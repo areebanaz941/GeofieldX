@@ -43,19 +43,19 @@ export default function Dashboard() {
   };
 
   // Prepare chart data
-  const pieData = [
+  const pieData = taskStats.total > 0 ? [
     { name: "Unassigned", value: taskStats.unassigned, color: "#9E9E9E" },
     { name: "In Progress", value: taskStats.inProgress, color: "#2196F3" },
     { name: "Completed", value: taskStats.completed, color: "#4CAF50" },
     { name: "Other", value: taskStats.total - taskStats.unassigned - taskStats.inProgress - taskStats.completed, color: "#FF9800" },
-  ];
+  ] : [{ name: "No Data", value: 1, color: "#9E9E9E" }];
 
-  const featurePieData = [
+  const featurePieData = featureStats.total > 0 ? [
     { name: "Towers", value: featureStats.towers, color: "#E91E63" },
     { name: "Manholes", value: featureStats.manholes, color: "#9C27B0" },
     { name: "Fiber Cables", value: featureStats.fiberCables, color: "#3F51B5" },
     { name: "Parcels", value: featureStats.parcels, color: "#009688" },
-  ];
+  ] : [{ name: "No Data", value: 1, color: "#9E9E9E" }];
 
   const recentTasks = [...tasks]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
