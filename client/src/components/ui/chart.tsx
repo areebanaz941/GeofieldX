@@ -68,8 +68,13 @@ const ChartContainer = React.forwardRef<
 ChartContainer.displayName = "Chart"
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  // Ensure config is not null or undefined
+  if (!config) {
+    return null;
+  }
+  
   const colorConfig = Object.entries(config).filter(
-    ([, config]) => config.theme || config.color
+    ([, config]) => config && (config.theme || config.color)
   )
 
   if (!colorConfig.length) {

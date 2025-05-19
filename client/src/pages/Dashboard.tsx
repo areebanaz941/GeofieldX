@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, LineChart, PieChart } from "@/components/ui/chart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -112,16 +111,42 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-80">
-                <ChartContainer>
-                  <PieChart
-                    data={pieData}
-                    index="name"
-                    category="value"
-                    colors={pieData.map(d => d.color)}
-                  />
-                </ChartContainer>
-              </div>
+              {taskStats.total > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+                      <span>Unassigned</span>
+                    </div>
+                    <span>{taskStats.unassigned} ({Math.round((taskStats.unassigned / taskStats.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                      <span>In Progress</span>
+                    </div>
+                    <span>{taskStats.inProgress} ({Math.round((taskStats.inProgress / taskStats.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <span>Completed</span>
+                    </div>
+                    <span>{taskStats.completed} ({Math.round((taskStats.completed / taskStats.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-orange-400 mr-2"></div>
+                      <span>Other</span>
+                    </div>
+                    <span>{taskStats.total - taskStats.unassigned - taskStats.inProgress - taskStats.completed} ({Math.round(((taskStats.total - taskStats.unassigned - taskStats.inProgress - taskStats.completed) / taskStats.total) * 100)}%)</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-48 items-center justify-center">
+                  <p className="text-gray-500">No task data available</p>
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -132,16 +157,42 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-80">
-                <ChartContainer>
-                  <PieChart
-                    data={featurePieData}
-                    index="name"
-                    category="value"
-                    colors={featurePieData.map(d => d.color)}
-                  />
-                </ChartContainer>
-              </div>
+              {featureStats.total > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-pink-500 mr-2"></div>
+                      <span>Towers</span>
+                    </div>
+                    <span>{featureStats.towers} ({Math.round((featureStats.towers / featureStats.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+                      <span>Manholes</span>
+                    </div>
+                    <span>{featureStats.manholes} ({Math.round((featureStats.manholes / featureStats.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-indigo-500 mr-2"></div>
+                      <span>Fiber Cables</span>
+                    </div>
+                    <span>{featureStats.fiberCables} ({Math.round((featureStats.fiberCables / featureStats.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-teal-500 mr-2"></div>
+                      <span>Parcels</span>
+                    </div>
+                    <span>{featureStats.parcels} ({Math.round((featureStats.parcels / featureStats.total) * 100)}%)</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-48 items-center justify-center">
+                  <p className="text-gray-500">No feature data available</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
