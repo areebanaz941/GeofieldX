@@ -438,4 +438,11 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Allow switching between memory and database storage
+let storage: IStorage = new MemStorage();
+
+export function setStorage(newStorage: IStorage) {
+  storage = newStorage;
+}
+
+export { storage };
