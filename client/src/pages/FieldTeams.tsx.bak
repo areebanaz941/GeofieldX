@@ -88,27 +88,6 @@ function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
             {teamMembers.length}
           </div>
         </div>
-        
-        {teamMembers.length > 0 && (
-          <div className="mt-4">
-            <h4 className="text-xs font-medium uppercase text-gray-500 mb-2">Team Members</h4>
-            <div className="space-y-2">
-              {teamMembers.slice(0, 3).map((member) => (
-                <div key={member.id} className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6 bg-primary-100 text-primary-600">
-                    <AvatarFallback className="text-xs">{getInitials(member.name)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{member.name}</span>
-                </div>
-              ))}
-              {teamMembers.length > 3 && (
-                <div className="text-xs text-gray-500">
-                  +{teamMembers.length - 3} more members
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </CardContent>
       <CardFooter className="bg-gray-50 flex justify-end gap-2 pt-2">
         {team.status === "Pending" && (
@@ -261,14 +240,14 @@ export default function FieldTeams() {
   });
   
   // Filter users based on search
-  const filteredUsers = fieldUsers.filter((user: User) =>
+  const filteredUsers = fieldUsers.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   // Get tasks assigned to each user
   const getUserTasks = (userId: number) => {
-    return tasks.filter((task: Task) => task.assignedTo === userId);
+    return tasks.filter((task) => task.assignedTo === userId);
   };
   
   // Calculate completion rate for each user
@@ -276,15 +255,15 @@ export default function FieldTeams() {
     const userTasks = getUserTasks(userId);
     if (userTasks.length === 0) return 0;
     
-    const completedTasks = userTasks.filter((task: Task) => task.status === "Completed");
+    const completedTasks = userTasks.filter((task) => task.status === "Completed");
     return Math.round((completedTasks.length / userTasks.length) * 100);
   };
   
   // Get team details for a user
   const getUserTeam = (userId: number) => {
-    const user = fieldUsers.find((u: User) => u.id === userId);
+    const user = fieldUsers.find(u => u.id === userId);
     if (!user?.teamId) return null;
-    return teams.find((team: Team) => team.id === user.teamId) || null;
+    return teams.find(team => team.id === user.teamId) || null;
   };
   
   // Handle team creation form submission
@@ -399,7 +378,7 @@ export default function FieldTeams() {
           <TabsContent value="members" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredUsers.length > 0 ? (
-                filteredUsers.map((fieldUser: User) => {
+                filteredUsers.map((fieldUser) => {
                   const userTasks = getUserTasks(fieldUser.id);
                   const completionRate = getUserCompletionRate(fieldUser.id);
                   const activeStatus = getActiveStatus(fieldUser.lastActive);
@@ -453,15 +432,15 @@ export default function FieldTeams() {
                             <div className="space-y-1">
                               <div className="flex justify-between items-center text-xs">
                                 <span>Completed</span>
-                                <span>{userTasks.filter((t: Task) => t.status === "Completed").length}</span>
+                                <span>{userTasks.filter(t => t.status === "Completed").length}</span>
                               </div>
                               <div className="flex justify-between items-center text-xs">
                                 <span>In Progress</span>
-                                <span>{userTasks.filter((t: Task) => t.status === "In Progress").length}</span>
+                                <span>{userTasks.filter(t => t.status === "In Progress").length}</span>
                               </div>
                               <div className="flex justify-between items-center text-xs">
                                 <span>Assigned</span>
-                                <span>{userTasks.filter((t: Task) => t.status === "Assigned").length}</span>
+                                <span>{userTasks.filter(t => t.status === "Assigned").length}</span>
                               </div>
                             </div>
                           </div>
@@ -534,7 +513,7 @@ export default function FieldTeams() {
                     team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                     (team.description || "").toLowerCase().includes(searchTerm.toLowerCase())
                   )
-                  .map((team: Team) => (
+                  .map((team) => (
                     <TeamCard 
                       key={team.id} 
                       team={team} 
@@ -550,6 +529,110 @@ export default function FieldTeams() {
                       ? "No teams created yet. Create your first team using the button above"
                       : "No teams available"
                   }
+                </div>
+              )}
+            </div>
+                          
+                          {teamMembers.length > 0 && (
+                            <div className="mt-4">
+                              <h4 className="text-xs font-medium uppercase text-gray-500 mb-2">Team Members</h4>
+                              <div className="space-y-2">
+                                {teamMembers.slice(0, 3).map((member) => (
+                                  <div key={member.id} className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6 bg-primary-100 text-primary-600">
+                                      <AvatarFallback className="text-xs">{getInitials(member.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm">{member.name}</span>
+                                  </div>
+                                ))}
+                                {teamMembers.length > 3 && (
+                                  <div className="text-xs text-gray-500">
+                                    +{teamMembers.length - 3} more members
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                        <CardFooter className="bg-gray-50 px-5 py-3 border-t flex justify-between">
+                          {user?.role === "Supervisor" && team.status === "Pending" && (
+                            <>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => {
+                                  updateTeamStatusMutation.mutate({ teamId: team.id, status: "Approved" });
+                                }}
+                                disabled={updateTeamStatusMutation.isPending}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <path d="M20 6L9 17l-5-5" />
+                                </svg>
+                                Approve
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  updateTeamStatusMutation.mutate({ teamId: team.id, status: "Rejected" });
+                                }}
+                                disabled={updateTeamStatusMutation.isPending}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {!(user?.role === "Supervisor" && team.status === "Pending") && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTeam(team);
+                                  toast({
+                                    title: "Team Details",
+                                    description: `Viewing details for ${team.name}`,
+                                  });
+                                }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                                Details
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTeam(team);
+                                  toast({
+                                    title: "Team Members",
+                                    description: `Viewing members for ${team.name}`,
+                                  });
+                                }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                  <circle cx="9" cy="7" r="4" />
+                                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                                Members
+                              </Button>
+                            </>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    );
+                  })
+              ) : (
+                <div className="col-span-full text-center py-8 text-gray-500">
+                  {searchTerm ? "No teams match your search criteria" : "No teams found"}
                 </div>
               )}
             </div>
