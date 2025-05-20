@@ -346,6 +346,59 @@ const LeafletMap = ({
     }
   }, []);
   
+  // Create a custom map legend
+  useEffect(() => {
+    if (mapRef.current) {
+      // Create a legend control if it doesn't exist
+      if (!mapRef.current.legendControl) {
+        const legend = L.control({ position: 'topright' });
+        
+        legend.onAdd = function() {
+          const div = L.DomUtil.create('div', 'info legend');
+          div.style.backgroundColor = 'white';
+          div.style.padding = '10px';
+          div.style.borderRadius = '4px';
+          div.style.boxShadow = '0 1px 5px rgba(0,0,0,0.2)';
+          div.style.zIndex = '1000';
+          
+          // Add title
+          div.innerHTML = '<h4 style="margin-top: 0; font-weight: bold; margin-bottom: 8px;">Map Legend</h4>';
+          
+          // Add feature types
+          if (features && features.length > 0) {
+            div.innerHTML += '<div style="margin-bottom: 8px;"><strong>Feature Types</strong></div>';
+            
+            for (const [type, color] of Object.entries(featureColors)) {
+              div.innerHTML += 
+                `<div style="display: flex; align-items: center; margin-bottom: 4px;">
+                  <div style="width: 16px; height: 16px; background-color: ${color}; margin-right: 8px; border-radius: 50%;"></div>
+                  <span>${type}</span>
+                </div>`;
+            }
+          }
+          
+          // Add task status
+          if (tasks && tasks.length > 0) {
+            div.innerHTML += '<div style="margin-top: 12px; margin-bottom: 8px;"><strong>Task Status</strong></div>';
+            
+            for (const [status, color] of Object.entries(statusColors)) {
+              div.innerHTML += 
+                `<div style="display: flex; align-items: center; margin-bottom: 4px;">
+                  <div style="width: 16px; height: 16px; background-color: ${color}; margin-right: 8px; border-radius: 3px;"></div>
+                  <span>${status}</span>
+                </div>`;
+            }
+          }
+          
+          return div;
+        };
+        
+        legend.addTo(mapRef.current);
+        mapRef.current.legendControl = legend;
+      }
+    }
+  }, [features, tasks]);
+  
   return (
     <div id="map" className={className}></div>
   );
