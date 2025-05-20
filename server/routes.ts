@@ -488,5 +488,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team management routes
+  app.post("/api/teams", isAuthenticated, async (req, res) => {
+    try {
+      const teamData = insertTeamSchema.parse(req.body);
+      // Set the creator to the current user
+      teamData.createdBy = (req.user as any).id;
+      
+      // If supervisor creates team, it's automatically approved
+      if ((req.user as any).role === "Supervisor") {
+        teamData.status = "Approved";
+      }
+      
+      const newTeam = await storage.createTeam(teamData);
+      res.status(201).json(newTeam);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create team" });
+    }
+  });
+
+  app.get("/api/teams", isAuthenticated, async (req, res) => {
+    try {
+      const teams = await storage.getAllTeams();
+      res.json(teams);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get teams" });
+    }
+  });
+
+  app.get("/api/teams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      res.json(team);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get team" });
+    }
+  });
+
+  app.patch("/api/teams/:id/status", isSupervisor, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!["Pending", "Approved", "Rejected"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const updatedTeam = await storage.updateTeamStatus(
+        teamId, 
+        status, 
+        status === "Approved" ? (req.user as any).id : undefined
+      );
+      
+      res.json(updatedTeam);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update team status" });
+    }
+  });
+
+  app.get("/api/teams/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const members = await storage.getUsersByTeam(teamId);
+      // Remove passwords from response
+      const membersResponse = members.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(membersResponse);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get team members" });
+    }
+  });
+
+  app.post("/api/users/:id/assign-team", isSupervisor, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { teamId } = req.body;
+      
+      if (!teamId) {
+        return res.status(400).json({ message: "Team ID is required" });
+      }
+      
+      const updatedUser = await storage.assignUserToTeam(userId, teamId);
+      const { password, ...userResponse } = updatedUser;
+      
+      res.json(userResponse);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to assign user to team" });
+    }
+  });
+
   return httpServer;
 }

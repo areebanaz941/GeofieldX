@@ -8,7 +8,9 @@ import type {
   TaskEvidence, 
   InsertUser, 
   InsertTask,
-  InsertFeature 
+  InsertFeature,
+  Team,
+  InsertTeam
 } from '@shared/schema';
 
 // Auth API
@@ -144,5 +146,36 @@ export async function updateBoundaryStatus(boundaryId: number, status: string) {
 
 export async function assignBoundary(boundaryId: number, assignedTo: number) {
   const res = await apiRequest('PUT', `/api/boundaries/${boundaryId}/assign`, { assignedTo });
+  return await res.json();
+}
+
+// Team API
+export async function createTeam(teamData: InsertTeam) {
+  const res = await apiRequest('POST', '/api/teams', teamData);
+  return await res.json();
+}
+
+export async function getAllTeams() {
+  const res = await apiRequest('GET', '/api/teams');
+  return await res.json();
+}
+
+export async function getTeam(teamId: number) {
+  const res = await apiRequest('GET', `/api/teams/${teamId}`);
+  return await res.json();
+}
+
+export async function updateTeamStatus(teamId: number, status: string) {
+  const res = await apiRequest('PATCH', `/api/teams/${teamId}/status`, { status });
+  return await res.json();
+}
+
+export async function getTeamMembers(teamId: number) {
+  const res = await apiRequest('GET', `/api/teams/${teamId}/members`);
+  return await res.json();
+}
+
+export async function assignUserToTeam(userId: number, teamId: number) {
+  const res = await apiRequest('POST', `/api/users/${userId}/assign-team`, { teamId });
   return await res.json();
 }
