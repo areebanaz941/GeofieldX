@@ -167,6 +167,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
+      
+      // If user is registering as field team member, check if team exists and is approved
+      if (userData.role === "Field" && userData.teamId) {
+        const team = await storage.getTeam(userData.teamId);
+        if (!team) {
+          return res.status(400).json({ message: "Team does not exist" });
+        }
+        if (team.status !== "Approved") {
+          return res.status(400).json({ message: "Team is not approved for registration" });
+        }
+      }
+      
       // Hash password
       userData.password = await bcrypt.hash(userData.password, 10);
       const newUser = await storage.createUser(userData);
