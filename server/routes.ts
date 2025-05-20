@@ -510,7 +510,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/teams", isAuthenticated, async (req, res) => {
+  // Allow public access to teams for registration purposes
+  app.get("/api/teams", async (req, res) => {
     try {
       const teams = await storage.getAllTeams();
       res.json(teams);

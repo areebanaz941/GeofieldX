@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,14 +10,38 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { getAllTeams } from "@/lib/api";
+import { Team } from "@shared/schema";
 
-const registerSchema = z.object({
+const baseRegisterSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email format"),
   role: z.enum(["Supervisor", "Field"]),
 });
+
+// Create conditional schema based on role
+const registerSchema = z.discriminatedUnion("role", [
+  z.object({
+    role: z.literal("Supervisor"),
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email format"),
+  }),
+  z.object({
+    role: z.literal("Field"),
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email format"),
+    teamId: z.string().refine(val => val !== "", {
+      message: "Please select a team"
+    }),
+  }),
+]);
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -26,6 +50,16 @@ export default function Register() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
+  const [selectedRole, setSelectedRole] = useState<string>("Field");
+  
+  // Fetch teams
+  const { data: teams = [], isLoading: isLoadingTeams } = useQuery({
+    queryKey: ['/api/teams'],
+    queryFn: getAllTeams
+  });
+  
+  // Filter teams to only show approved teams
+  const approvedTeams = teams.filter((team: Team) => team.status === "Approved");
   
   // Redirect if already logged in
   if (user) {
@@ -41,13 +75,32 @@ export default function Register() {
       name: "",
       email: "",
       role: "Field",
+      ...(selectedRole === "Field" && { teamId: "" }),
     },
   });
+
+  // Watch for role changes to update form state
+  const watchRole = form.watch("role");
+  
+  useEffect(() => {
+    setSelectedRole(watchRole);
+    
+    // Reset the form with updated defaults based on role
+    form.reset({
+      ...form.getValues(),
+      ...(watchRole === "Field" && { teamId: "" })
+    });
+  }, [watchRole, form]);
 
   const onSubmit = async (values: RegisterFormValues) => {
     setIsLoading(true);
     try {
-      await register(values);
+      // Convert teamId to number for Field users
+      const formattedValues = values.role === "Field" 
+        ? { ...values, teamId: parseInt(values.teamId, 10) }
+        : values;
+        
+      await register(formattedValues);
       toast({
         title: "Success",
         description: "Your account has been created",
@@ -145,6 +198,47 @@ export default function Register() {
                   </FormItem>
                 )}
               />
+              
+              {/* Show team selection only for Field role */}
+              {selectedRole === "Field" && (
+                <FormField
+                  control={form.control}
+                  name="teamId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Team</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingTeams ? "Loading teams..." : "Select your team"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {approvedTeams.length === 0 ? (
+                            <SelectItem value="" disabled>No approved teams available</SelectItem>
+                          ) : (
+                            <>
+                              <SelectItem value="" disabled>Select a team</SelectItem>
+                              {approvedTeams.map((team: Team) => (
+                                <SelectItem key={team.id} value={team.id.toString()}>
+                                  {team.name}
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      {approvedTeams.length === 0 && !isLoadingTeams && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          No approved teams available. Please contact a supervisor to create and approve a team.
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+              )}
+              
               <FormField
                 control={form.control}
                 name="password"
