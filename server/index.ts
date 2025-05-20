@@ -40,6 +40,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize the database
+  await setupDatabase();
+  
+  // Set up database storage instead of memory storage
+  setStorage(new PostgresStorage());
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
