@@ -1,4 +1,4 @@
-import { users, tasks, features, boundaries, taskUpdates, taskEvidence } from "@shared/schema";
+import { users, tasks, features, boundaries, taskUpdates, taskEvidence, teams } from "@shared/schema";
 import type { 
   User, InsertUser, 
   Task, InsertTask, 
@@ -6,7 +6,8 @@ import type {
   Boundary, InsertBoundary,
   TaskUpdate, InsertTaskUpdate,
   TaskEvidence, InsertTaskEvidence,
-  UserWithLocation
+  Team, InsertTeam,
+  UserWithLocation, UserWithTeam
 } from "@shared/schema";
 import bcrypt from 'bcryptjs';
 
@@ -52,6 +53,15 @@ export interface IStorage {
   // Task evidence operations
   addTaskEvidence(evidence: InsertTaskEvidence): Promise<TaskEvidence>;
   getTaskEvidence(taskId: number): Promise<TaskEvidence[]>;
+  
+  // Team operations
+  createTeam(team: InsertTeam): Promise<Team>;
+  getTeam(id: number): Promise<Team | undefined>;
+  getTeamByName(name: string): Promise<Team | undefined>;
+  updateTeamStatus(id: number, status: string, approvedBy?: number): Promise<Team>;
+  getAllTeams(): Promise<Team[]>;
+  getUsersByTeam(teamId: number): Promise<User[]>;
+  assignUserToTeam(userId: number, teamId: number): Promise<User>;
 }
 
 export class MemStorage implements IStorage {

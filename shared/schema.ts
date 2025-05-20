@@ -11,6 +11,7 @@ export const specificFeatureTypeEnum = pgEnum('specific_feature_type', ['Mobilli
 export const userRoleEnum = pgEnum('user_role', ['Supervisor', 'Field']);
 export const taskStatusEnum = pgEnum('task_status', ['Unassigned', 'Assigned', 'In Progress', 'Completed', 'In-Complete', 'Submit-Review', 'Review_Accepted', 'Review_Reject', 'Review_inprogress']);
 export const taskPriorityEnum = pgEnum('task_priority', ['Low', 'Medium', 'High', 'Urgent']);
+export const teamStatusEnum = pgEnum('team_status', ['Pending', 'Approved', 'Rejected']);
 
 // Users Table
 export const users = pgTable("users", {
@@ -20,6 +21,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   role: userRoleEnum("role").notNull().default('Field'),
+  teamId: integer("team_id"), // Will be updated with a reference later
   lastActive: timestamp("last_active"),
   currentLocation: jsonb("current_location"), // GeoJSON Point
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -94,6 +96,18 @@ export const taskEvidence = pgTable("task_evidence", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Teams Table (for field team management)
+export const teams = pgTable("teams", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  status: teamStatusEnum("status").notNull().default('Pending'),
+  createdBy: integer("created_by").references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Schemas for insertion
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, lastActive: true, currentLocation: true, createdAt: true });
 export const insertBoundarySchema = createInsertSchema(boundaries).omit({ id: true, createdAt: true, updatedAt: true });
@@ -101,6 +115,7 @@ export const insertFeatureSchema = createInsertSchema(features).omit({ id: true,
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTaskUpdateSchema = createInsertSchema(taskUpdates).omit({ id: true, createdAt: true });
 export const insertTaskEvidenceSchema = createInsertSchema(taskEvidence).omit({ id: true, createdAt: true });
+export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true, updatedAt: true, approvedBy: true });
 
 // Export types
 export type User = typeof users.$inferSelect;
@@ -121,6 +136,9 @@ export type InsertTaskUpdate = z.infer<typeof insertTaskUpdateSchema>;
 export type TaskEvidence = typeof taskEvidence.$inferSelect;
 export type InsertTaskEvidence = z.infer<typeof insertTaskEvidenceSchema>;
 
+export type Team = typeof teams.$inferSelect;
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+
 // Types for frontend use
 export type UserWithLocation = User & {
   location?: {
@@ -138,4 +156,8 @@ export type FeatureWithGeometry = Feature & {
 
 export type TaskWithAssignee = Task & {
   assignee?: User;
+};
+
+export type UserWithTeam = User & {
+  team?: Team;
 };
