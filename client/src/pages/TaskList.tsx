@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import CreateTaskModal from "@/components/CreateTaskModal";
 import TaskDetailsModal from "@/components/TaskDetailsModal";
-import { useAuth } from "@/hooks/useAuth";
+import useAuth from "@/hooks/useAuth";
 import { Task } from "@shared/schema";
 
 export default function TaskList() {
