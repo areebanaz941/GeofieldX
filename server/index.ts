@@ -1,9 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupDatabase } from "./db";
-import { PostgresStorage } from "./dbStorage";
 import { setStorage } from "./storage";
+import { FileStorage } from "./fileStorage";
 
 const app = express();
 app.use(express.json());
@@ -40,11 +39,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize the database
-  await setupDatabase();
-  
-  // Set up database storage instead of memory storage
-  setStorage(new PostgresStorage());
+  // Set up file-based storage for data persistence
+  // This ensures team data is saved between application restarts
+  setStorage(new FileStorage());
   
   const server = await registerRoutes(app);
 
