@@ -10,3 +10,6 @@ export function useAuth() {
   
   return context;
 }
+
+// This is needed to avoid HMR issues
+export default useAuth;
