@@ -527,10 +527,32 @@ export default function FieldTeams() {
           </TabsContent>
             
           <TabsContent value="teams" className="mt-0">
+            {/* Show a notice for field users that they can only see their own team */}
+            {!isSupervisor && (
+              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-4 text-blue-800">
+                <p className="text-sm font-medium flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  As a field team member, you can only view information about your own team
+                </p>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {teams.length > 0 ? (
                 teams
+                  // Filter teams based on user role:
+                  // - Supervisors can see all teams
+                  // - Field users can only see their own team
                   .filter(team => 
+                    isSupervisor ? true : (user?.teamId === team.id)
+                  )
+                  // Apply text search filtering
+                  .filter(team => 
+                    searchTerm === "" || 
                     team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                     (team.description || "").toLowerCase().includes(searchTerm.toLowerCase())
                   )
@@ -550,6 +572,21 @@ export default function FieldTeams() {
                       ? "No teams created yet. Create your first team using the button above"
                       : "No teams available"
                   }
+                </div>
+              )}
+              
+              {/* No teams found after filtering */}
+              {teams.length > 0 && 
+               teams.filter(team => isSupervisor ? true : (user?.teamId === team.id))
+                 .filter(team => 
+                   searchTerm === "" || 
+                   team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                   (team.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+                 ).length === 0 && (
+                <div className="col-span-full text-center py-8 text-gray-500">
+                  {isSupervisor
+                    ? "No teams match your search criteria"
+                    : "You are not currently assigned to a team"}
                 </div>
               )}
             </div>
