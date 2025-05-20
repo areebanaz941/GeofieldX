@@ -28,6 +28,11 @@ function App() {
                 <Dashboard />
               </AuthenticatedRoutes>
             </Route>
+            <Route path="/dashboard">
+              <AuthenticatedRoutes>
+                <Dashboard />
+              </AuthenticatedRoutes>
+            </Route>
             <Route path="/map">
               <AuthenticatedRoutes>
                 <MapView />

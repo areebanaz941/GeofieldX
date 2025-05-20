@@ -3,6 +3,44 @@
 @tailwind utilities;
 
 :root {
+  --primary-color: #caf7b7;
+  --accent-color: hsl(102,80%,84%);
+  --text-on-light: #333;
+  --secondary-color: #f0f8f0;
+}
+
+body {
+  background-color: #f8fdf6;
+}
+
+.bg-primary-custom {
+  background-color: var(--primary-color);
+}
+
+.bg-secondary-custom {
+  background-color: var(--secondary-color);
+}
+
+.text-on-primary {
+  color: var(--text-on-light);
+}
+
+/* Mobile responsiveness improvements */
+@media (max-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .responsive-padding {
+    padding: 1rem;
+  }
+  
+  .responsive-text {
+    font-size: 0.9rem;
+  }
+}
+
+:root {
       --background: 0 0% 100%;
 --foreground: 20 14.3% 4.1%;
 --muted: 60 4.8% 95.9%;
