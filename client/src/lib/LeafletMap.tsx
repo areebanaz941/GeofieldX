@@ -3,6 +3,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Task, User, Feature, Boundary } from '@shared/schema';
 
+// Store legend control reference separately
+interface CustomMap extends L.Map {
+  _legendControl?: L.Control;
+}
+
 // Define status colors
 const statusColors = {
   'Unassigned': '#9E9E9E',
@@ -346,58 +351,72 @@ const LeafletMap = ({
     }
   }, []);
   
-  // Create a custom map legend
+  // Create a legend control
   useEffect(() => {
-    if (mapRef.current) {
-      // Create a legend control if it doesn't exist
-      if (!mapRef.current.legendControl) {
-        const legend = L.control({ position: 'topright' });
+    if (!mapRef.current) return;
+    
+    // Remove existing legend if any
+    const map = mapRef.current;
+    const existingLegends = document.querySelectorAll('.map-legend-control');
+    existingLegends.forEach(el => el.remove());
+    
+    // Create custom legend control
+    const LegendControl = L.Control.extend({
+      options: {
+        position: 'topright'
+      },
+      
+      onAdd: function() {
+        const container = L.DomUtil.create('div', 'map-legend-control');
         
-        legend.onAdd = function() {
-          const div = L.DomUtil.create('div', 'info legend');
-          div.style.backgroundColor = 'white';
-          div.style.padding = '10px';
-          div.style.borderRadius = '4px';
-          div.style.boxShadow = '0 1px 5px rgba(0,0,0,0.2)';
-          div.style.zIndex = '1000';
-          
-          // Add title
-          div.innerHTML = '<h4 style="margin-top: 0; font-weight: bold; margin-bottom: 8px;">Map Legend</h4>';
-          
-          // Add feature types
-          if (features && features.length > 0) {
-            div.innerHTML += '<div style="margin-bottom: 8px;"><strong>Feature Types</strong></div>';
-            
-            for (const [type, color] of Object.entries(featureColors)) {
-              div.innerHTML += 
-                `<div style="display: flex; align-items: center; margin-bottom: 4px;">
-                  <div style="width: 16px; height: 16px; background-color: ${color}; margin-right: 8px; border-radius: 50%;"></div>
-                  <span>${type}</span>
-                </div>`;
-            }
-          }
-          
-          // Add task status
-          if (tasks && tasks.length > 0) {
-            div.innerHTML += '<div style="margin-top: 12px; margin-bottom: 8px;"><strong>Task Status</strong></div>';
-            
-            for (const [status, color] of Object.entries(statusColors)) {
-              div.innerHTML += 
-                `<div style="display: flex; align-items: center; margin-bottom: 4px;">
-                  <div style="width: 16px; height: 16px; background-color: ${color}; margin-right: 8px; border-radius: 3px;"></div>
-                  <span>${status}</span>
-                </div>`;
-            }
-          }
-          
-          return div;
-        };
+        // Style the container
+        container.style.backgroundColor = 'white';
+        container.style.padding = '10px';
+        container.style.borderRadius = '4px';
+        container.style.boxShadow = '0 1px 5px rgba(0,0,0,0.2)';
+        container.style.minWidth = '150px';
+        container.style.zIndex = '1000';
         
-        legend.addTo(mapRef.current);
-        mapRef.current.legendControl = legend;
+        // Add title
+        let content = '<h4 style="margin:0 0 8px; font-weight:bold;">Map Legend</h4>';
+        
+        // Add feature types
+        if (features && features.length > 0) {
+          content += '<div style="margin-bottom:8px;"><strong>Feature Types</strong></div>';
+          
+          Object.entries(featureColors).forEach(([type, color]) => {
+            content += `
+              <div style="display:flex; align-items:center; margin-bottom:4px;">
+                <div style="width:16px; height:16px; background-color:${color}; margin-right:8px; border-radius:50%;"></div>
+                <span>${type}</span>
+              </div>
+            `;
+          });
+        }
+        
+        // Add task status
+        if (tasks && tasks.length > 0) {
+          content += '<div style="margin-top:12px; margin-bottom:8px;"><strong>Task Status</strong></div>';
+          
+          Object.entries(statusColors).forEach(([status, color]) => {
+            content += `
+              <div style="display:flex; align-items:center; margin-bottom:4px;">
+                <div style="width:16px; height:16px; background-color:${color}; margin-right:8px; border-radius:3px;"></div>
+                <span>${status}</span>
+              </div>
+            `;
+          });
+        }
+        
+        container.innerHTML = content;
+        return container;
       }
-    }
-  }, [features, tasks]);
+    });
+    
+    // Add the legend to the map
+    new LegendControl().addTo(map);
+    
+  }, [features, tasks, mapRef.current]);
   
   return (
     <div id="map" className={className}></div>

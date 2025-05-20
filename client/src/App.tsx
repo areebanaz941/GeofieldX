@@ -38,6 +38,11 @@ function App() {
                 <MapView />
               </AuthenticatedRoutes>
             </Route>
+            <Route path="/map-view">
+              <AuthenticatedRoutes>
+                <MapView />
+              </AuthenticatedRoutes>
+            </Route>
             <Route path="/tasks">
               <AuthenticatedRoutes>
                 <TaskList />
