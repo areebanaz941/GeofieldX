@@ -16,7 +16,8 @@ import {
   insertFeatureSchema, 
   insertBoundarySchema,
   insertTaskUpdateSchema,
-  insertTaskEvidenceSchema
+  insertTaskEvidenceSchema,
+  insertTeamSchema
 } from "@shared/schema";
 import { z } from "zod";
 import createMemoryStore from "memorystore";

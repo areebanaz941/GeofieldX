@@ -71,6 +71,7 @@ export class MemStorage implements IStorage {
   private boundaries: Map<number, Boundary>;
   private taskUpdates: Map<number, TaskUpdate>;
   private taskEvidence: Map<number, TaskEvidence>;
+  private teams: Map<number, Team>;
   
   private userCurrentId: number;
   private taskCurrentId: number;
@@ -78,6 +79,7 @@ export class MemStorage implements IStorage {
   private boundaryCurrentId: number;
   private taskUpdateCurrentId: number;
   private taskEvidenceCurrentId: number;
+  private teamCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -86,6 +88,7 @@ export class MemStorage implements IStorage {
     this.boundaries = new Map();
     this.taskUpdates = new Map();
     this.taskEvidence = new Map();
+    this.teams = new Map();
     
     this.userCurrentId = 1;
     this.taskCurrentId = 1;
@@ -93,6 +96,7 @@ export class MemStorage implements IStorage {
     this.boundaryCurrentId = 1;
     this.taskUpdateCurrentId = 1;
     this.taskEvidenceCurrentId = 1;
+    this.teamCurrentId = 1;
     
     // Initialize with a supervisor user
     this.createUser({
@@ -353,6 +357,84 @@ export class MemStorage implements IStorage {
 
   async getTaskEvidence(taskId: number): Promise<TaskEvidence[]> {
     return Array.from(this.taskEvidence.values()).filter(evidence => evidence.taskId === taskId);
+  }
+  
+  // Team operations
+  async createTeam(insertTeam: InsertTeam): Promise<Team> {
+    const id = this.teamCurrentId++;
+    
+    const team: Team = {
+      id,
+      name: insertTeam.name,
+      description: insertTeam.description || null,
+      status: insertTeam.status || 'Pending',
+      createdBy: insertTeam.createdBy || null,
+      approvedBy: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.teams.set(id, team);
+    return team;
+  }
+  
+  async getTeam(id: number): Promise<Team | undefined> {
+    return this.teams.get(id);
+  }
+  
+  async getTeamByName(name: string): Promise<Team | undefined> {
+    return Array.from(this.teams.values())
+      .find(team => team.name === name);
+  }
+  
+  async updateTeamStatus(id: number, status: string, approvedBy?: number): Promise<Team> {
+    const team = await this.getTeam(id);
+    if (!team) {
+      throw new Error(`Team with ID ${id} not found`);
+    }
+    
+    const updatedTeam = {
+      ...team,
+      status: status as any, // Cast needed for type compatibility
+      updatedAt: new Date(),
+      ...(approvedBy ? { approvedBy } : {})
+    };
+    
+    this.teams.set(id, updatedTeam);
+    return updatedTeam;
+  }
+  
+  async getAllTeams(): Promise<Team[]> {
+    return Array.from(this.teams.values());
+  }
+  
+  async getUsersByTeam(teamId: number): Promise<User[]> {
+    return Array.from(this.users.values())
+      .filter(user => user.teamId === teamId);
+  }
+  
+  async assignUserToTeam(userId: number, teamId: number): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    
+    const team = await this.getTeam(teamId);
+    if (!team) {
+      throw new Error(`Team with ID ${teamId} not found`);
+    }
+    
+    if (team.status !== 'Approved') {
+      throw new Error(`Cannot assign user to team that is not approved`);
+    }
+    
+    const updatedUser = {
+      ...user,
+      teamId
+    };
+    
+    this.users.set(userId, updatedUser);
+    return updatedUser;
   }
 }
 
