@@ -47,6 +47,94 @@ function getActiveStatus(lastActive: Date | null | undefined) {
   return "Offline";
 }
 
+// TeamCard component for displaying team information
+interface TeamCardProps {
+  team: Team;
+  fieldUsers: User[];
+  handleTeamStatusChange: (teamId: number, status: string) => void;
+}
+
+function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
+  // Find members of this team
+  const teamMembers = fieldUsers.filter(user => user.teamId === team.id);
+  
+  return (
+    <Card key={team.id} className="overflow-hidden">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <CardTitle>{team.name}</CardTitle>
+          <Badge
+            className={`
+              ${team.status === "Approved" ? "bg-green-100 text-green-700 border-green-200" : ""}
+              ${team.status === "Pending" ? "bg-yellow-100 text-yellow-700 border-yellow-200" : ""}
+              ${team.status === "Rejected" ? "bg-red-100 text-red-700 border-red-200" : ""}
+            `}
+          >
+            {team.status}
+          </Badge>
+        </div>
+        <CardDescription className="mt-2">
+          {team.description || "No description provided"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="text-sm">
+            <span className="font-medium">Created:</span>{" "}
+            {new Date(team.createdAt).toLocaleDateString()}
+          </div>
+          <div className="text-sm">
+            <span className="font-medium">Members:</span>{" "}
+            {teamMembers.length}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="bg-gray-50 flex justify-end gap-2 pt-2">
+        {team.status === "Pending" && (
+          <>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="border-red-500 text-red-500 hover:bg-red-50"
+              onClick={() => handleTeamStatusChange(team.id, "Rejected")}
+            >
+              Reject
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="border-green-500 text-green-500 hover:bg-green-50"
+              onClick={() => handleTeamStatusChange(team.id, "Approved")}
+            >
+              Approve
+            </Button>
+          </>
+        )}
+        {team.status === "Rejected" && (
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="border-green-500 text-green-500 hover:bg-green-50"
+            onClick={() => handleTeamStatusChange(team.id, "Approved")}
+          >
+            Approve
+          </Button>
+        )}
+        {team.status === "Approved" && (
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="border-red-500 text-red-500 hover:bg-red-50"
+            onClick={() => handleTeamStatusChange(team.id, "Rejected")}
+          >
+            Deactivate
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
+
 // Form schema for creating a new team
 const teamFormSchema = z.object({
   name: z.string().min(3, { message: "Team name must be at least 3 characters" }),

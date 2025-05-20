@@ -215,10 +215,10 @@ export default function Register() {
                         </FormControl>
                         <SelectContent>
                           {approvedTeams.length === 0 ? (
-                            <SelectItem value="" disabled>No approved teams available</SelectItem>
+                            <SelectItem value="_none" disabled>No approved teams available</SelectItem>
                           ) : (
                             <>
-                              <SelectItem value="" disabled>Select a team</SelectItem>
+                              <SelectItem value="_placeholder" disabled>Select a team</SelectItem>
                               {approvedTeams.map((team: Team) => (
                                 <SelectItem key={team.id} value={team.id.toString()}>
                                   {team.name}
