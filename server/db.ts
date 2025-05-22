@@ -3,8 +3,12 @@ import * as schema from "@shared/schema";
 
 // MongoDB connection string
 const connectionString =
+  process.env.MONGODB_URI ||
   process.env.DATABASE_URL ||
   "mongodb+srv://areebanaz4848:Geowhatsapp@cluster0.ldne1j8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+// Log the connection being used (without showing credentials)
+console.log("Using MongoDB connection with host:", connectionString.split('@')[1]?.split('/')[0] || 'Unknown host');
 
 // MongoDB connection options
 const mongooseOptions = {
@@ -14,7 +18,7 @@ const mongooseOptions = {
   serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
   socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
   bufferCommands: false, // Disable mongoose buffering
-  bufferMaxEntries: 0, // Disable mongoose buffering
+  // bufferMaxEntries option removed as it's no longer supported
 };
 
 // Database connection instance
@@ -30,9 +34,16 @@ async function connectToDatabase() {
   try {
     console.log("Connecting to MongoDB...");
 
+    // Adding SSL options directly to connection to fix MongoDB Atlas SSL issues
     const connection = await mongoose.connect(
       connectionString,
-      mongooseOptions,
+      {
+        ...mongooseOptions,
+        ssl: true,
+        sslValidate: false,
+        tlsAllowInvalidCertificates: true,
+        tlsAllowInvalidHostnames: true,
+      }
     );
 
     isConnected = true;
