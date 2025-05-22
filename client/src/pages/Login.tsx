@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
+import GeoPilotLogo from "../assets/GeoPilot Logo.png";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -91,7 +92,7 @@ export default function Login() {
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center mb-3">
             <div className="flex items-center mb-2">
-              <img src="/attached_assets/Virtual-leap-logo-nocolors.png" alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
+              <img src={GeoPilotLogo} alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
               <CardTitle className="text-2xl bg-gradient-to-r from-[#2E8B57] to-[#3CB371] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
             <CardDescription className="text-center italic font-medium text-[#2E8B57]">
