@@ -13,6 +13,7 @@ import useAuth from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { getAllTeams } from "@/lib/api";
 import { Team } from "@shared/schema";
+import GeoPilotLogo from "../assets/GeoPilot Logo.png";
 
 const baseRegisterSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -124,7 +125,7 @@ export default function Register() {
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center mb-3">
             <div className="flex items-center mb-2">
-              <img src="/attached_assets/GeoPilot Logo.png" alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
+              <img src={GeoPilotLogo} alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
               <CardTitle className="text-2xl bg-gradient-to-r from-[#2E8B57] to-[#3CB371] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
             <CardDescription className="text-center italic font-medium text-[#2E8B57]">
