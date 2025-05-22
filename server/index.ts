@@ -2,8 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setStorage } from "./storage";
-import { MongoStorage } from "./mongoStorage";
-import { connectToMongoDB } from "./mongoDb";
+import { FileStorage } from "./fileStorage";
 
 const app = express();
 app.use(express.json());
@@ -40,12 +39,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize MongoDB connection
-  await connectToMongoDB();
-  
-  // Set up MongoDB storage for data persistence
-  // This ensures all team data is saved to MongoDB database
-  setStorage(new MongoStorage());
+  // Set up file-based storage for data persistence
+  // This ensures all team data is saved to files in data directory
+  setStorage(new FileStorage());
   
   const server = await registerRoutes(app);
 
