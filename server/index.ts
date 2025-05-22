@@ -2,7 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setStorage, type IStorage } from "./storage";
-import { FileStorage } from "./fileStorage";
+import { MongoStorage } from "./mongoStorage";
+import { connectToMongoDB } from "./mongoDb";
 import { InsertUser, InsertTeam } from "@shared/schema";
 
 const app = express();
@@ -95,14 +96,34 @@ async function addInitialData(storage: IStorage) {
 }
 
 (async () => {
-  // Set up file-based storage with the supervisor account and team data
-  const storage = new FileStorage();
+  let storage = null;
   
-  // Initialize this storage as our data backend
-  setStorage(storage);
-  
-  // Add the supervisor account and team data
-  await addInitialData(storage);
+  // Attempt to connect to MongoDB
+  try {
+    console.log('Attempting to connect to MongoDB...');
+    const isConnected = await connectToMongoDB();
+    
+    if (isConnected) {
+      console.log('Using MongoDB storage for data persistence');
+      // Use MongoDB for storage
+      storage = new MongoStorage();
+    } else {
+      console.log('MongoDB connection failed, falling back to file storage');
+      // Import FileStorage here to handle the fallback case
+      const { FileStorage } = await import('./fileStorage');
+      storage = new FileStorage();
+    }
+    
+    // Initialize this storage as our data backend
+    setStorage(storage);
+    
+    // Add the supervisor account and initial team data
+    await addInitialData(storage);
+    
+  } catch (error) {
+    console.error('Error during storage initialization:', error);
+    throw error;
+  }
   
   const server = await registerRoutes(app);
 

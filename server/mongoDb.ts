@@ -7,15 +7,56 @@ const MONGODB_URI = process.env.MONGODB_URI as string;
 mongoose.set('strictQuery', false);
 
 // Connect to MongoDB and handle connection events
-async function connectToMongoDB() {
+async function connectToMongoDB(): Promise<boolean> {
   try {
+    // Check if we have a MongoDB URI
+    if (!MONGODB_URI) {
+      console.error('MONGODB_URI environment variable is not set. Please set it to connect to MongoDB.');
+      console.error('Using file storage as fallback...');
+      return false;
+    }
+    
     console.log('Connecting to MongoDB...');
-    await mongoose.connect(MONGODB_URI);
+    // Safely log the connection string format without exposing credentials
+    const maskedUri = MONGODB_URI.replace(/mongodb(\+srv)?:\/\/([^:]+):([^@]+)@/g, 'mongodb$1://$2:****@');
+    console.log('Connection string format:', maskedUri);
+    
+    // Add additional options for better connection reliability
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000, // Give up initial connection after 10 seconds
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+    });
+    
     console.log('Connected to MongoDB successfully');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    // Try again after a delay
+    
+    // Verify the connection is working with a simple operation
+    if (mongoose.connection.db) {
+      const adminDb = mongoose.connection.db.admin();
+      const result = await adminDb.ping();
+      console.log('MongoDB ping test:', result ? 'Successful' : 'Failed');
+    } else {
+      console.log('MongoDB connection not fully established');
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error('MongoDB connection error details:');
+    console.error('- Error name:', error.name || 'Unknown error');
+    console.error('- Error message:', error.message || 'No error message');
+    
+    if (error.message && typeof error.message === 'string') {
+      if (error.message.includes('ENOTFOUND')) {
+        console.error('Cannot resolve MongoDB hostname. Check your connection string.');
+      } else if (error.message.includes('Authentication failed')) {
+        console.error('Authentication failed. Check your username and password.');
+      } else if (error.message.includes('timed out')) {
+        console.error('Connection timed out. Check your network or MongoDB Atlas network settings.');
+      }
+    }
+    
+    console.log('Retrying connection in 5 seconds...');
     setTimeout(connectToMongoDB, 5000);
+    return false;
   }
 }
 
