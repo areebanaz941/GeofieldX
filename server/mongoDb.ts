@@ -1,82 +1,35 @@
 import mongoose from 'mongoose';
 
-// MongoDB connection string from environment variable - fix the @admin issue if present
-let MONGODB_URI = process.env.MONGODB_URI as string;
+// MongoDB connection string - using the direct connection string format
+const MONGODB_URI = "mongodb+srv://areebanaz4848:Geowhatsapp@cluster0.ldne1j8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-// Check and fix common connection string formatting issues
-if (MONGODB_URI && MONGODB_URI.includes('@admin@')) {
-  console.log('Fixing connection string format (@admin issue detected)');
-  MONGODB_URI = MONGODB_URI.replace('@admin@', '@');
-}
-
-// Set additional mongoose options for better compatibility
+// Set mongoose options for better compatibility
 mongoose.set('strictQuery', false);
 
-// Connect to MongoDB and handle connection events
+// Simple MongoDB connection function without any extra options
 async function connectToMongoDB(): Promise<boolean> {
   try {
-    // Check if we have a MongoDB URI
-    if (!MONGODB_URI) {
-      console.error('MONGODB_URI environment variable is not set. Please set it to connect to MongoDB.');
-      console.error('Using file storage as fallback...');
-      return false;
-    }
+    console.log('Attempting MongoDB connection...');
     
-    console.log('Connecting to MongoDB...');
-    // Safely log the connection string format without exposing credentials
-    const maskedUri = MONGODB_URI.replace(/mongodb(\+srv)?:\/\/([^:]+):([^@]+)@/g, 'mongodb$1://$2:****@');
-    console.log('Connection string format:', maskedUri);
+    // Connect with minimal configuration
+    await mongoose.connect(MONGODB_URI);
     
-    // Add additional options for better connection reliability
-    await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000, // Give up initial connection after 10 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      ssl: true,
-      tlsAllowInvalidHostnames: true, // Allow invalid hostnames for development environment
-      tlsAllowInvalidCertificates: true, // Allow invalid certificates for development environment
-    });
-    
-    console.log('Connected to MongoDB successfully');
-    
-    // Verify the connection is working with a simple operation
-    if (mongoose.connection.db) {
-      const adminDb = mongoose.connection.db.admin();
-      const result = await adminDb.ping();
-      console.log('MongoDB ping test:', result ? 'Successful' : 'Failed');
-    } else {
-      console.log('MongoDB connection not fully established');
-    }
-    
+    console.log('MongoDB connection successful');
     return true;
   } catch (error: any) {
-    console.error('MongoDB connection error details:');
-    console.error('- Error name:', error.name || 'Unknown error');
-    console.error('- Error message:', error.message || 'No error message');
-    
-    if (error.message && typeof error.message === 'string') {
-      if (error.message.includes('ENOTFOUND')) {
-        console.error('Cannot resolve MongoDB hostname. Check your connection string.');
-      } else if (error.message.includes('Authentication failed')) {
-        console.error('Authentication failed. Check your username and password.');
-      } else if (error.message.includes('timed out')) {
-        console.error('Connection timed out. Check your network or MongoDB Atlas network settings.');
-      }
-    }
-    
-    console.log('Retrying connection in 5 seconds...');
-    setTimeout(connectToMongoDB, 5000);
+    console.error('MongoDB connection failed:', error.message);
+    console.log('Falling back to file storage for data persistence');
     return false;
   }
 }
 
-// MongoDB connection event handlers
+// Keep mongoose connection handlers simple
 mongoose.connection.on('error', (err) => {
   console.error('MongoDB connection error:', err);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected, trying to reconnect...');
-  setTimeout(connectToMongoDB, 5000);
+  console.log('MongoDB disconnected');
 });
 
 // Define schemas

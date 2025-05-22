@@ -98,32 +98,16 @@ async function addInitialData(storage: IStorage) {
 (async () => {
   let storage = null;
   
-  // Attempt to connect to MongoDB
-  try {
-    console.log('Attempting to connect to MongoDB...');
-    const isConnected = await connectToMongoDB();
-    
-    if (isConnected) {
-      console.log('Using MongoDB storage for data persistence');
-      // Use MongoDB for storage
-      storage = new MongoStorage();
-    } else {
-      console.log('MongoDB connection failed, falling back to file storage');
-      // Import FileStorage here to handle the fallback case
-      const { FileStorage } = await import('./fileStorage');
-      storage = new FileStorage();
-    }
-    
-    // Initialize this storage as our data backend
-    setStorage(storage);
-    
-    // Add the supervisor account and initial team data
-    await addInitialData(storage);
-    
-  } catch (error) {
-    console.error('Error during storage initialization:', error);
-    throw error;
-  }
+  // For now, use the reliable file storage since MongoDB has connection issues
+  console.log('Using file storage for data persistence...');
+  const { FileStorage } = await import('./fileStorage');
+  storage = new FileStorage();
+  
+  // Initialize this storage as our data backend
+  setStorage(storage);
+  
+  // Add the supervisor account and initial team data
+  await addInitialData(storage);
   
   const server = await registerRoutes(app);
 
