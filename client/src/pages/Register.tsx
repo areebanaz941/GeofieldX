@@ -120,15 +120,15 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F5EF] to-white px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] px-4">
       <Card className="w-full max-w-md border-0 shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center mb-3">
             <div className="flex items-center mb-2">
               <img src={GeoPilotLogo} alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
-              <CardTitle className="text-2xl bg-gradient-to-r from-[#2A9D8F] to-[#264653] bg-clip-text text-transparent">GeoPilot</CardTitle>
+              <CardTitle className="text-2xl bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
-            <CardDescription className="text-center italic font-medium text-[#2A9D8F]">
+            <CardDescription className="text-center italic font-medium text-[#F9973E]">
               Your Field. Your Team. Your Control.
             </CardDescription>
             <CardDescription className="text-center mt-2">
@@ -255,7 +255,7 @@ export default function Register() {
               />
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-[#2E8B57] to-[#3CB371] hover:from-[#267349] hover:to-[#339966]" 
+                className="w-full bg-gradient-to-r from-[#1E5CB3] to-[#3F7ED5] hover:from-[#164785] hover:to-[#2B5999]" 
                 disabled={isLoading}
               >
                 {isLoading ? "Creating account..." : "Register"}
