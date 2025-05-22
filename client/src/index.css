@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --primary-color: #2E8B57; /* Sea Green */
-  --accent-color: #3CB371; /* Medium Sea Green */
+  --primary-color: #1E5CB3; /* Deep Blue */
+  --accent-color: #F9973E; /* Orange/Amber */
   --text-on-light: #fff;
-  --secondary-color: #F5FFFA; /* Mint Cream */
-  --tertiary-color: #43A047; /* Green variation */
+  --secondary-color: #E0F7F6; /* Light Blue-Green */
+  --tertiary-color: #E74C3C; /* Red Accent */
 }
 
 body {
@@ -50,13 +50,13 @@ body {
 --popover-foreground: 20 14.3% 4.1%;
 --card: 0 0% 100%;
 --card-foreground: 20 14.3% 4.1%;
---border: 147 36% 30% / 20%;
---input: 147 36% 30% / 15%;
---primary: 147 36% 36%; /* Sea Green hue */
+--border: 215 75% 30% / 20%;
+--input: 215 75% 30% / 15%;
+--primary: 215 75% 41%; /* Deep Blue hue */
 --primary-foreground: 0 0% 100%;
---secondary: 147 36% 95%;
---secondary-foreground: 147 36% 25%;
---accent: 147 36% 40%;
+--secondary: 180 50% 93%;
+--secondary-foreground: 215 75% 30%;
+--accent: 30 94% 61%; /* Orange/Amber */
 --accent-foreground: 0 0% 100%;
 --destructive: 0 84.2% 60.2%;
 --destructive-foreground: 60 9.1% 97.8%;
@@ -72,13 +72,13 @@ body {
 --popover-foreground: 0 0% 98%;
 --card: 157 35% 12%;
 --card-foreground: 0 0% 98%;
---border: 147 36% 30% / 30%;
---input: 147 36% 30% / 25%;
---primary: 147 36% 42%; /* Brighter Sea Green for dark mode */
+--border: 215 75% 30% / 30%;
+--input: 215 75% 30% / 25%;
+--primary: 215 75% 46%; /* Brighter Deep Blue for dark mode */
 --primary-foreground: 0 0% 100%;
---secondary: 147 30% 25%;
+--secondary: 215 40% 25%;
 --secondary-foreground: 0 0% 98%;
---accent: 147 42% 35%;
+--accent: 30 94% 61%; /* Orange/Amber */
 --accent-foreground: 0 0% 100%;
 --destructive: 0 62.8% 40.6%;
 --destructive-foreground: 0 0% 98%;

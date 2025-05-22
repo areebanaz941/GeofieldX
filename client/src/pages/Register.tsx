@@ -266,7 +266,7 @@ export default function Register() {
         <CardFooter className="flex justify-center">
           <div className="text-sm">
             Already have an account?{" "}
-            <a href="/login" className="font-medium text-[#2E8B57] hover:text-[#267349]">
+            <a href="/login" className="font-medium text-[#1E5CB3] hover:text-[#164785]">
               Login
             </a>
           </div>
