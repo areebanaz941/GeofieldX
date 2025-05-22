@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
-// MongoDB connection string - Using a simpler URI format to avoid connection issues
-const MONGODB_URI = 'mongodb://localhost:27017/geowhats';
+// MongoDB connection string for Atlas
+const MONGODB_URI = 'mongodb+srv://areebanaz4848:GeoWhats%40admin@cluster0.ceiekbl.mongodb.net/?retryWrites=true&w=majority';
 
 // Set additional mongoose options for better compatibility
 mongoose.set('strictQuery', false);
@@ -71,12 +71,12 @@ const TaskSchema = new mongoose.Schema({
     enum: ['Low', 'Medium', 'High', 'Urgent'], 
     required: true 
   },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  createdBy: { type: Number, default: null },
+  assignedTo: { type: Number, default: null },
   dueDate: { type: Date, default: null },
   location: { type: Object, default: null },
-  boundaryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Boundary', default: null },
-  featureId: { type: mongoose.Schema.Types.ObjectId, ref: 'Feature', default: null },
+  boundaryId: { type: Number, default: null },
+  featureId: { type: Number, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -109,10 +109,11 @@ const FeatureSchema = new mongoose.Schema({
     enum: ['Required', 'None'], 
     default: 'None' 
   },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  geometryData: { type: Object, required: true },
-  info: { type: String, default: null },
-  boundaryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Boundary', default: null },
+  createdBy: { type: Number, default: null },
+  geometry: { type: Object, required: true },
+  remarks: { type: String, default: null },
+  maintenanceDate: { type: Date, default: null },
+  boundaryId: { type: Number, default: null },
   createdAt: { type: Date, default: Date.now },
   lastUpdated: { type: Date, default: Date.now }
 });
@@ -132,8 +133,9 @@ const BoundarySchema = new mongoose.Schema({
 });
 
 const TaskUpdateSchema = new mongoose.Schema({
-  taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  id: { type: Number, required: true, unique: true },
+  taskId: { type: Number, required: true },
+  userId: { type: Number, required: true },
   comment: { type: String, default: null },
   oldStatus: { 
     type: String, 
@@ -149,8 +151,9 @@ const TaskUpdateSchema = new mongoose.Schema({
 });
 
 const TaskEvidenceSchema = new mongoose.Schema({
-  taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  id: { type: Number, required: true, unique: true },
+  taskId: { type: Number, required: true },
+  userId: { type: Number, required: true },
   imageUrl: { type: String, required: true },
   description: { type: String, default: null },
   createdAt: { type: Date, default: Date.now }

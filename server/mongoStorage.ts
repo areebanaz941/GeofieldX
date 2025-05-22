@@ -1,22 +1,61 @@
 import { IStorage } from './storage';
-import { 
-  User as UserType, InsertUser, 
-  Task as TaskType, InsertTask,
-  Feature as FeatureType, InsertFeature,
-  Boundary as BoundaryType, InsertBoundary,
-  TaskUpdate as TaskUpdateType, InsertTaskUpdate,
-  TaskEvidence as TaskEvidenceType, InsertTaskEvidence,
-  Team as TeamType, InsertTeam
+import {
+  User, InsertUser,
+  Task, InsertTask,
+  Feature, InsertFeature,
+  Boundary, InsertBoundary,
+  TaskUpdate, InsertTaskUpdate,
+  TaskEvidence, InsertTaskEvidence,
+  Team, InsertTeam
 } from '@shared/schema';
 import { 
-  User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence 
+  User as UserModel, 
+  Team as TeamModel, 
+  Task as TaskModel, 
+  Feature as FeatureModel,
+  Boundary as BoundaryModel,
+  TaskUpdate as TaskUpdateModel,
+  TaskEvidence as TaskEvidenceModel,
+  connectToMongoDB
 } from './mongoDb';
 
+/**
+ * MongoDB implementation of the IStorage interface
+ */
 export class MongoStorage implements IStorage {
+  constructor() {
+    // Ensure MongoDB connection is established
+    this.initialize();
+  }
+
+  private async initialize() {
+    await connectToMongoDB();
+    
+    // Check if supervisor exists, if not create one
+    const supervisorExists = await UserModel.findOne({ username: 'supervisor12' });
+    if (!supervisorExists) {
+      console.log('Creating default supervisor account...');
+      const supervisor = new UserModel({
+        id: 1,
+        username: 'supervisor12',
+        password: 'supervisor@12',
+        name: 'Supervisor',
+        email: 'supervisor@geowhats.com',
+        role: 'Supervisor',
+        teamId: null,
+        lastActive: null,
+        currentLocation: null,
+        createdAt: new Date()
+      });
+      await supervisor.save();
+      console.log('Default supervisor account created.');
+    }
+  }
+
   // User operations
-  async getUser(id: number): Promise<UserType | undefined> {
+  async getUser(id: number): Promise<User | undefined> {
     try {
-      const user = await User.findOne({ id });
+      const user = await UserModel.findOne({ id });
       if (!user) return undefined;
       
       return {
@@ -26,20 +65,20 @@ export class MongoStorage implements IStorage {
         name: user.name,
         email: user.email,
         role: user.role as "Supervisor" | "Field",
-        teamId: user.teamId ? Number(user.teamId) : null,
+        teamId: user.teamId,
         lastActive: user.lastActive,
         currentLocation: user.currentLocation,
         createdAt: user.createdAt
       };
     } catch (error) {
-      console.error('MongoDB getUserById error:', error);
+      console.error('MongoDB getUser error:', error);
       return undefined;
     }
   }
 
-  async getUserByUsername(username: string): Promise<UserType | undefined> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
     try {
-      const user = await User.findOne({ username });
+      const user = await UserModel.findOne({ username });
       if (!user) return undefined;
       
       return {
@@ -49,7 +88,7 @@ export class MongoStorage implements IStorage {
         name: user.name,
         email: user.email,
         role: user.role as "Supervisor" | "Field",
-        teamId: user.teamId ? Number(user.teamId) : null,
+        teamId: user.teamId,
         lastActive: user.lastActive,
         currentLocation: user.currentLocation,
         createdAt: user.createdAt
@@ -60,13 +99,13 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createUser(user: InsertUser): Promise<UserType> {
+  async createUser(user: InsertUser): Promise<User> {
     try {
       // Find the highest id and increment by 1
-      const maxIdUser = await User.findOne().sort({ id: -1 });
+      const maxIdUser = await UserModel.findOne().sort({ id: -1 });
       const nextId = maxIdUser ? maxIdUser.id + 1 : 1;
       
-      const newUser = new User({
+      const newUser = new UserModel({
         id: nextId,
         username: user.username,
         password: user.password,
@@ -88,7 +127,7 @@ export class MongoStorage implements IStorage {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role as "Supervisor" | "Field",
-        teamId: newUser.teamId ? Number(newUser.teamId) : null,
+        teamId: newUser.teamId,
         lastActive: newUser.lastActive,
         currentLocation: newUser.currentLocation,
         createdAt: newUser.createdAt
@@ -99,9 +138,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateUserLocation(id: number, location: { lat: number, lng: number }): Promise<UserType> {
+  async updateUserLocation(id: number, location: { lat: number, lng: number }): Promise<User> {
     try {
-      const user = await User.findOneAndUpdate(
+      const user = await UserModel.findOneAndUpdate(
         { id },
         { 
           currentLocation: location,
@@ -121,7 +160,7 @@ export class MongoStorage implements IStorage {
         name: user.name,
         email: user.email,
         role: user.role as "Supervisor" | "Field",
-        teamId: user.teamId ? Number(user.teamId) : null,
+        teamId: user.teamId,
         lastActive: user.lastActive,
         currentLocation: user.currentLocation,
         createdAt: user.createdAt
@@ -132,9 +171,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateUserLastActive(id: number): Promise<UserType> {
+  async updateUserLastActive(id: number): Promise<User> {
     try {
-      const user = await User.findOneAndUpdate(
+      const user = await UserModel.findOneAndUpdate(
         { id },
         { lastActive: new Date() },
         { new: true }
@@ -151,7 +190,7 @@ export class MongoStorage implements IStorage {
         name: user.name,
         email: user.email,
         role: user.role as "Supervisor" | "Field",
-        teamId: user.teamId ? Number(user.teamId) : null,
+        teamId: user.teamId,
         lastActive: user.lastActive,
         currentLocation: user.currentLocation,
         createdAt: user.createdAt
@@ -162,9 +201,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getAllFieldUsers(): Promise<UserType[]> {
+  async getAllFieldUsers(): Promise<User[]> {
     try {
-      const users = await User.find({ role: 'Field' });
+      const users = await UserModel.find({ role: 'Field' });
       
       return users.map(user => ({
         id: user.id,
@@ -173,7 +212,7 @@ export class MongoStorage implements IStorage {
         name: user.name,
         email: user.email,
         role: user.role as "Supervisor" | "Field",
-        teamId: user.teamId ? Number(user.teamId) : null,
+        teamId: user.teamId,
         lastActive: user.lastActive,
         currentLocation: user.currentLocation,
         createdAt: user.createdAt
@@ -185,16 +224,16 @@ export class MongoStorage implements IStorage {
   }
 
   // Team operations
-  async createTeam(team: InsertTeam): Promise<TeamType> {
+  async createTeam(team: InsertTeam): Promise<Team> {
     try {
       // Find the highest id and increment by 1
-      const maxIdTeam = await Team.findOne().sort({ id: -1 });
+      const maxIdTeam = await TeamModel.findOne().sort({ id: -1 });
       const nextId = maxIdTeam ? maxIdTeam.id + 1 : 1;
       
-      const newTeam = new Team({
+      const newTeam = new TeamModel({
         id: nextId,
         name: team.name,
-        description: team.description || '',
+        description: team.description || null,
         status: team.status || 'Pending',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -210,7 +249,7 @@ export class MongoStorage implements IStorage {
         status: newTeam.status as "Pending" | "Approved" | "Rejected",
         createdAt: newTeam.createdAt,
         updatedAt: newTeam.updatedAt,
-        approvedBy: newTeam.approvedBy ? Number(newTeam.approvedBy) : null
+        approvedBy: newTeam.approvedBy
       };
     } catch (error) {
       console.error('MongoDB createTeam error:', error);
@@ -218,9 +257,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getTeam(id: number): Promise<TeamType | undefined> {
+  async getTeam(id: number): Promise<Team | undefined> {
     try {
-      const team = await Team.findOne({ id });
+      const team = await TeamModel.findOne({ id });
       if (!team) return undefined;
       
       return {
@@ -230,7 +269,7 @@ export class MongoStorage implements IStorage {
         status: team.status as "Pending" | "Approved" | "Rejected",
         createdAt: team.createdAt,
         updatedAt: team.updatedAt,
-        approvedBy: team.approvedBy ? Number(team.approvedBy) : null
+        approvedBy: team.approvedBy
       };
     } catch (error) {
       console.error('MongoDB getTeam error:', error);
@@ -238,9 +277,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getTeamByName(name: string): Promise<TeamType | undefined> {
+  async getTeamByName(name: string): Promise<Team | undefined> {
     try {
-      const team = await Team.findOne({ name });
+      const team = await TeamModel.findOne({ name });
       if (!team) return undefined;
       
       return {
@@ -250,7 +289,7 @@ export class MongoStorage implements IStorage {
         status: team.status as "Pending" | "Approved" | "Rejected",
         createdAt: team.createdAt,
         updatedAt: team.updatedAt,
-        approvedBy: team.approvedBy ? Number(team.approvedBy) : null
+        approvedBy: team.approvedBy
       };
     } catch (error) {
       console.error('MongoDB getTeamByName error:', error);
@@ -258,7 +297,7 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateTeamStatus(id: number, status: string, approvedBy?: number): Promise<TeamType> {
+  async updateTeamStatus(id: number, status: string, approvedBy?: number): Promise<Team> {
     try {
       const updateData: any = {
         status,
@@ -269,7 +308,7 @@ export class MongoStorage implements IStorage {
         updateData.approvedBy = approvedBy;
       }
       
-      const team = await Team.findOneAndUpdate(
+      const team = await TeamModel.findOneAndUpdate(
         { id },
         updateData,
         { new: true }
@@ -286,7 +325,7 @@ export class MongoStorage implements IStorage {
         status: team.status as "Pending" | "Approved" | "Rejected",
         createdAt: team.createdAt,
         updatedAt: team.updatedAt,
-        approvedBy: team.approvedBy ? Number(team.approvedBy) : null
+        approvedBy: team.approvedBy
       };
     } catch (error) {
       console.error('MongoDB updateTeamStatus error:', error);
@@ -294,9 +333,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getAllTeams(): Promise<TeamType[]> {
+  async getAllTeams(): Promise<Team[]> {
     try {
-      const teams = await Team.find();
+      const teams = await TeamModel.find();
       
       return teams.map(team => ({
         id: team.id,
@@ -305,7 +344,7 @@ export class MongoStorage implements IStorage {
         status: team.status as "Pending" | "Approved" | "Rejected",
         createdAt: team.createdAt,
         updatedAt: team.updatedAt,
-        approvedBy: team.approvedBy ? Number(team.approvedBy) : null
+        approvedBy: team.approvedBy
       }));
     } catch (error) {
       console.error('MongoDB getAllTeams error:', error);
@@ -313,9 +352,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getUsersByTeam(teamId: number): Promise<UserType[]> {
+  async getUsersByTeam(teamId: number): Promise<User[]> {
     try {
-      const users = await User.find({ teamId });
+      const users = await UserModel.find({ teamId });
       
       return users.map(user => ({
         id: user.id,
@@ -324,7 +363,7 @@ export class MongoStorage implements IStorage {
         name: user.name,
         email: user.email,
         role: user.role as "Supervisor" | "Field",
-        teamId: user.teamId ? Number(user.teamId) : null,
+        teamId: user.teamId,
         lastActive: user.lastActive,
         currentLocation: user.currentLocation,
         createdAt: user.createdAt
@@ -335,9 +374,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async assignUserToTeam(userId: number, teamId: number): Promise<UserType> {
+  async assignUserToTeam(userId: number, teamId: number): Promise<User> {
     try {
-      const user = await User.findOneAndUpdate(
+      const user = await UserModel.findOneAndUpdate(
         { id: userId },
         { teamId },
         { new: true }
@@ -354,7 +393,7 @@ export class MongoStorage implements IStorage {
         name: user.name,
         email: user.email,
         role: user.role as "Supervisor" | "Field",
-        teamId: user.teamId ? Number(user.teamId) : null,
+        teamId: user.teamId,
         lastActive: user.lastActive,
         currentLocation: user.currentLocation,
         createdAt: user.createdAt
@@ -366,24 +405,24 @@ export class MongoStorage implements IStorage {
   }
 
   // Task operations - implementing just the required methods for now
-  async createTask(task: InsertTask): Promise<TaskType> {
+  async createTask(insertTask: InsertTask): Promise<Task> {
     try {
       // Find the highest id and increment by 1
-      const maxIdTask = await Task.findOne().sort({ id: -1 });
+      const maxIdTask = await TaskModel.findOne().sort({ id: -1 });
       const nextId = maxIdTask ? maxIdTask.id + 1 : 1;
       
-      const newTask = new Task({
+      const newTask = new TaskModel({
         id: nextId,
-        title: task.title,
-        description: task.description || null,
-        status: task.status || 'Unassigned',
-        priority: task.priority,
-        createdBy: task.createdBy || null,
-        assignedTo: task.assignedTo || null,
-        dueDate: task.dueDate || null,
-        location: task.location || null,
-        boundaryId: task.boundaryId || null,
-        featureId: task.featureId || null,
+        title: insertTask.title,
+        description: insertTask.description || null,
+        status: insertTask.status || 'Unassigned',
+        priority: insertTask.priority,
+        createdBy: insertTask.createdBy || null,
+        assignedTo: insertTask.assignedTo || null,
+        dueDate: insertTask.dueDate || null,
+        location: insertTask.location || null,
+        boundaryId: insertTask.boundaryId || null,
+        featureId: insertTask.featureId || null,
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -396,12 +435,12 @@ export class MongoStorage implements IStorage {
         description: newTask.description,
         status: newTask.status as any,
         priority: newTask.priority as "Low" | "Medium" | "High" | "Urgent",
-        createdBy: newTask.createdBy ? Number(newTask.createdBy) : null,
-        assignedTo: newTask.assignedTo ? Number(newTask.assignedTo) : null,
+        createdBy: newTask.createdBy,
+        assignedTo: newTask.assignedTo,
         dueDate: newTask.dueDate,
         location: newTask.location,
-        boundaryId: newTask.boundaryId ? Number(newTask.boundaryId) : null,
-        featureId: newTask.featureId ? Number(newTask.featureId) : null,
+        boundaryId: newTask.boundaryId,
+        featureId: newTask.featureId,
         createdAt: newTask.createdAt,
         updatedAt: newTask.updatedAt
       };
@@ -411,9 +450,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getTask(id: number): Promise<TaskType | undefined> {
+  async getTask(id: number): Promise<Task | undefined> {
     try {
-      const task = await Task.findOne({ id });
+      const task = await TaskModel.findOne({ id });
       if (!task) return undefined;
       
       return {
@@ -422,12 +461,12 @@ export class MongoStorage implements IStorage {
         description: task.description,
         status: task.status as any,
         priority: task.priority as "Low" | "Medium" | "High" | "Urgent",
-        createdBy: task.createdBy ? Number(task.createdBy) : null,
-        assignedTo: task.assignedTo ? Number(task.assignedTo) : null,
+        createdBy: task.createdBy,
+        assignedTo: task.assignedTo,
         dueDate: task.dueDate,
         location: task.location,
-        boundaryId: task.boundaryId ? Number(task.boundaryId) : null,
-        featureId: task.featureId ? Number(task.featureId) : null,
+        boundaryId: task.boundaryId,
+        featureId: task.featureId,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       };
@@ -437,9 +476,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateTaskStatus(id: number, status: string, userId: number): Promise<TaskType> {
+  async updateTaskStatus(id: number, status: string, userId: number): Promise<Task> {
     try {
-      const task = await Task.findOneAndUpdate(
+      const task = await TaskModel.findOneAndUpdate(
         { id },
         {
           status,
@@ -453,7 +492,8 @@ export class MongoStorage implements IStorage {
       }
       
       // Create a task update record
-      const taskUpdate = new TaskUpdate({
+      const taskUpdate = new TaskUpdateModel({
+        id: await this.getNextTaskUpdateId(),
         taskId: task.id,
         userId,
         comment: null,
@@ -470,12 +510,12 @@ export class MongoStorage implements IStorage {
         description: task.description,
         status: task.status as any,
         priority: task.priority as "Low" | "Medium" | "High" | "Urgent",
-        createdBy: task.createdBy ? Number(task.createdBy) : null,
-        assignedTo: task.assignedTo ? Number(task.assignedTo) : null,
+        createdBy: task.createdBy,
+        assignedTo: task.assignedTo,
         dueDate: task.dueDate,
         location: task.location,
-        boundaryId: task.boundaryId ? Number(task.boundaryId) : null,
-        featureId: task.featureId ? Number(task.featureId) : null,
+        boundaryId: task.boundaryId,
+        featureId: task.featureId,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       };
@@ -485,9 +525,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async assignTask(id: number, assignedTo: number): Promise<TaskType> {
+  async assignTask(id: number, assignedTo: number): Promise<Task> {
     try {
-      const task = await Task.findOneAndUpdate(
+      const task = await TaskModel.findOneAndUpdate(
         { id },
         {
           assignedTo,
@@ -507,12 +547,12 @@ export class MongoStorage implements IStorage {
         description: task.description,
         status: task.status as any,
         priority: task.priority as "Low" | "Medium" | "High" | "Urgent",
-        createdBy: task.createdBy ? Number(task.createdBy) : null,
-        assignedTo: task.assignedTo ? Number(task.assignedTo) : null,
+        createdBy: task.createdBy,
+        assignedTo: task.assignedTo,
         dueDate: task.dueDate,
         location: task.location,
-        boundaryId: task.boundaryId ? Number(task.boundaryId) : null,
-        featureId: task.featureId ? Number(task.featureId) : null,
+        boundaryId: task.boundaryId,
+        featureId: task.featureId,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       };
@@ -522,9 +562,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getTasksByAssignee(userId: number): Promise<TaskType[]> {
+  async getTasksByAssignee(userId: number): Promise<Task[]> {
     try {
-      const tasks = await Task.find({ assignedTo: userId });
+      const tasks = await TaskModel.find({ assignedTo: userId });
       
       return tasks.map(task => ({
         id: task.id,
@@ -532,12 +572,12 @@ export class MongoStorage implements IStorage {
         description: task.description,
         status: task.status as any,
         priority: task.priority as "Low" | "Medium" | "High" | "Urgent",
-        createdBy: task.createdBy ? Number(task.createdBy) : null,
-        assignedTo: task.assignedTo ? Number(task.assignedTo) : null,
+        createdBy: task.createdBy,
+        assignedTo: task.assignedTo,
         dueDate: task.dueDate,
         location: task.location,
-        boundaryId: task.boundaryId ? Number(task.boundaryId) : null,
-        featureId: task.featureId ? Number(task.featureId) : null,
+        boundaryId: task.boundaryId,
+        featureId: task.featureId,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       }));
@@ -547,9 +587,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getTasksByCreator(userId: number): Promise<TaskType[]> {
+  async getTasksByCreator(userId: number): Promise<Task[]> {
     try {
-      const tasks = await Task.find({ createdBy: userId });
+      const tasks = await TaskModel.find({ createdBy: userId });
       
       return tasks.map(task => ({
         id: task.id,
@@ -557,12 +597,12 @@ export class MongoStorage implements IStorage {
         description: task.description,
         status: task.status as any,
         priority: task.priority as "Low" | "Medium" | "High" | "Urgent",
-        createdBy: task.createdBy ? Number(task.createdBy) : null,
-        assignedTo: task.assignedTo ? Number(task.assignedTo) : null,
+        createdBy: task.createdBy,
+        assignedTo: task.assignedTo,
         dueDate: task.dueDate,
         location: task.location,
-        boundaryId: task.boundaryId ? Number(task.boundaryId) : null,
-        featureId: task.featureId ? Number(task.featureId) : null,
+        boundaryId: task.boundaryId,
+        featureId: task.featureId,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       }));
@@ -572,9 +612,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getAllTasks(): Promise<TaskType[]> {
+  async getAllTasks(): Promise<Task[]> {
     try {
-      const tasks = await Task.find();
+      const tasks = await TaskModel.find();
       
       return tasks.map(task => ({
         id: task.id,
@@ -582,12 +622,12 @@ export class MongoStorage implements IStorage {
         description: task.description,
         status: task.status as any,
         priority: task.priority as "Low" | "Medium" | "High" | "Urgent",
-        createdBy: task.createdBy ? Number(task.createdBy) : null,
-        assignedTo: task.assignedTo ? Number(task.assignedTo) : null,
+        createdBy: task.createdBy,
+        assignedTo: task.assignedTo,
         dueDate: task.dueDate,
         location: task.location,
-        boundaryId: task.boundaryId ? Number(task.boundaryId) : null,
-        featureId: task.featureId ? Number(task.featureId) : null,
+        boundaryId: task.boundaryId,
+        featureId: task.featureId,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       }));
@@ -597,129 +637,27 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  // Task updates operations
-  async createTaskUpdate(update: InsertTaskUpdate): Promise<TaskUpdateType> {
-    try {
-      // Find the highest id and increment by 1
-      const maxIdUpdate = await TaskUpdate.findOne().sort({ id: -1 });
-      const nextId = maxIdUpdate ? maxIdUpdate.id + 1 : 1;
-      
-      const newUpdate = new TaskUpdate({
-        id: nextId,
-        taskId: update.taskId,
-        userId: update.userId,
-        comment: update.comment || null,
-        oldStatus: update.oldStatus || null,
-        newStatus: update.newStatus || null,
-        createdAt: new Date()
-      });
-      
-      await newUpdate.save();
-      
-      return {
-        id: newUpdate.id,
-        taskId: Number(newUpdate.taskId),
-        userId: Number(newUpdate.userId),
-        comment: newUpdate.comment,
-        oldStatus: newUpdate.oldStatus as any,
-        newStatus: newUpdate.newStatus as any,
-        createdAt: newUpdate.createdAt
-      };
-    } catch (error) {
-      console.error('MongoDB createTaskUpdate error:', error);
-      throw error;
-    }
-  }
-
-  async getTaskUpdates(taskId: number): Promise<TaskUpdateType[]> {
-    try {
-      const updates = await TaskUpdate.find({ taskId });
-      
-      return updates.map(update => ({
-        id: update.id,
-        taskId: Number(update.taskId),
-        userId: Number(update.userId),
-        comment: update.comment,
-        oldStatus: update.oldStatus as any,
-        newStatus: update.newStatus as any,
-        createdAt: update.createdAt
-      }));
-    } catch (error) {
-      console.error('MongoDB getTaskUpdates error:', error);
-      return [];
-    }
-  }
-
-  // Task evidence operations
-  async addTaskEvidence(evidence: InsertTaskEvidence): Promise<TaskEvidenceType> {
-    try {
-      // Find the highest id and increment by 1
-      const maxIdEvidence = await TaskEvidence.findOne().sort({ id: -1 });
-      const nextId = maxIdEvidence ? maxIdEvidence.id + 1 : 1;
-      
-      const newEvidence = new TaskEvidence({
-        id: nextId,
-        taskId: evidence.taskId,
-        userId: evidence.userId,
-        imageUrl: evidence.imageUrl,
-        description: evidence.description || null,
-        createdAt: new Date()
-      });
-      
-      await newEvidence.save();
-      
-      return {
-        id: newEvidence.id,
-        taskId: Number(newEvidence.taskId),
-        userId: Number(newEvidence.userId),
-        imageUrl: newEvidence.imageUrl,
-        description: newEvidence.description,
-        createdAt: newEvidence.createdAt
-      };
-    } catch (error) {
-      console.error('MongoDB addTaskEvidence error:', error);
-      throw error;
-    }
-  }
-
-  async getTaskEvidence(taskId: number): Promise<TaskEvidenceType[]> {
-    try {
-      const evidences = await TaskEvidence.find({ taskId });
-      
-      return evidences.map(evidence => ({
-        id: evidence.id,
-        taskId: Number(evidence.taskId),
-        userId: Number(evidence.userId),
-        imageUrl: evidence.imageUrl,
-        description: evidence.description,
-        createdAt: evidence.createdAt
-      }));
-    } catch (error) {
-      console.error('MongoDB getTaskEvidence error:', error);
-      return [];
-    }
-  }
-
   // Feature operations
-  async createFeature(feature: InsertFeature): Promise<FeatureType> {
+  async createFeature(insertFeature: InsertFeature): Promise<Feature> {
     try {
       // Find the highest id and increment by 1
-      const maxIdFeature = await Feature.findOne().sort({ id: -1 });
+      const maxIdFeature = await FeatureModel.findOne().sort({ id: -1 });
       const nextId = maxIdFeature ? maxIdFeature.id + 1 : 1;
       
-      const newFeature = new Feature({
+      const newFeature = new FeatureModel({
         id: nextId,
-        name: feature.name,
-        feaNo: feature.feaNo,
-        feaState: feature.feaState,
-        feaStatus: feature.feaStatus,
-        feaType: feature.feaType,
-        specificType: feature.specificType,
-        maintenance: feature.maintenance || 'None',
-        createdBy: feature.createdBy || null,
-        geometryData: feature.geometryData,
-        info: feature.info || null,
-        boundaryId: feature.boundaryId || null,
+        name: insertFeature.name,
+        feaNo: insertFeature.feaNo,
+        feaState: insertFeature.feaState,
+        feaStatus: insertFeature.feaStatus,
+        feaType: insertFeature.feaType,
+        specificType: insertFeature.specificType,
+        maintenance: insertFeature.maintenance || 'None',
+        maintenanceDate: insertFeature.maintenanceDate || null,
+        geometry: insertFeature.geometry,
+        remarks: insertFeature.remarks || null,
+        createdBy: insertFeature.createdBy || null,
+        boundaryId: insertFeature.boundaryId || null,
         createdAt: new Date(),
         lastUpdated: new Date()
       });
@@ -735,10 +673,11 @@ export class MongoStorage implements IStorage {
         feaType: newFeature.feaType as any,
         specificType: newFeature.specificType as any,
         maintenance: newFeature.maintenance as "Required" | "None",
-        createdBy: newFeature.createdBy ? Number(newFeature.createdBy) : null,
-        geometryData: newFeature.geometryData,
-        info: newFeature.info,
-        boundaryId: newFeature.boundaryId ? Number(newFeature.boundaryId) : null,
+        maintenanceDate: newFeature.maintenanceDate,
+        geometry: newFeature.geometry,
+        remarks: newFeature.remarks,
+        createdBy: newFeature.createdBy,
+        boundaryId: newFeature.boundaryId,
         createdAt: newFeature.createdAt,
         lastUpdated: newFeature.lastUpdated
       };
@@ -748,9 +687,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getFeature(id: number): Promise<FeatureType | undefined> {
+  async getFeature(id: number): Promise<Feature | undefined> {
     try {
-      const feature = await Feature.findOne({ id });
+      const feature = await FeatureModel.findOne({ id });
       if (!feature) return undefined;
       
       return {
@@ -762,10 +701,11 @@ export class MongoStorage implements IStorage {
         feaType: feature.feaType as any,
         specificType: feature.specificType as any,
         maintenance: feature.maintenance as "Required" | "None",
-        createdBy: feature.createdBy ? Number(feature.createdBy) : null,
-        geometryData: feature.geometryData,
-        info: feature.info,
-        boundaryId: feature.boundaryId ? Number(feature.boundaryId) : null,
+        maintenanceDate: feature.maintenanceDate,
+        geometry: feature.geometry,
+        remarks: feature.remarks,
+        createdBy: feature.createdBy,
+        boundaryId: feature.boundaryId,
         createdAt: feature.createdAt,
         lastUpdated: feature.lastUpdated
       };
@@ -775,14 +715,14 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateFeature(id: number, featureUpdate: Partial<FeatureType>): Promise<FeatureType> {
+  async updateFeature(id: number, featureUpdate: Partial<Feature>): Promise<Feature> {
     try {
-      const updateData: any = {
+      const updateData = {
         ...featureUpdate,
         lastUpdated: new Date()
       };
       
-      const feature = await Feature.findOneAndUpdate(
+      const feature = await FeatureModel.findOneAndUpdate(
         { id },
         updateData,
         { new: true }
@@ -801,10 +741,11 @@ export class MongoStorage implements IStorage {
         feaType: feature.feaType as any,
         specificType: feature.specificType as any,
         maintenance: feature.maintenance as "Required" | "None",
-        createdBy: feature.createdBy ? Number(feature.createdBy) : null,
-        geometryData: feature.geometryData,
-        info: feature.info,
-        boundaryId: feature.boundaryId ? Number(feature.boundaryId) : null,
+        maintenanceDate: feature.maintenanceDate,
+        geometry: feature.geometry,
+        remarks: feature.remarks,
+        createdBy: feature.createdBy,
+        boundaryId: feature.boundaryId,
         createdAt: feature.createdAt,
         lastUpdated: feature.lastUpdated
       };
@@ -816,7 +757,7 @@ export class MongoStorage implements IStorage {
 
   async deleteFeature(id: number): Promise<boolean> {
     try {
-      const result = await Feature.deleteOne({ id });
+      const result = await FeatureModel.deleteOne({ id });
       return result.deletedCount === 1;
     } catch (error) {
       console.error('MongoDB deleteFeature error:', error);
@@ -824,9 +765,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getFeaturesByType(type: string): Promise<FeatureType[]> {
+  async getFeaturesByType(type: string): Promise<Feature[]> {
     try {
-      const features = await Feature.find({ feaType: type });
+      const features = await FeatureModel.find({ feaType: type });
       
       return features.map(feature => ({
         id: feature.id,
@@ -837,10 +778,11 @@ export class MongoStorage implements IStorage {
         feaType: feature.feaType as any,
         specificType: feature.specificType as any,
         maintenance: feature.maintenance as "Required" | "None",
-        createdBy: feature.createdBy ? Number(feature.createdBy) : null,
-        geometryData: feature.geometryData,
-        info: feature.info,
-        boundaryId: feature.boundaryId ? Number(feature.boundaryId) : null,
+        maintenanceDate: feature.maintenanceDate,
+        geometry: feature.geometry,
+        remarks: feature.remarks,
+        createdBy: feature.createdBy,
+        boundaryId: feature.boundaryId,
         createdAt: feature.createdAt,
         lastUpdated: feature.lastUpdated
       }));
@@ -850,9 +792,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getFeaturesByStatus(status: string): Promise<FeatureType[]> {
+  async getFeaturesByStatus(status: string): Promise<Feature[]> {
     try {
-      const features = await Feature.find({ feaStatus: status });
+      const features = await FeatureModel.find({ feaStatus: status });
       
       return features.map(feature => ({
         id: feature.id,
@@ -863,10 +805,11 @@ export class MongoStorage implements IStorage {
         feaType: feature.feaType as any,
         specificType: feature.specificType as any,
         maintenance: feature.maintenance as "Required" | "None",
-        createdBy: feature.createdBy ? Number(feature.createdBy) : null,
-        geometryData: feature.geometryData,
-        info: feature.info,
-        boundaryId: feature.boundaryId ? Number(feature.boundaryId) : null,
+        maintenanceDate: feature.maintenanceDate,
+        geometry: feature.geometry,
+        remarks: feature.remarks,
+        createdBy: feature.createdBy,
+        boundaryId: feature.boundaryId,
         createdAt: feature.createdAt,
         lastUpdated: feature.lastUpdated
       }));
@@ -876,9 +819,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getAllFeatures(): Promise<FeatureType[]> {
+  async getAllFeatures(): Promise<Feature[]> {
     try {
-      const features = await Feature.find();
+      const features = await FeatureModel.find();
       
       return features.map(feature => ({
         id: feature.id,
@@ -889,10 +832,11 @@ export class MongoStorage implements IStorage {
         feaType: feature.feaType as any,
         specificType: feature.specificType as any,
         maintenance: feature.maintenance as "Required" | "None",
-        createdBy: feature.createdBy ? Number(feature.createdBy) : null,
-        geometryData: feature.geometryData,
-        info: feature.info,
-        boundaryId: feature.boundaryId ? Number(feature.boundaryId) : null,
+        maintenanceDate: feature.maintenanceDate,
+        geometry: feature.geometry,
+        remarks: feature.remarks,
+        createdBy: feature.createdBy,
+        boundaryId: feature.boundaryId,
         createdAt: feature.createdAt,
         lastUpdated: feature.lastUpdated
       }));
@@ -903,19 +847,19 @@ export class MongoStorage implements IStorage {
   }
 
   // Boundary operations
-  async createBoundary(boundary: InsertBoundary): Promise<BoundaryType> {
+  async createBoundary(insertBoundary: InsertBoundary): Promise<Boundary> {
     try {
       // Find the highest id and increment by 1
-      const maxIdBoundary = await Boundary.findOne().sort({ id: -1 });
+      const maxIdBoundary = await BoundaryModel.findOne().sort({ id: -1 });
       const nextId = maxIdBoundary ? maxIdBoundary.id + 1 : 1;
       
-      const newBoundary = new Boundary({
+      const newBoundary = new BoundaryModel({
         id: nextId,
-        name: boundary.name,
-        description: boundary.description || null,
-        status: boundary.status || 'New',
-        assignedTo: boundary.assignedTo || null,
-        geometry: boundary.geometry,
+        name: insertBoundary.name,
+        description: insertBoundary.description || null,
+        status: insertBoundary.status || 'New',
+        assignedTo: insertBoundary.assignedTo || null,
+        geometry: insertBoundary.geometry,
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -927,7 +871,7 @@ export class MongoStorage implements IStorage {
         name: newBoundary.name,
         description: newBoundary.description,
         status: newBoundary.status as any,
-        assignedTo: newBoundary.assignedTo ? Number(newBoundary.assignedTo) : null,
+        assignedTo: newBoundary.assignedTo,
         geometry: newBoundary.geometry,
         createdAt: newBoundary.createdAt,
         updatedAt: newBoundary.updatedAt
@@ -938,9 +882,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getBoundary(id: number): Promise<BoundaryType | undefined> {
+  async getBoundary(id: number): Promise<Boundary | undefined> {
     try {
-      const boundary = await Boundary.findOne({ id });
+      const boundary = await BoundaryModel.findOne({ id });
       if (!boundary) return undefined;
       
       return {
@@ -948,7 +892,7 @@ export class MongoStorage implements IStorage {
         name: boundary.name,
         description: boundary.description,
         status: boundary.status as any,
-        assignedTo: boundary.assignedTo ? Number(boundary.assignedTo) : null,
+        assignedTo: boundary.assignedTo,
         geometry: boundary.geometry,
         createdAt: boundary.createdAt,
         updatedAt: boundary.updatedAt
@@ -959,9 +903,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateBoundaryStatus(id: number, status: string): Promise<BoundaryType> {
+  async updateBoundaryStatus(id: number, status: string): Promise<Boundary> {
     try {
-      const boundary = await Boundary.findOneAndUpdate(
+      const boundary = await BoundaryModel.findOneAndUpdate(
         { id },
         {
           status,
@@ -979,7 +923,7 @@ export class MongoStorage implements IStorage {
         name: boundary.name,
         description: boundary.description,
         status: boundary.status as any,
-        assignedTo: boundary.assignedTo ? Number(boundary.assignedTo) : null,
+        assignedTo: boundary.assignedTo,
         geometry: boundary.geometry,
         createdAt: boundary.createdAt,
         updatedAt: boundary.updatedAt
@@ -990,9 +934,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async assignBoundary(id: number, userId: number): Promise<BoundaryType> {
+  async assignBoundary(id: number, userId: number): Promise<Boundary> {
     try {
-      const boundary = await Boundary.findOneAndUpdate(
+      const boundary = await BoundaryModel.findOneAndUpdate(
         { id },
         {
           assignedTo: userId,
@@ -1010,7 +954,7 @@ export class MongoStorage implements IStorage {
         name: boundary.name,
         description: boundary.description,
         status: boundary.status as any,
-        assignedTo: boundary.assignedTo ? Number(boundary.assignedTo) : null,
+        assignedTo: boundary.assignedTo,
         geometry: boundary.geometry,
         createdAt: boundary.createdAt,
         updatedAt: boundary.updatedAt
@@ -1021,22 +965,131 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getAllBoundaries(): Promise<BoundaryType[]> {
+  async getAllBoundaries(): Promise<Boundary[]> {
     try {
-      const boundaries = await Boundary.find();
+      const boundaries = await BoundaryModel.find();
       
       return boundaries.map(boundary => ({
         id: boundary.id,
         name: boundary.name,
         description: boundary.description,
         status: boundary.status as any,
-        assignedTo: boundary.assignedTo ? Number(boundary.assignedTo) : null,
+        assignedTo: boundary.assignedTo,
         geometry: boundary.geometry,
         createdAt: boundary.createdAt,
         updatedAt: boundary.updatedAt
       }));
     } catch (error) {
       console.error('MongoDB getAllBoundaries error:', error);
+      return [];
+    }
+  }
+
+  // Task updates operations
+  private async getNextTaskUpdateId(): Promise<number> {
+    const maxIdTaskUpdate = await TaskUpdateModel.findOne().sort({ id: -1 });
+    return maxIdTaskUpdate ? maxIdTaskUpdate.id + 1 : 1;
+  }
+  
+  async createTaskUpdate(insertUpdate: InsertTaskUpdate): Promise<TaskUpdate> {
+    try {
+      const nextId = await this.getNextTaskUpdateId();
+      
+      const newUpdate = new TaskUpdateModel({
+        id: nextId,
+        taskId: insertUpdate.taskId,
+        userId: insertUpdate.userId,
+        comment: insertUpdate.comment || null,
+        oldStatus: insertUpdate.oldStatus || null,
+        newStatus: insertUpdate.newStatus || null,
+        createdAt: new Date()
+      });
+      
+      await newUpdate.save();
+      
+      return {
+        id: newUpdate.id,
+        taskId: newUpdate.taskId,
+        userId: newUpdate.userId,
+        comment: newUpdate.comment,
+        oldStatus: newUpdate.oldStatus as any,
+        newStatus: newUpdate.newStatus as any,
+        createdAt: newUpdate.createdAt
+      };
+    } catch (error) {
+      console.error('MongoDB createTaskUpdate error:', error);
+      throw error;
+    }
+  }
+
+  async getTaskUpdates(taskId: number): Promise<TaskUpdate[]> {
+    try {
+      const updates = await TaskUpdateModel.find({ taskId });
+      
+      return updates.map(update => ({
+        id: update.id,
+        taskId: update.taskId,
+        userId: update.userId,
+        comment: update.comment,
+        oldStatus: update.oldStatus as any,
+        newStatus: update.newStatus as any,
+        createdAt: update.createdAt
+      }));
+    } catch (error) {
+      console.error('MongoDB getTaskUpdates error:', error);
+      return [];
+    }
+  }
+
+  // Task evidence operations
+  private async getNextTaskEvidenceId(): Promise<number> {
+    const maxIdTaskEvidence = await TaskEvidenceModel.findOne().sort({ id: -1 });
+    return maxIdTaskEvidence ? maxIdTaskEvidence.id + 1 : 1;
+  }
+  
+  async addTaskEvidence(insertEvidence: InsertTaskEvidence): Promise<TaskEvidence> {
+    try {
+      const nextId = await this.getNextTaskEvidenceId();
+      
+      const newEvidence = new TaskEvidenceModel({
+        id: nextId,
+        taskId: insertEvidence.taskId,
+        userId: insertEvidence.userId,
+        imageUrl: insertEvidence.imageUrl,
+        description: insertEvidence.description || null,
+        createdAt: new Date()
+      });
+      
+      await newEvidence.save();
+      
+      return {
+        id: newEvidence.id,
+        taskId: newEvidence.taskId,
+        userId: newEvidence.userId,
+        imageUrl: newEvidence.imageUrl,
+        description: newEvidence.description,
+        createdAt: newEvidence.createdAt
+      };
+    } catch (error) {
+      console.error('MongoDB addTaskEvidence error:', error);
+      throw error;
+    }
+  }
+
+  async getTaskEvidence(taskId: number): Promise<TaskEvidence[]> {
+    try {
+      const evidences = await TaskEvidenceModel.find({ taskId });
+      
+      return evidences.map(evidence => ({
+        id: evidence.id,
+        taskId: evidence.taskId,
+        userId: evidence.userId,
+        imageUrl: evidence.imageUrl,
+        description: evidence.description,
+        createdAt: evidence.createdAt
+      }));
+    } catch (error) {
+      console.error('MongoDB getTaskEvidence error:', error);
       return [];
     }
   }
