@@ -49,6 +49,57 @@ export class MongoStorage implements IStorage {
       });
       await supervisor.save();
       console.log('Default supervisor account created.');
+      
+      // Create some sample teams for users to select from
+      await this.createInitialTeams();
+    }
+  }
+  
+  // Create initial teams for the application
+  private async createInitialTeams() {
+    try {
+      const teamsExist = await TeamModel.findOne();
+      if (!teamsExist) {
+        console.log('Creating initial teams...');
+        
+        const teams = [
+          {
+            id: 1,
+            name: 'Field Team Alpha',
+            description: 'Primary field operations team',
+            status: 'Approved',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            approvedBy: 1
+          },
+          {
+            id: 2,
+            name: 'Field Team Beta',
+            description: 'Secondary field operations team',
+            status: 'Approved',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            approvedBy: 1
+          },
+          {
+            id: 3,
+            name: 'Maintenance Team',
+            description: 'Team responsible for infrastructure maintenance',
+            status: 'Approved',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            approvedBy: 1
+          }
+        ];
+        
+        for (const team of teams) {
+          await new TeamModel(team).save();
+        }
+        
+        console.log('Initial teams created successfully');
+      }
+    } catch (error) {
+      console.error('Error creating initial teams:', error);
     }
   }
 

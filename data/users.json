@@ -1,0 +1,17 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "supervisor12",
+      "password": "supervisor@12",
+      "name": "Supervisor",
+      "email": "supervisor@geowhats.com",
+      "role": "Supervisor",
+      "teamId": null,
+      "lastActive": null,
+      "currentLocation": null,
+      "createdAt": "2025-05-22T17:56:40.038Z"
+    }
+  ],
+  "currentId": 2
+}

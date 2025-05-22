@@ -1,8 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setStorage } from "./storage";
+import { setStorage, type IStorage } from "./storage";
 import { FileStorage } from "./fileStorage";
+import { InsertUser, InsertTeam } from "@shared/schema";
 
 const app = express();
 app.use(express.json());
@@ -38,10 +39,70 @@ app.use((req, res, next) => {
   next();
 });
 
+// Function to add supervisor account and team data
+async function addInitialData(storage: IStorage) {
+  try {
+    // Check if supervisor exists
+    const existingSupervisor = await storage.getUserByUsername('supervisor12');
+    
+    if (!existingSupervisor) {
+      // Create supervisor account
+      console.log('Creating supervisor account with username: supervisor12');
+      const supervisorData: InsertUser = {
+        username: 'supervisor12',
+        password: 'supervisor@12',
+        name: 'Supervisor',
+        email: 'supervisor@geowhats.com',
+        role: 'Supervisor',
+        teamId: null
+      };
+      
+      await storage.createUser(supervisorData);
+    }
+    
+    // Check if teams exist
+    const allTeams = await storage.getAllTeams();
+    
+    if (allTeams.length === 0) {
+      // Create initial teams
+      console.log('Creating initial teams for field users');
+      
+      const teams: InsertTeam[] = [
+        {
+          name: 'Field Team Alpha',
+          description: 'Primary field operations team',
+          status: 'Approved'
+        },
+        {
+          name: 'Field Team Beta',
+          description: 'Secondary field operations team',
+          status: 'Approved'
+        },
+        {
+          name: 'Maintenance Team',
+          description: 'Team responsible for infrastructure maintenance',
+          status: 'Approved'
+        }
+      ];
+      
+      for (const team of teams) {
+        await storage.createTeam(team);
+      }
+    }
+  } catch (error) {
+    console.error('Error adding initial data:', error);
+  }
+}
+
 (async () => {
-  // Set up file-based storage for data persistence
-  // This ensures all team data is saved to files in data directory
-  setStorage(new FileStorage());
+  // Set up file-based storage with the supervisor account and team data
+  const storage = new FileStorage();
+  
+  // Initialize this storage as our data backend
+  setStorage(storage);
+  
+  // Add the supervisor account and team data
+  await addInitialData(storage);
   
   const server = await registerRoutes(app);
 

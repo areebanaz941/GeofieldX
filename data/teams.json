@@ -1,0 +1,32 @@
+{
+  "teams": [
+    {
+      "id": 1,
+      "name": "Field Team Alpha",
+      "description": "Primary field operations team",
+      "status": "Approved",
+      "createdAt": "2025-05-22T17:56:40.038Z",
+      "updatedAt": "2025-05-22T17:56:40.038Z",
+      "approvedBy": null
+    },
+    {
+      "id": 2,
+      "name": "Field Team Beta",
+      "description": "Secondary field operations team",
+      "status": "Approved",
+      "createdAt": "2025-05-22T17:56:40.039Z",
+      "updatedAt": "2025-05-22T17:56:40.039Z",
+      "approvedBy": null
+    },
+    {
+      "id": 3,
+      "name": "Maintenance Team",
+      "description": "Team responsible for infrastructure maintenance",
+      "status": "Approved",
+      "createdAt": "2025-05-22T17:56:40.039Z",
+      "updatedAt": "2025-05-22T17:56:40.039Z",
+      "approvedBy": null
+    }
+  ],
+  "currentId": 4
+}

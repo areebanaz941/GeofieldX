@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
-// MongoDB connection string for Atlas
-const MONGODB_URI = 'mongodb+srv://areebanaz4848:GeoWhatsadmin@cluster0.ceiekbl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+// MongoDB connection string from environment variable
+const MONGODB_URI = process.env.MONGODB_URI as string;
 
 // Set additional mongoose options for better compatibility
 mongoose.set('strictQuery', false);
