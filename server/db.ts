@@ -34,15 +34,12 @@ async function connectToDatabase() {
   try {
     console.log("Connecting to MongoDB...");
 
-    // Adding SSL options directly to connection to fix MongoDB Atlas SSL issues
+    // Connect with appropriate options for MongoDB Atlas
     const connection = await mongoose.connect(
       connectionString,
       {
         ...mongooseOptions,
-        ssl: true,
-        sslValidate: false,
-        tlsAllowInvalidCertificates: true,
-        tlsAllowInvalidHostnames: true,
+        tlsAllowInvalidCertificates: true
       }
     );
 
