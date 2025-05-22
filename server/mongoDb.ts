@@ -1,7 +1,13 @@
 import mongoose from 'mongoose';
 
-// MongoDB connection string from environment variable
-const MONGODB_URI = process.env.MONGODB_URI as string;
+// MongoDB connection string from environment variable - fix the @admin issue if present
+let MONGODB_URI = process.env.MONGODB_URI as string;
+
+// Check and fix common connection string formatting issues
+if (MONGODB_URI && MONGODB_URI.includes('@admin@')) {
+  console.log('Fixing connection string format (@admin issue detected)');
+  MONGODB_URI = MONGODB_URI.replace('@admin@', '@');
+}
 
 // Set additional mongoose options for better compatibility
 mongoose.set('strictQuery', false);
@@ -25,6 +31,9 @@ async function connectToMongoDB(): Promise<boolean> {
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 10000, // Give up initial connection after 10 seconds
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      ssl: true,
+      tlsAllowInvalidHostnames: true, // Allow invalid hostnames for development environment
+      tlsAllowInvalidCertificates: true, // Allow invalid certificates for development environment
     });
     
     console.log('Connected to MongoDB successfully');
