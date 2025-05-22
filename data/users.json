@@ -1,17 +1,25 @@
 {
   "users": [
     {
-      "id": 1,
+      "_id": "682fa264bef6fae9f0d8083a",
       "username": "supervisor12",
       "password": "supervisor@12",
-      "name": "Supervisor",
+      "name": "System Supervisor",
       "email": "supervisor@geowhats.com",
       "role": "Supervisor",
-      "teamId": null,
-      "lastActive": null,
-      "currentLocation": null,
-      "createdAt": "2025-05-22T17:56:40.038Z"
+      "createdAt": "2025-05-22T22:17:08.254Z",
+      "updatedAt": "2025-05-22T22:17:08.254Z"
+    },
+    {
+      "_id": "682fa283ebabe9c6987f98a8",
+      "username": "field_user_demo",
+      "password": "demo123",
+      "name": "Demo Field User",
+      "email": "field.demo@geowhats.com",
+      "role": "Field",
+      "teamId": "682fa264529cca1564dd2f56",
+      "createdAt": "2025-05-22T22:17:39.178Z",
+      "updatedAt": "2025-05-22T22:17:39.178Z"
     }
-  ],
-  "currentId": 2
+  ]
 }

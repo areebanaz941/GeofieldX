@@ -1,32 +1,40 @@
 {
   "teams": [
     {
-      "id": 1,
+      "_id": "682fa264529cca1564dd2f56",
       "name": "Field Team Alpha",
-      "description": "Primary field operations team",
+      "description": "Primary field operations team for towers and infrastructure",
       "status": "Approved",
-      "createdAt": "2025-05-22T17:56:40.038Z",
-      "updatedAt": "2025-05-22T17:56:40.038Z",
-      "approvedBy": null
+      "createdBy": "682fa264bef6fae9f0d8083a",
+      "createdAt": "2025-05-22T22:17:08.255Z",
+      "updatedAt": "2025-05-22T22:17:08.255Z"
     },
     {
-      "id": 2,
+      "_id": "682fa264ee16198f70ae9aae",
       "name": "Field Team Beta",
-      "description": "Secondary field operations team",
+      "description": "Secondary field operations team for maintenance tasks",
       "status": "Approved",
-      "createdAt": "2025-05-22T17:56:40.039Z",
-      "updatedAt": "2025-05-22T17:56:40.039Z",
-      "approvedBy": null
+      "createdBy": "682fa264bef6fae9f0d8083a",
+      "createdAt": "2025-05-22T22:17:08.255Z",
+      "updatedAt": "2025-05-22T22:17:08.255Z"
     },
     {
-      "id": 3,
+      "_id": "682fa2643726412329e3ce77",
       "name": "Maintenance Team",
-      "description": "Team responsible for infrastructure maintenance",
+      "description": "Specialized team for infrastructure maintenance and repairs",
       "status": "Approved",
-      "createdAt": "2025-05-22T17:56:40.039Z",
-      "updatedAt": "2025-05-22T17:56:40.039Z",
-      "approvedBy": null
+      "createdBy": "682fa264bef6fae9f0d8083a",
+      "createdAt": "2025-05-22T22:17:08.256Z",
+      "updatedAt": "2025-05-22T22:17:08.256Z"
+    },
+    {
+      "_id": "682fa2648a087a1b1d4e1839",
+      "name": "Survey Team",
+      "description": "Team responsible for site surveys and boundary mapping",
+      "status": "Approved",
+      "createdBy": "682fa264bef6fae9f0d8083a",
+      "createdAt": "2025-05-22T22:17:08.256Z",
+      "updatedAt": "2025-05-22T22:17:08.256Z"
     }
-  ],
-  "currentId": 4
+  ]
 }
