@@ -3,13 +3,26 @@ import mongoose from 'mongoose';
 // Get MongoDB connection string from environment
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
-// Connection options
+// Parse connection string to determine if SSL is required
+const isAtlasConnection = MONGODB_URI.includes('mongodb+srv') || 
+                         MONGODB_URI.includes('mongodb.net');
+
+// Connection options with SSL configuration only if needed
 const options = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  ssl: true,
-  tls: true,
-  tlsAllowInvalidCertificates: true,
+  retryWrites: true,
+  w: 'majority',
+  serverSelectionTimeoutMS: 15000,
+  connectTimeoutMS: 15000,
+  // SSL options only applied for Atlas connections
+  ...(isAtlasConnection ? {
+    ssl: true, 
+    tls: true,
+    tlsAllowInvalidCertificates: true,
+    tlsAllowInvalidHostnames: true,
+    directConnection: false,
+  } : {})
 } as mongoose.ConnectOptions;
 
 /**
