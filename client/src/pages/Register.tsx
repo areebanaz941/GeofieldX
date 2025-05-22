@@ -126,9 +126,9 @@ export default function Register() {
           <div className="flex flex-col items-center mb-3">
             <div className="flex items-center mb-2">
               <img src={GeoPilotLogo} alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
-              <CardTitle className="text-2xl bg-gradient-to-r from-[#2E8B57] to-[#3CB371] bg-clip-text text-transparent">GeoPilot</CardTitle>
+              <CardTitle className="text-2xl bg-gradient-to-r from-[#2A9D8F] to-[#264653] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
-            <CardDescription className="text-center italic font-medium text-[#2E8B57]">
+            <CardDescription className="text-center italic font-medium text-[#2A9D8F]">
               Your Field. Your Team. Your Control.
             </CardDescription>
             <CardDescription className="text-center mt-2">

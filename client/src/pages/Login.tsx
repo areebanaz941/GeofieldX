@@ -87,15 +87,15 @@ export default function Login() {
   };
   
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F5EF] to-white px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] px-4">
       <Card className="w-full max-w-md border-0 shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center mb-3">
             <div className="flex items-center mb-2">
               <img src={GeoPilotLogo} alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
-              <CardTitle className="text-2xl bg-gradient-to-r from-[#2E8B57] to-[#3CB371] bg-clip-text text-transparent">GeoPilot</CardTitle>
+              <CardTitle className="text-2xl bg-gradient-to-r from-[#2A9D8F] to-[#264653] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
-            <CardDescription className="text-center italic font-medium text-[#2E8B57]">
+            <CardDescription className="text-center italic font-medium text-[#2A9D8F]">
               Your Field. Your Team. Your Control.
             </CardDescription>
             <CardDescription className="text-center mt-2">
@@ -134,7 +134,7 @@ export default function Login() {
               />
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-[#2E8B57] to-[#3CB371] hover:from-[#267349] hover:to-[#339966]" 
+                className="w-full bg-gradient-to-r from-[#2A9D8F] to-[#264653] hover:from-[#238A7D] hover:to-[#1D3746]" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -163,7 +163,7 @@ export default function Login() {
                 <div className="flex gap-2">
                   <Button 
                     type="button" 
-                    className="flex-1 bg-[#2E8B57] hover:bg-[#267349]"
+                    className="flex-1 bg-[#2A9D8F] hover:bg-[#238A7D]"
                     onClick={() => handleDemoLogin("supervisor")} 
                     disabled={isLoading}
                   >
@@ -171,7 +171,7 @@ export default function Login() {
                   </Button>
                   <Button 
                     type="button" 
-                    className="flex-1 bg-[#3CB371] hover:bg-[#339966]"
+                    className="flex-1 bg-[#264653] hover:bg-[#1D3746]"
                     onClick={() => handleDemoLogin("fielduser")}
                     disabled={isLoading}
                   >
@@ -185,7 +185,7 @@ export default function Login() {
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-sm text-center">
             Don't have an account?{" "}
-            <a href="/register" className="font-medium text-[#2E8B57] hover:text-[#267349]">
+            <a href="/register" className="font-medium text-[#2A9D8F] hover:text-[#238A7D]">
               Register
             </a>
           </div>
