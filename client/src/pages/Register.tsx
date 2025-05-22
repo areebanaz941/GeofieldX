@@ -119,21 +119,21 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F5EF] to-white px-4">
+      <Card className="w-full max-w-md border-0 shadow-lg">
         <CardHeader className="space-y-1">
-          <div className="flex items-center mb-2">
-            <div className="mr-2 text-primary-500 text-2xl">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
+          <div className="flex flex-col items-center mb-3">
+            <div className="flex items-center mb-2">
+              <img src="/attached_assets/Virtual-leap-logo-nocolors.png" alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
+              <CardTitle className="text-2xl bg-gradient-to-r from-[#2E8B57] to-[#3CB371] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
-            <CardTitle className="text-2xl">GeoWhats</CardTitle>
+            <CardDescription className="text-center italic font-medium text-[#2E8B57]">
+              Your Field. Your Team. Your Control.
+            </CardDescription>
+            <CardDescription className="text-center mt-2">
+              Create a new account to access the field operations management system
+            </CardDescription>
           </div>
-          <CardDescription>
-            Create a new account to access the field operations management system
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -252,7 +252,11 @@ export default function Register() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-[#2E8B57] to-[#3CB371] hover:from-[#267349] hover:to-[#339966]" 
+                disabled={isLoading}
+              >
                 {isLoading ? "Creating account..." : "Register"}
               </Button>
             </form>
@@ -261,7 +265,7 @@ export default function Register() {
         <CardFooter className="flex justify-center">
           <div className="text-sm">
             Already have an account?{" "}
-            <a href="/login" className="text-primary-600 hover:text-primary-800">
+            <a href="/login" className="font-medium text-[#2E8B57] hover:text-[#267349]">
               Login
             </a>
           </div>

@@ -86,21 +86,21 @@ export default function Login() {
   };
   
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-white px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F5EF] to-white px-4">
       <Card className="w-full max-w-md border-0 shadow-lg">
         <CardHeader className="space-y-1">
-          <div className="flex items-center mb-2">
-            <div className="mr-2 text-green-600 text-2xl">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
+          <div className="flex flex-col items-center mb-3">
+            <div className="flex items-center mb-2">
+              <img src="/attached_assets/Virtual-leap-logo-nocolors.png" alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
+              <CardTitle className="text-2xl bg-gradient-to-r from-[#2E8B57] to-[#3CB371] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
-            <CardTitle className="text-2xl bg-gradient-to-r from-green-600 to-teal-500 bg-clip-text text-transparent">GeoWhats</CardTitle>
+            <CardDescription className="text-center italic font-medium text-[#2E8B57]">
+              Your Field. Your Team. Your Control.
+            </CardDescription>
+            <CardDescription className="text-center mt-2">
+              Enter your credentials to access the field operations management system
+            </CardDescription>
           </div>
-          <CardDescription>
-            Enter your credentials to access the field operations management system
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -133,7 +133,7 @@ export default function Login() {
               />
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700" 
+                className="w-full bg-gradient-to-r from-[#2E8B57] to-[#3CB371] hover:from-[#267349] hover:to-[#339966]" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -162,7 +162,7 @@ export default function Login() {
                 <div className="flex gap-2">
                   <Button 
                     type="button" 
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1 bg-[#2E8B57] hover:bg-[#267349]"
                     onClick={() => handleDemoLogin("supervisor")} 
                     disabled={isLoading}
                   >
@@ -170,7 +170,7 @@ export default function Login() {
                   </Button>
                   <Button 
                     type="button" 
-                    className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                    className="flex-1 bg-[#3CB371] hover:bg-[#339966]"
                     onClick={() => handleDemoLogin("fielduser")}
                     disabled={isLoading}
                   >
