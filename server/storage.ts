@@ -1,56 +1,60 @@
-import { User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence } from "@shared/schema";
+import {
+  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, 
+  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence
+} from "@shared/schema";
+import { Types } from "mongoose";
 
 // Define the storage interface for data access
 export interface IStorage {
   // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: any): Promise<User>;
-  updateUserLocation(id: number, location: { lat: number, lng: number }): Promise<User>;
-  updateUserLastActive(id: number): Promise<User>;
-  getAllFieldUsers(): Promise<User[]>;
+  getUser(id: string): Promise<IUser | undefined>;
+  getUserByUsername(username: string): Promise<IUser | undefined>;
+  createUser(userData: InsertUser): Promise<IUser>;
+  updateUserLocation(id: string, location: { lat: number, lng: number }): Promise<IUser>;
+  updateUserLastActive(id: string): Promise<IUser>;
+  getAllFieldUsers(): Promise<IUser[]>;
   
   // Team operations
-  createTeam(team: any): Promise<Team>;
-  getTeam(id: number): Promise<Team | undefined>;
-  getTeamByName(name: string): Promise<Team | undefined>;
-  updateTeamStatus(id: number, status: string, approvedBy?: number): Promise<Team>;
-  getAllTeams(): Promise<Team[]>;
-  getUsersByTeam(teamId: number): Promise<User[]>;
-  assignUserToTeam(userId: number, teamId: number): Promise<User>;
+  createTeam(teamData: InsertTeam): Promise<ITeam>;
+  getTeam(id: string): Promise<ITeam | undefined>;
+  getTeamByName(name: string): Promise<ITeam | undefined>;
+  updateTeamStatus(id: string, status: string, approvedBy?: string): Promise<ITeam>;
+  getAllTeams(): Promise<ITeam[]>;
+  getUsersByTeam(teamId: string): Promise<IUser[]>;
+  assignUserToTeam(userId: string, teamId: string): Promise<IUser>;
   
   // Task operations
-  createTask(task: any): Promise<Task>;
-  getTask(id: number): Promise<Task | undefined>;
-  updateTaskStatus(id: number, status: string, userId: number): Promise<Task>;
-  assignTask(id: number, assignedTo: number): Promise<Task>;
-  getTasksByAssignee(userId: number): Promise<Task[]>;
-  getTasksByCreator(userId: number): Promise<Task[]>;
-  getAllTasks(): Promise<Task[]>;
+  createTask(taskData: InsertTask): Promise<ITask>;
+  getTask(id: string): Promise<ITask | undefined>;
+  updateTaskStatus(id: string, status: string, userId: string): Promise<ITask>;
+  assignTask(id: string, assignedTo: string): Promise<ITask>;
+  getTasksByAssignee(userId: string): Promise<ITask[]>;
+  getTasksByCreator(userId: string): Promise<ITask[]>;
+  getAllTasks(): Promise<ITask[]>;
   
   // Feature operations
-  createFeature(feature: any): Promise<Feature>;
-  getFeature(id: number): Promise<Feature | undefined>;
-  updateFeature(id: number, feature: Partial<Feature>): Promise<Feature>;
-  deleteFeature(id: number): Promise<boolean>;
-  getFeaturesByType(type: string): Promise<Feature[]>;
-  getFeaturesByStatus(status: string): Promise<Feature[]>;
-  getAllFeatures(): Promise<Feature[]>;
+  createFeature(featureData: InsertFeature): Promise<IFeature>;
+  getFeature(id: string): Promise<IFeature | undefined>;
+  updateFeature(id: string, feature: Partial<InsertFeature>): Promise<IFeature>;
+  deleteFeature(id: string): Promise<boolean>;
+  getFeaturesByType(type: string): Promise<IFeature[]>;
+  getFeaturesByStatus(status: string): Promise<IFeature[]>;
+  getAllFeatures(): Promise<IFeature[]>;
   
   // Boundary operations
-  createBoundary(boundary: any): Promise<Boundary>;
-  getBoundary(id: number): Promise<Boundary | undefined>;
-  updateBoundaryStatus(id: number, status: string): Promise<Boundary>;
-  assignBoundary(id: number, userId: number): Promise<Boundary>;
-  getAllBoundaries(): Promise<Boundary[]>;
+  createBoundary(boundaryData: InsertBoundary): Promise<IBoundary>;
+  getBoundary(id: string): Promise<IBoundary | undefined>;
+  updateBoundaryStatus(id: string, status: string): Promise<IBoundary>;
+  assignBoundary(id: string, userId: string): Promise<IBoundary>;
+  getAllBoundaries(): Promise<IBoundary[]>;
   
   // Task update operations
-  createTaskUpdate(update: any): Promise<TaskUpdate>;
-  getTaskUpdates(taskId: number): Promise<TaskUpdate[]>;
+  createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate>;
+  getTaskUpdates(taskId: string): Promise<ITaskUpdate[]>;
   
   // Task evidence operations
-  addTaskEvidence(evidence: any): Promise<TaskEvidence>;
-  getTaskEvidence(taskId: number): Promise<TaskEvidence[]>;
+  addTaskEvidence(evidenceData: InsertTaskEvidence): Promise<ITaskEvidence>;
+  getTaskEvidence(taskId: string): Promise<ITaskEvidence[]>;
 }
 
 // In-memory storage implementation as a fallback

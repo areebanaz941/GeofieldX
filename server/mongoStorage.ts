@@ -1,6 +1,10 @@
-import mongoose from 'mongoose';
-import { IStorage } from './storage';
-import * as schema from '@shared/schema';
+import { Types } from "mongoose";
+import { IStorage } from "./storage";
+import {
+  User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence,
+  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence,
+  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence
+} from "@shared/schema";
 
 /**
  * MongoStorage implementation of IStorage interface
@@ -8,536 +12,462 @@ import * as schema from '@shared/schema';
  */
 export class MongoStorage implements IStorage {
   constructor() {
-    console.log('Initializing MongoDB storage');
+    console.log("Initializing MongoDB storage with Mongoose models");
   }
 
   // User operations
-  async getUser(id: number): Promise<any> {
+  async getUser(id: string): Promise<IUser | undefined> {
     try {
-      const user = await schema.User.findOne({ id });
-      return user ? user.toObject() : undefined;
+      const user = await User.findById(id);
+      return user || undefined;
     } catch (error) {
-      console.error('MongoDB Error - getUser:', error);
+      console.error("Error getting user:", error);
+      return undefined;
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<IUser | undefined> {
+    try {
+      const user = await User.findOne({ username });
+      return user || undefined;
+    } catch (error) {
+      console.error("Error getting user by username:", error);
+      return undefined;
+    }
+  }
+
+  async createUser(userData: InsertUser): Promise<IUser> {
+    try {
+      const user = new User(userData);
+      await user.save();
+      return user;
+    } catch (error) {
+      console.error("Error creating user:", error);
       throw error;
     }
   }
 
-  async getUserByUsername(username: string): Promise<any> {
+  async updateUserLocation(id: string, location: { lat: number, lng: number }): Promise<IUser> {
     try {
-      const user = await schema.User.findOne({ username });
-      return user ? user.toObject() : undefined;
-    } catch (error) {
-      console.error('MongoDB Error - getUserByUsername:', error);
-      throw error;
-    }
-  }
-
-  async createUser(userData: any): Promise<any> {
-    try {
-      const newUser = new schema.User({
-        ...userData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastActive: null,
-        currentLocation: null
-      });
-      
-      await newUser.save();
-      return newUser.toObject();
-    } catch (error) {
-      console.error('MongoDB Error - createUser:', error);
-      throw error;
-    }
-  }
-
-  async updateUserLocation(id: number, location: { lat: number, lng: number }): Promise<any> {
-    try {
-      const user = await schema.User.findOneAndUpdate(
-        { id },
-        { 
-          currentLocation: { 
-            type: 'Point', 
-            coordinates: [location.lng, location.lat] 
-          },
-          updatedAt: new Date()
-        },
-        { new: true }
-      );
-      
+      const user = await User.findById(id);
       if (!user) {
         throw new Error(`User with ID ${id} not found`);
       }
+
+      user.currentLocation = {
+        type: "Point",
+        coordinates: [location.lng, location.lat]
+      };
       
-      return user.toObject();
+      await user.save();
+      return user;
     } catch (error) {
-      console.error('MongoDB Error - updateUserLocation:', error);
+      console.error("Error updating user location:", error);
       throw error;
     }
   }
 
-  async updateUserLastActive(id: number): Promise<any> {
+  async updateUserLastActive(id: string): Promise<IUser> {
     try {
-      const user = await schema.User.findOneAndUpdate(
-        { id },
-        { 
-          lastActive: new Date(),
-          updatedAt: new Date()
-        },
-        { new: true }
-      );
-      
+      const user = await User.findById(id);
       if (!user) {
         throw new Error(`User with ID ${id} not found`);
       }
-      
-      return user.toObject();
+
+      user.lastActive = new Date();
+      await user.save();
+      return user;
     } catch (error) {
-      console.error('MongoDB Error - updateUserLastActive:', error);
+      console.error("Error updating user last active:", error);
       throw error;
     }
   }
 
-  async getAllFieldUsers(): Promise<any[]> {
+  async getAllFieldUsers(): Promise<IUser[]> {
     try {
-      const users = await schema.User.find({ role: 'Field' });
-      return users.map(user => user.toObject());
+      return await User.find({ role: "Field" });
     } catch (error) {
-      console.error('MongoDB Error - getAllFieldUsers:', error);
-      throw error;
+      console.error("Error getting all field users:", error);
+      return [];
     }
   }
 
   // Team operations
-  async createTeam(teamData: any): Promise<any> {
+  async createTeam(teamData: InsertTeam): Promise<ITeam> {
     try {
-      const newTeam = new schema.Team({
-        ...teamData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      
-      await newTeam.save();
-      return newTeam.toObject();
+      const team = new Team(teamData);
+      await team.save();
+      return team;
     } catch (error) {
-      console.error('MongoDB Error - createTeam:', error);
+      console.error("Error creating team:", error);
       throw error;
     }
   }
 
-  async getTeam(id: number): Promise<any> {
+  async getTeam(id: string): Promise<ITeam | undefined> {
     try {
-      const team = await schema.Team.findOne({ id });
-      return team ? team.toObject() : undefined;
+      const team = await Team.findById(id);
+      return team || undefined;
     } catch (error) {
-      console.error('MongoDB Error - getTeam:', error);
-      throw error;
+      console.error("Error getting team:", error);
+      return undefined;
     }
   }
 
-  async getTeamByName(name: string): Promise<any> {
+  async getTeamByName(name: string): Promise<ITeam | undefined> {
     try {
-      const team = await schema.Team.findOne({ name });
-      return team ? team.toObject() : undefined;
+      const team = await Team.findOne({ name });
+      return team || undefined;
     } catch (error) {
-      console.error('MongoDB Error - getTeamByName:', error);
-      throw error;
+      console.error("Error getting team by name:", error);
+      return undefined;
     }
   }
 
-  async updateTeamStatus(id: number, status: string, approvedBy?: number): Promise<any> {
+  async updateTeamStatus(id: string, status: string, approvedBy?: string): Promise<ITeam> {
     try {
-      const updateData: any = {
-        status,
-        updatedAt: new Date()
-      };
-      
-      if (approvedBy) {
-        updateData.approvedBy = approvedBy;
-      }
-      
-      const team = await schema.Team.findOneAndUpdate(
-        { id },
-        updateData,
-        { new: true }
-      );
-      
+      const team = await Team.findById(id);
       if (!team) {
         throw new Error(`Team with ID ${id} not found`);
       }
+
+      team.status = status as any;
+      if (approvedBy) {
+        team.approvedBy = new Types.ObjectId(approvedBy);
+      }
       
-      return team.toObject();
+      await team.save();
+      return team;
     } catch (error) {
-      console.error('MongoDB Error - updateTeamStatus:', error);
+      console.error("Error updating team status:", error);
       throw error;
     }
   }
 
-  async getAllTeams(): Promise<any[]> {
+  async getAllTeams(): Promise<ITeam[]> {
     try {
-      const teams = await schema.Team.find();
-      return teams.map(team => team.toObject());
+      return await Team.find();
     } catch (error) {
-      console.error('MongoDB Error - getAllTeams:', error);
-      throw error;
+      console.error("Error getting all teams:", error);
+      return [];
     }
   }
 
-  async getUsersByTeam(teamId: number): Promise<any[]> {
+  async getUsersByTeam(teamId: string): Promise<IUser[]> {
     try {
-      const users = await schema.User.find({ teamId });
-      return users.map(user => user.toObject());
+      return await User.find({ teamId: new Types.ObjectId(teamId) });
     } catch (error) {
-      console.error('MongoDB Error - getUsersByTeam:', error);
-      throw error;
+      console.error("Error getting users by team:", error);
+      return [];
     }
   }
 
-  async assignUserToTeam(userId: number, teamId: number): Promise<any> {
+  async assignUserToTeam(userId: string, teamId: string): Promise<IUser> {
     try {
-      const user = await schema.User.findOneAndUpdate(
-        { id: userId },
-        { 
-          teamId,
-          updatedAt: new Date()
-        },
-        { new: true }
-      );
-      
+      const user = await User.findById(userId);
       if (!user) {
         throw new Error(`User with ID ${userId} not found`);
       }
-      
-      return user.toObject();
+
+      const team = await Team.findById(teamId);
+      if (!team) {
+        throw new Error(`Team with ID ${teamId} not found`);
+      }
+
+      user.teamId = new Types.ObjectId(teamId);
+      await user.save();
+      return user;
     } catch (error) {
-      console.error('MongoDB Error - assignUserToTeam:', error);
+      console.error("Error assigning user to team:", error);
       throw error;
     }
   }
 
   // Task operations
-  async createTask(taskData: any): Promise<any> {
+  async createTask(taskData: InsertTask): Promise<ITask> {
     try {
-      const newTask = new schema.Task({
-        ...taskData,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      const task = new Task(taskData);
+      await task.save();
+      return task;
+    } catch (error) {
+      console.error("Error creating task:", error);
+      throw error;
+    }
+  }
+
+  async getTask(id: string): Promise<ITask | undefined> {
+    try {
+      const task = await Task.findById(id);
+      return task || undefined;
+    } catch (error) {
+      console.error("Error getting task:", error);
+      return undefined;
+    }
+  }
+
+  async updateTaskStatus(id: string, status: string, userId: string): Promise<ITask> {
+    try {
+      const task = await Task.findById(id);
+      if (!task) {
+        throw new Error(`Task with ID ${id} not found`);
+      }
+
+      // Save old status for history
+      const oldStatus = task.status;
+      
+      // Update task status
+      task.status = status as any;
+      await task.save();
+
+      // Create task update history
+      await TaskUpdate.create({
+        taskId: task._id,
+        userId: new Types.ObjectId(userId),
+        oldStatus,
+        newStatus: status,
       });
-      
-      await newTask.save();
-      return newTask.toObject();
+
+      return task;
     } catch (error) {
-      console.error('MongoDB Error - createTask:', error);
+      console.error("Error updating task status:", error);
       throw error;
     }
   }
 
-  async getTask(id: number): Promise<any> {
+  async assignTask(id: string, assignedTo: string): Promise<ITask> {
     try {
-      const task = await schema.Task.findOne({ id });
-      return task ? task.toObject() : undefined;
-    } catch (error) {
-      console.error('MongoDB Error - getTask:', error);
-      throw error;
-    }
-  }
-
-  async updateTaskStatus(id: number, status: string, userId: number): Promise<any> {
-    try {
-      const task = await schema.Task.findOneAndUpdate(
-        { id },
-        { 
-          status,
-          updatedAt: new Date(),
-          lastUpdatedBy: userId
-        },
-        { new: true }
-      );
-      
+      const task = await Task.findById(id);
       if (!task) {
         throw new Error(`Task with ID ${id} not found`);
       }
-      
-      return task.toObject();
-    } catch (error) {
-      console.error('MongoDB Error - updateTaskStatus:', error);
-      throw error;
-    }
-  }
 
-  async assignTask(id: number, assignedTo: number): Promise<any> {
-    try {
-      const task = await schema.Task.findOneAndUpdate(
-        { id },
-        { 
-          assignedTo,
-          status: 'Assigned',
-          updatedAt: new Date()
-        },
-        { new: true }
-      );
-      
-      if (!task) {
-        throw new Error(`Task with ID ${id} not found`);
+      task.assignedTo = new Types.ObjectId(assignedTo);
+      if (task.status === "Unassigned") {
+        task.status = "Assigned";
       }
       
-      return task.toObject();
+      await task.save();
+      return task;
     } catch (error) {
-      console.error('MongoDB Error - assignTask:', error);
+      console.error("Error assigning task:", error);
       throw error;
     }
   }
 
-  async getTasksByAssignee(userId: number): Promise<any[]> {
+  async getTasksByAssignee(userId: string): Promise<ITask[]> {
     try {
-      const tasks = await schema.Task.find({ assignedTo: userId });
-      return tasks.map(task => task.toObject());
+      return await Task.find({ assignedTo: new Types.ObjectId(userId) });
     } catch (error) {
-      console.error('MongoDB Error - getTasksByAssignee:', error);
-      throw error;
+      console.error("Error getting tasks by assignee:", error);
+      return [];
     }
   }
 
-  async getTasksByCreator(userId: number): Promise<any[]> {
+  async getTasksByCreator(userId: string): Promise<ITask[]> {
     try {
-      const tasks = await schema.Task.find({ createdBy: userId });
-      return tasks.map(task => task.toObject());
+      return await Task.find({ createdBy: new Types.ObjectId(userId) });
     } catch (error) {
-      console.error('MongoDB Error - getTasksByCreator:', error);
-      throw error;
+      console.error("Error getting tasks by creator:", error);
+      return [];
     }
   }
 
-  async getAllTasks(): Promise<any[]> {
+  async getAllTasks(): Promise<ITask[]> {
     try {
-      const tasks = await schema.Task.find();
-      return tasks.map(task => task.toObject());
+      return await Task.find();
     } catch (error) {
-      console.error('MongoDB Error - getAllTasks:', error);
-      throw error;
+      console.error("Error getting all tasks:", error);
+      return [];
     }
   }
 
   // Feature operations
-  async createFeature(featureData: any): Promise<any> {
+  async createFeature(featureData: InsertFeature): Promise<IFeature> {
     try {
-      const newFeature = new schema.Feature({
-        ...featureData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastUpdated: new Date()
-      });
-      
-      await newFeature.save();
-      return newFeature.toObject();
+      const feature = new Feature(featureData);
+      feature.lastUpdated = new Date();
+      await feature.save();
+      return feature;
     } catch (error) {
-      console.error('MongoDB Error - createFeature:', error);
+      console.error("Error creating feature:", error);
       throw error;
     }
   }
 
-  async getFeature(id: number): Promise<any> {
+  async getFeature(id: string): Promise<IFeature | undefined> {
     try {
-      const feature = await schema.Feature.findOne({ id });
-      return feature ? feature.toObject() : undefined;
+      const feature = await Feature.findById(id);
+      return feature || undefined;
     } catch (error) {
-      console.error('MongoDB Error - getFeature:', error);
-      throw error;
+      console.error("Error getting feature:", error);
+      return undefined;
     }
   }
 
-  async updateFeature(id: number, featureUpdate: Partial<any>): Promise<any> {
+  async updateFeature(id: string, feature: Partial<InsertFeature>): Promise<IFeature> {
     try {
-      const feature = await schema.Feature.findOneAndUpdate(
-        { id },
-        { 
-          ...featureUpdate,
-          updatedAt: new Date(),
-          lastUpdated: new Date()
-        },
-        { new: true }
-      );
-      
-      if (!feature) {
+      const existingFeature = await Feature.findById(id);
+      if (!existingFeature) {
         throw new Error(`Feature with ID ${id} not found`);
       }
+
+      // Update all fields from partial update
+      Object.keys(feature).forEach((key) => {
+        (existingFeature as any)[key] = (feature as any)[key];
+      });
       
-      return feature.toObject();
+      existingFeature.lastUpdated = new Date();
+      await existingFeature.save();
+      return existingFeature;
     } catch (error) {
-      console.error('MongoDB Error - updateFeature:', error);
+      console.error("Error updating feature:", error);
       throw error;
     }
   }
 
-  async deleteFeature(id: number): Promise<boolean> {
+  async deleteFeature(id: string): Promise<boolean> {
     try {
-      const result = await schema.Feature.deleteOne({ id });
-      return result.deletedCount > 0;
+      const result = await Feature.deleteOne({ _id: new Types.ObjectId(id) });
+      return result.deletedCount === 1;
     } catch (error) {
-      console.error('MongoDB Error - deleteFeature:', error);
-      throw error;
+      console.error("Error deleting feature:", error);
+      return false;
     }
   }
 
-  async getFeaturesByType(type: string): Promise<any[]> {
+  async getFeaturesByType(type: string): Promise<IFeature[]> {
     try {
-      const features = await schema.Feature.find({ feaType: type });
-      return features.map(feature => feature.toObject());
+      return await Feature.find({ feaType: type });
     } catch (error) {
-      console.error('MongoDB Error - getFeaturesByType:', error);
-      throw error;
+      console.error("Error getting features by type:", error);
+      return [];
     }
   }
 
-  async getFeaturesByStatus(status: string): Promise<any[]> {
+  async getFeaturesByStatus(status: string): Promise<IFeature[]> {
     try {
-      const features = await schema.Feature.find({ feaStatus: status });
-      return features.map(feature => feature.toObject());
+      return await Feature.find({ feaStatus: status });
     } catch (error) {
-      console.error('MongoDB Error - getFeaturesByStatus:', error);
-      throw error;
+      console.error("Error getting features by status:", error);
+      return [];
     }
   }
 
-  async getAllFeatures(): Promise<any[]> {
+  async getAllFeatures(): Promise<IFeature[]> {
     try {
-      const features = await schema.Feature.find();
-      return features.map(feature => feature.toObject());
+      return await Feature.find();
     } catch (error) {
-      console.error('MongoDB Error - getAllFeatures:', error);
-      throw error;
+      console.error("Error getting all features:", error);
+      return [];
     }
   }
 
   // Boundary operations
-  async createBoundary(boundaryData: any): Promise<any> {
+  async createBoundary(boundaryData: InsertBoundary): Promise<IBoundary> {
     try {
-      const newBoundary = new schema.Boundary({
-        ...boundaryData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      
-      await newBoundary.save();
-      return newBoundary.toObject();
+      const boundary = new Boundary(boundaryData);
+      await boundary.save();
+      return boundary;
     } catch (error) {
-      console.error('MongoDB Error - createBoundary:', error);
+      console.error("Error creating boundary:", error);
       throw error;
     }
   }
 
-  async getBoundary(id: number): Promise<any> {
+  async getBoundary(id: string): Promise<IBoundary | undefined> {
     try {
-      const boundary = await schema.Boundary.findOne({ id });
-      return boundary ? boundary.toObject() : undefined;
+      const boundary = await Boundary.findById(id);
+      return boundary || undefined;
     } catch (error) {
-      console.error('MongoDB Error - getBoundary:', error);
-      throw error;
+      console.error("Error getting boundary:", error);
+      return undefined;
     }
   }
 
-  async updateBoundaryStatus(id: number, status: string): Promise<any> {
+  async updateBoundaryStatus(id: string, status: string): Promise<IBoundary> {
     try {
-      const boundary = await schema.Boundary.findOneAndUpdate(
-        { id },
-        { 
-          status,
-          updatedAt: new Date()
-        },
-        { new: true }
-      );
-      
+      const boundary = await Boundary.findById(id);
       if (!boundary) {
         throw new Error(`Boundary with ID ${id} not found`);
       }
-      
-      return boundary.toObject();
+
+      boundary.status = status as any;
+      await boundary.save();
+      return boundary;
     } catch (error) {
-      console.error('MongoDB Error - updateBoundaryStatus:', error);
+      console.error("Error updating boundary status:", error);
       throw error;
     }
   }
 
-  async assignBoundary(id: number, userId: number): Promise<any> {
+  async assignBoundary(id: string, userId: string): Promise<IBoundary> {
     try {
-      const boundary = await schema.Boundary.findOneAndUpdate(
-        { id },
-        { 
-          assignedTo: userId,
-          updatedAt: new Date()
-        },
-        { new: true }
-      );
-      
+      const boundary = await Boundary.findById(id);
       if (!boundary) {
         throw new Error(`Boundary with ID ${id} not found`);
       }
-      
-      return boundary.toObject();
+
+      boundary.assignedTo = new Types.ObjectId(userId);
+      await boundary.save();
+      return boundary;
     } catch (error) {
-      console.error('MongoDB Error - assignBoundary:', error);
+      console.error("Error assigning boundary:", error);
       throw error;
     }
   }
 
-  async getAllBoundaries(): Promise<any[]> {
+  async getAllBoundaries(): Promise<IBoundary[]> {
     try {
-      const boundaries = await schema.Boundary.find();
-      return boundaries.map(boundary => boundary.toObject());
+      return await Boundary.find();
     } catch (error) {
-      console.error('MongoDB Error - getAllBoundaries:', error);
-      throw error;
+      console.error("Error getting all boundaries:", error);
+      return [];
     }
   }
 
   // Task update operations
-  async createTaskUpdate(updateData: any): Promise<any> {
+  async createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate> {
     try {
-      const newUpdate = new schema.TaskUpdate({
-        ...updateData,
-        createdAt: new Date()
-      });
-      
-      await newUpdate.save();
-      return newUpdate.toObject();
+      const update = new TaskUpdate(updateData);
+      await update.save();
+      return update;
     } catch (error) {
-      console.error('MongoDB Error - createTaskUpdate:', error);
+      console.error("Error creating task update:", error);
       throw error;
     }
   }
 
-  async getTaskUpdates(taskId: number): Promise<any[]> {
+  async getTaskUpdates(taskId: string): Promise<ITaskUpdate[]> {
     try {
-      const updates = await schema.TaskUpdate.find({ taskId }).sort({ createdAt: -1 });
-      return updates.map(update => update.toObject());
+      return await TaskUpdate.find({ 
+        taskId: new Types.ObjectId(taskId) 
+      }).sort({ createdAt: -1 });
     } catch (error) {
-      console.error('MongoDB Error - getTaskUpdates:', error);
-      throw error;
+      console.error("Error getting task updates:", error);
+      return [];
     }
   }
 
   // Task evidence operations
-  async addTaskEvidence(evidenceData: any): Promise<any> {
+  async addTaskEvidence(evidenceData: InsertTaskEvidence): Promise<ITaskEvidence> {
     try {
-      const newEvidence = new schema.TaskEvidence({
-        ...evidenceData,
-        createdAt: new Date()
-      });
-      
-      await newEvidence.save();
-      return newEvidence.toObject();
+      const evidence = new TaskEvidence(evidenceData);
+      await evidence.save();
+      return evidence;
     } catch (error) {
-      console.error('MongoDB Error - addTaskEvidence:', error);
+      console.error("Error adding task evidence:", error);
       throw error;
     }
   }
 
-  async getTaskEvidence(taskId: number): Promise<any[]> {
+  async getTaskEvidence(taskId: string): Promise<ITaskEvidence[]> {
     try {
-      const evidence = await schema.TaskEvidence.find({ taskId }).sort({ createdAt: -1 });
-      return evidence.map(item => item.toObject());
+      return await TaskEvidence.find({ 
+        taskId: new Types.ObjectId(taskId) 
+      }).sort({ createdAt: -1 });
     } catch (error) {
-      console.error('MongoDB Error - getTaskEvidence:', error);
-      throw error;
+      console.error("Error getting task evidence:", error);
+      return [];
     }
   }
 }

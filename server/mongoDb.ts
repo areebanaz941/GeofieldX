@@ -1,52 +1,33 @@
 import mongoose from 'mongoose';
 
-// Connect to MongoDB with better error handling
+// Get MongoDB connection string from environment
+const MONGODB_URI = process.env.MONGODB_URI || '';
+
+// Connection options
+const options = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  ssl: true,
+  tls: true,
+  tlsAllowInvalidCertificates: true,
+} as mongoose.ConnectOptions;
+
+/**
+ * Connects to MongoDB using mongoose
+ * @returns Promise resolving to the mongoose connection
+ */
 export async function connectToMongoDB() {
+  if (!MONGODB_URI) {
+    throw new Error('MongoDB connection string is not defined!');
+  }
+
   try {
-    // Use the MongoDB connection string from environment variables
-    const uri = process.env.MONGODB_URI || process.env.DATABASE_URL;
-    
-    if (!uri) {
-      throw new Error('MongoDB connection string is not defined in environment variables');
-    }
-    
-    // Ensure the connection string has the correct format
-    if (!uri.startsWith('mongodb://') && !uri.startsWith('mongodb+srv://')) {
-      throw new Error('Invalid MongoDB connection string format. Must start with mongodb:// or mongodb+srv://');
-    }
-    
-    console.log('Attempting to connect to MongoDB...');
-    
-    // Connect to MongoDB with improved options
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 10000, // 10 seconds
-      socketTimeoutMS: 45000, // 45 seconds
-    });
-    
-    console.log('MongoDB connection successful!');
-    return true;
+    console.log('Connecting to MongoDB Atlas...');
+    const connection = await mongoose.connect(MONGODB_URI, options);
+    console.log('Successfully connected to MongoDB Atlas!');
+    return connection;
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    return false;
+    console.error('Failed to connect to MongoDB:', error);
+    throw error;
   }
 }
-
-// Add connection event listeners
-mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to MongoDB Atlas');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('Mongoose connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('Mongoose disconnected from MongoDB');
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  await mongoose.connection.close();
-  console.log('MongoDB connection closed');
-  process.exit(0);
-});
