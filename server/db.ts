@@ -1,117 +1,250 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from '@shared/schema';
+import mongoose from "mongoose";
+import * as schema from "@shared/schema";
 
-// Database connection
-const connectionString = process.env.DATABASE_URL as string;
-const client = postgres(connectionString);
-const db = drizzle(client, { schema });
+// MongoDB connection string
+const connectionString =
+  process.env.DATABASE_URL ||
+  "mongodb+srv://areebanaz4848:Geowhatsapp@cluster0.ldne1j8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-// Initialize database schema without full migrations
-async function setupDatabase() {
+// MongoDB connection options
+const mongooseOptions = {
+  retryWrites: true,
+  w: "majority",
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+  bufferCommands: false, // Disable mongoose buffering
+  bufferMaxEntries: 0, // Disable mongoose buffering
+};
+
+// Database connection instance
+let isConnected = false;
+
+// Connect to MongoDB
+async function connectToDatabase() {
+  if (isConnected) {
+    console.log("Already connected to MongoDB");
+    return mongoose.connection;
+  }
+
   try {
-    console.log('Setting up database...');
-    
-    // Create tables directly without using migrations folder
-    const sqlSchema = `
-      -- Create user role enum if not exists
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
-          CREATE TYPE user_role AS ENUM ('Supervisor', 'Field');
-        END IF;
-      END $$;
+    console.log("Connecting to MongoDB...");
 
-      -- Create team status enum if not exists
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'team_status') THEN
-          CREATE TYPE team_status AS ENUM ('Pending', 'Approved', 'Rejected');
-        END IF;
-      END $$;
+    const connection = await mongoose.connect(
+      connectionString,
+      mongooseOptions,
+    );
 
-      -- Create task status enum if not exists
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_status') THEN
-          CREATE TYPE task_status AS ENUM ('Unassigned', 'Assigned', 'In Progress', 'Completed', 'In-Complete', 'Submit-Review', 'Review_Accepted', 'Review_Reject', 'Review_inprogress');
-        END IF;
-      END $$;
+    isConnected = true;
+    console.log("Successfully connected to MongoDB");
 
-      -- Create feature type enum if not exists
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'feature_type') THEN
-          CREATE TYPE feature_type AS ENUM ('Tower', 'Manhole', 'FiberCable', 'Parcel');
-        END IF;
-      END $$;
-
-      -- Create task priority enum if not exists
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_priority') THEN
-          CREATE TYPE task_priority AS ENUM ('Low', 'Medium', 'High', 'Urgent');
-        END IF;
-      END $$;
-
-      -- Create teams table if not exists
-      CREATE TABLE IF NOT EXISTS teams (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT,
-        status team_status NOT NULL DEFAULT 'Pending',
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        approved_by INTEGER
-      );
-
-      -- Create users table if not exists
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        role user_role NOT NULL,
-        team_id INTEGER,
-        last_active TIMESTAMP,
-        current_location JSONB,
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
-      );
-
-      -- Create tasks table if not exists
-      CREATE TABLE IF NOT EXISTS tasks (
-        id SERIAL PRIMARY KEY,
-        title TEXT NOT NULL,
-        description TEXT,
-        status task_status NOT NULL DEFAULT 'Unassigned',
-        priority task_priority NOT NULL,
-        created_by INTEGER,
-        assigned_to INTEGER,
-        due_date TIMESTAMP,
-        location JSONB,
-        boundary_id INTEGER,
-        feature_id INTEGER,
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-      );
-
-      -- Add foreign key to teams for approved_by
-      ALTER TABLE teams
-      ADD CONSTRAINT fk_teams_approved_by
-      FOREIGN KEY (approved_by) 
-      REFERENCES users(id) 
-      ON DELETE SET NULL;
-    `;
-    
-    // Execute SQL to create tables
-    await client.unsafe(sqlSchema);
-    
-    console.log('Database setup complete');
+    return connection;
   } catch (error) {
-    console.error('Database setup error:', error);
+    console.error("MongoDB connection error:", error);
+    throw error;
   }
 }
 
-export { db, setupDatabase };
+// Setup database and initialize collections
+async function setupDatabase() {
+  try {
+    console.log("Setting up MongoDB database...");
+
+    // Connect to database
+    await connectToDatabase();
+
+    // Create indexes for better performance
+    await createIndexes();
+
+    console.log("Database setup complete");
+    return mongoose.connection;
+  } catch (error) {
+    console.error("Database setup error:", error);
+    throw error;
+  }
+}
+
+// Create necessary indexes for performance
+async function createIndexes() {
+  try {
+    console.log("Creating database indexes...");
+
+    // User indexes
+    await schema.User.collection.createIndex({ username: 1 }, { unique: true });
+    await schema.User.collection.createIndex({ email: 1 }, { unique: true });
+    await schema.User.collection.createIndex({ teamId: 1 });
+    await schema.User.collection.createIndex({ currentLocation: "2dsphere" });
+
+    // Team indexes
+    await schema.Team.collection.createIndex({ name: 1 }, { unique: true });
+    await schema.Team.collection.createIndex({ status: 1 });
+    await schema.Team.collection.createIndex({ createdBy: 1 });
+
+    // Task indexes
+    await schema.Task.collection.createIndex({ status: 1 });
+    await schema.Task.collection.createIndex({ priority: 1 });
+    await schema.Task.collection.createIndex({ assignedTo: 1 });
+    await schema.Task.collection.createIndex({ createdBy: 1 });
+    await schema.Task.collection.createIndex({ dueDate: 1 });
+    await schema.Task.collection.createIndex({ location: "2dsphere" });
+    await schema.Task.collection.createIndex({ featureId: 1 });
+    await schema.Task.collection.createIndex({ boundaryId: 1 });
+
+    // Feature indexes
+    await schema.Feature.collection.createIndex({ feaNo: 1 });
+    await schema.Feature.collection.createIndex({ feaState: 1 });
+    await schema.Feature.collection.createIndex({ feaStatus: 1 });
+    await schema.Feature.collection.createIndex({ feaType: 1 });
+    await schema.Feature.collection.createIndex({ geometry: "2dsphere" });
+    await schema.Feature.collection.createIndex({ boundaryId: 1 });
+    await schema.Feature.collection.createIndex({ createdBy: 1 });
+
+    // Boundary indexes
+    await schema.Boundary.collection.createIndex({ name: 1 });
+    await schema.Boundary.collection.createIndex({ status: 1 });
+    await schema.Boundary.collection.createIndex({ assignedTo: 1 });
+    await schema.Boundary.collection.createIndex({ geometry: "2dsphere" });
+
+    // Task Update indexes
+    await schema.TaskUpdate.collection.createIndex({ taskId: 1 });
+    await schema.TaskUpdate.collection.createIndex({ userId: 1 });
+    await schema.TaskUpdate.collection.createIndex({ createdAt: -1 });
+
+    // Task Evidence indexes
+    await schema.TaskEvidence.collection.createIndex({ taskId: 1 });
+    await schema.TaskEvidence.collection.createIndex({ userId: 1 });
+    await schema.TaskEvidence.collection.createIndex({ createdAt: -1 });
+
+    console.log("Database indexes created successfully");
+  } catch (error) {
+    console.error("Error creating indexes:", error);
+    // Don't throw here as indexes might already exist
+  }
+}
+
+// Handle connection events
+mongoose.connection.on("connected", () => {
+  console.log("Mongoose connected to MongoDB");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error("Mongoose connection error:", err);
+});
+
+mongoose.connection.on("disconnected", () => {
+  console.log("Mongoose disconnected from MongoDB");
+  isConnected = false;
+});
+
+// Handle process termination
+process.on("SIGINT", async () => {
+  try {
+    await mongoose.connection.close();
+    console.log("MongoDB connection closed through app termination");
+    process.exit(0);
+  } catch (error) {
+    console.error("Error closing MongoDB connection:", error);
+    process.exit(1);
+  }
+});
+
+// Helper function to get database connection
+function getDatabase() {
+  if (!isConnected) {
+    throw new Error("Database not connected. Call setupDatabase() first.");
+  }
+  return mongoose.connection;
+}
+
+// Helper function to check connection status
+function isConnectedToDatabase(): boolean {
+  return isConnected && mongoose.connection.readyState === 1;
+}
+
+// Database operation utilities
+export const db = {
+  // Models from schema
+  User: schema.User,
+  Team: schema.Team,
+  Task: schema.Task,
+  Feature: schema.Feature,
+  Boundary: schema.Boundary,
+  TaskUpdate: schema.TaskUpdate,
+  TaskEvidence: schema.TaskEvidence,
+
+  // Connection utilities
+  connect: connectToDatabase,
+  disconnect: () => mongoose.connection.close(),
+  getConnection: getDatabase,
+  isConnected: isConnectedToDatabase,
+
+  // Transaction helper
+  transaction: async <T>(
+    callback: (session: mongoose.ClientSession) => Promise<T>,
+  ): Promise<T> => {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+      const result = await callback(session);
+      await session.commitTransaction();
+      return result;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  },
+};
+
+// Seed data function (optional)
+async function seedDatabase() {
+  try {
+    console.log("Checking for existing data...");
+
+    // Check if users already exist
+    const userCount = await schema.User.countDocuments();
+    if (userCount > 0) {
+      console.log(`Database already has ${userCount} users. Skipping seed.`);
+      return;
+    }
+
+    console.log("Seeding database with initial data...");
+
+    // Create default admin user
+    const adminUser = new schema.User({
+      username: "admin",
+      password: "hashed_password_here", // Make sure to hash this!
+      name: "System Administrator",
+      email: "admin@example.com",
+      role: "Supervisor",
+    });
+
+    await adminUser.save();
+    console.log("Default admin user created");
+
+    // Create default team
+    const defaultTeam = new schema.Team({
+      name: "Default Team",
+      description: "Default field operations team",
+      status: "Approved",
+      createdBy: adminUser._id,
+      approvedBy: adminUser._id,
+    });
+
+    await defaultTeam.save();
+    console.log("Default team created");
+
+    console.log("Database seeding complete");
+  } catch (error) {
+    console.error("Error seeding database:", error);
+  }
+}
+
+export {
+  setupDatabase,
+  connectToDatabase,
+  createIndexes,
+  seedDatabase,
+  isConnectedToDatabase as isConnected,
+};
