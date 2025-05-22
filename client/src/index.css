@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --primary-color: #caf7b7;
-  --accent-color: hsl(102,80%,84%);
-  --text-on-light: #333;
-  --secondary-color: #f0f8f0;
+  --primary-color: #2E8B57; /* Sea Green */
+  --accent-color: #3CB371; /* Medium Sea Green */
+  --text-on-light: #fff;
+  --secondary-color: #F5FFFA; /* Mint Cream */
+  --tertiary-color: #43A047; /* Green variation */
 }
 
 body {
@@ -43,45 +44,45 @@ body {
 :root {
       --background: 0 0% 100%;
 --foreground: 20 14.3% 4.1%;
---muted: 60 4.8% 95.9%;
+--muted: 120 16% 93%;
 --muted-foreground: 25 5.3% 44.7%;
 --popover: 0 0% 100%;
 --popover-foreground: 20 14.3% 4.1%;
 --card: 0 0% 100%;
 --card-foreground: 20 14.3% 4.1%;
---border: 20 5.9% 90%;
---input: 20 5.9% 90%;
---primary: 207 90% 54%;
---primary-foreground: 211 100% 99%;
---secondary: 60 4.8% 95.9%;
---secondary-foreground: 24 9.8% 10%;
---accent: 60 4.8% 95.9%;
---accent-foreground: 24 9.8% 10%;
+--border: 147 36% 30% / 20%;
+--input: 147 36% 30% / 15%;
+--primary: 147 36% 36%; /* Sea Green hue */
+--primary-foreground: 0 0% 100%;
+--secondary: 147 36% 95%;
+--secondary-foreground: 147 36% 25%;
+--accent: 147 36% 40%;
+--accent-foreground: 0 0% 100%;
 --destructive: 0 84.2% 60.2%;
 --destructive-foreground: 60 9.1% 97.8%;
---ring: 20 14.3% 4.1%;
+--ring: 147 36% 36%;
 --radius: 0.5rem;
   }
   .dark {
-      --background: 240 10% 3.9%;
+      --background: 157 35% 10%;
 --foreground: 0 0% 98%;
---muted: 240 3.7% 15.9%;
---muted-foreground: 240 5% 64.9%;
---popover: 240 10% 3.9%;
+--muted: 157 35% 20%;
+--muted-foreground: 157 30% 70%;
+--popover: 157 35% 8%;
 --popover-foreground: 0 0% 98%;
---card: 240 10% 3.9%;
+--card: 157 35% 12%;
 --card-foreground: 0 0% 98%;
---border: 240 3.7% 15.9%;
---input: 240 3.7% 15.9%;
---primary: 207 90% 54%;
---primary-foreground: 211 100% 99%;
---secondary: 240 3.7% 15.9%;
+--border: 147 36% 30% / 30%;
+--input: 147 36% 30% / 25%;
+--primary: 147 36% 42%; /* Brighter Sea Green for dark mode */
+--primary-foreground: 0 0% 100%;
+--secondary: 147 30% 25%;
 --secondary-foreground: 0 0% 98%;
---accent: 240 3.7% 15.9%;
---accent-foreground: 0 0% 98%;
---destructive: 0 62.8% 30.6%;
+--accent: 147 42% 35%;
+--accent-foreground: 0 0% 100%;
+--destructive: 0 62.8% 40.6%;
 --destructive-foreground: 0 0% 98%;
---ring: 240 4.9% 83.9%;
+--ring: 147 36% 50%;
 --radius: 0.5rem;
   }
 
