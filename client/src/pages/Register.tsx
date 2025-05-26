@@ -220,8 +220,8 @@ export default function Register() {
                           ) : (
                             <>
                               <SelectItem value="_placeholder" disabled>Select a team</SelectItem>
-                              {approvedTeams.map((team: Team) => (
-                                <SelectItem key={team.id} value={team.id.toString()}>
+                              {approvedTeams.map((team: any) => (
+                                <SelectItem key={team._id} value={team._id.toString()}>
                                   {team.name}
                                 </SelectItem>
                               ))}
