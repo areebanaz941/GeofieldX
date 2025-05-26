@@ -38,9 +38,7 @@ const registerSchema = z.discriminatedUnion("role", [
     password: z.string().min(6, "Password must be at least 6 characters"),
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email format"),
-    teamId: z.string().refine(val => val !== "", {
-      message: "Please select a team"
-    }),
+    teamId: z.string().min(1, "Please select a team"),
   }),
 ]);
 
@@ -96,10 +94,8 @@ export default function Register() {
   const onSubmit = async (values: RegisterFormValues) => {
     setIsLoading(true);
     try {
-      // Convert teamId to number for Field users
-      const formattedValues = values.role === "Field" 
-        ? { ...values, teamId: parseInt(values.teamId, 10) }
-        : values;
+      // Keep teamId as string for MongoDB ObjectId compatibility
+      const formattedValues = values;
         
       await register(formattedValues);
       toast({
