@@ -163,7 +163,6 @@ export default function TaskList() {
           open={createTaskModalOpen}
           onClose={() => setCreateTaskModalOpen(false)}
           onOpenChange={setCreateTaskModalOpen}
-          teams={fieldUsers}
         />
       )}
 
