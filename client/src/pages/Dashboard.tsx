@@ -2,12 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
+import CreateTaskModal from "@/components/CreateTaskModal";
 import useAuth from "@/hooks/useAuth";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const isSupervisor = user?.role === "Supervisor";
+  const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
@@ -63,7 +66,21 @@ export default function Dashboard() {
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary-custom">
       <div className="container mx-auto max-w-6xl">
-        <h1 className="text-2xl font-bold mb-6 text-on-primary">Dashboard</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl font-bold text-on-primary">Dashboard</h1>
+          {isSupervisor && (
+            <Button 
+              onClick={() => setCreateTaskModalOpen(true)}
+              className="bg-primary-500 hover:bg-primary-600 text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                <path d="M5 12h14"></path>
+                <path d="M12 5v14"></path>
+              </svg>
+              Create Task
+            </Button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 responsive-grid">
           <Card className="bg-primary-custom border-0 shadow-sm">
@@ -316,6 +333,14 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {createTaskModalOpen && (
+        <CreateTaskModal
+          open={createTaskModalOpen}
+          onClose={() => setCreateTaskModalOpen(false)}
+          onOpenChange={setCreateTaskModalOpen}
+        />
+      )}
     </div>
   );
 }
