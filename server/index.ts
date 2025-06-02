@@ -242,7 +242,7 @@ function setupGracefulShutdown(server: any, storage: IStorage) {
 
     // Start the server
     const port = parseInt(process.env.PORT || "5000", 10);
-    const host = process.env.HOST || "0.0.0.0";
+    const host = process.env.HOST || "localhost";
 
     server.listen(
       {
