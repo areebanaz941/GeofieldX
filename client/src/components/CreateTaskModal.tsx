@@ -1,10 +1,12 @@
-import { useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient } from "@/lib/queryClient";
-import { createTask } from "@/lib/api";
+import { createTask, getAllTeams, getUsersByTeam } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { User } from "@shared/schema";
+
 
 // Define form schema
 const formSchema = z.object({
@@ -40,7 +41,8 @@ const formSchema = z.object({
   status: z.string().default("Unassigned"),
   priority: z.enum(["Low", "Medium", "High", "Urgent"]).default("Medium"),
   dueDate: z.string().optional(),
-  assignedTo: z.number().optional(),
+  teamId: z.string().optional(),
+  assignedTo: z.string().optional(),
   location: z.any(),
 });
 
@@ -50,7 +52,6 @@ interface CreateTaskModalProps {
   open: boolean;
   onClose: () => void;
   onOpenChange: (open: boolean) => void;
-  teams: User[];
   selectedLocation?: { lat: number; lng: number } | null;
   setSelectionMode?: (mode: boolean) => void;
 }
@@ -59,11 +60,26 @@ export default function CreateTaskModal({
   open,
   onClose,
   onOpenChange,
-  teams,
   selectedLocation,
   setSelectionMode,
 }: CreateTaskModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+
+  // Fetch teams if user is supervisor
+  const { data: teams = [] } = useQuery({
+    queryKey: ['/api/teams'],
+    queryFn: getAllTeams,
+    enabled: user?.role === "Supervisor"
+  });
+
+  // Fetch team members when a team is selected
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['/api/teams', selectedTeamId, 'users'],
+    queryFn: () => getUsersByTeam(selectedTeamId),
+    enabled: !!selectedTeamId
+  });
 
   // Initialize form
   const form = useForm<TaskFormValues>({
@@ -113,15 +129,22 @@ export default function CreateTaskModal({
   });
 
   const onSubmit = (values: TaskFormValues) => {
-    if (values.assignedTo) {
-      // If task is assigned, update status to "Assigned"
-      values.status = "Assigned";
-    }
-
-    createTaskMutation.mutate({
-      ...values,
+    const taskData = {
+      title: values.title,
+      description: values.description,
+      status: values.assignedTo ? "Assigned" as const : "Unassigned" as const,
+      priority: values.priority,
       dueDate: values.dueDate ? new Date(values.dueDate) : undefined,
-    });
+      teamId: values.teamId || undefined,
+      assignedTo: values.assignedTo || undefined,
+      location: selectedLocation ? {
+        type: "Point" as const,
+        coordinates: [selectedLocation.lng, selectedLocation.lat]
+      } : undefined,
+      createdBy: user?._id
+    };
+
+    createTaskMutation.mutate(taskData);
   };
 
   return (
@@ -165,28 +188,74 @@ export default function CreateTaskModal({
               )}
             />
             
+            {user?.role === "Supervisor" && (
+              <FormField
+                control={form.control}
+                name="teamId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Select Team</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedTeamId(value);
+                        form.setValue("assignedTo", ""); // Clear assignee when team changes
+                      }}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a team" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">No specific team</SelectItem>
+                        {teams.filter((team: any) => team.status === "Approved").map((team: any) => (
+                          <SelectItem key={team._id} value={team._id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            
             <FormField
               control={form.control}
               name="assignedTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assign To</FormLabel>
+                  <FormLabel>Assign To Team Member</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
-                    value={field.value?.toString()}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={user?.role === "Supervisor" && !!selectedTeamId && teamMembers.length === 0}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select team member" />
+                        <SelectValue placeholder={
+                          user?.role === "Supervisor" && selectedTeamId && teamMembers.length === 0
+                            ? "No team members available"
+                            : "Select team member"
+                        } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.id.toString()}>
-                          {team.name}
+                      <SelectItem value="">Leave unassigned</SelectItem>
+                      {user?.role === "Supervisor" && selectedTeamId ? (
+                        teamMembers.map((member: any) => (
+                          <SelectItem key={member._id} value={member._id}>
+                            {member.name} ({member.username})
+                          </SelectItem>
+                        ))
+                      ) : user?.role === "Field" ? (
+                        <SelectItem value={user._id}>
+                          Assign to myself
                         </SelectItem>
-                      ))}
+                      ) : null}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -675,6 +675,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  app.get(
+    "/api/teams/:id/users",
+    isAuthenticated,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const teamId = req.params.id;
+        const users = await storage.getUsersByTeam(teamId);
+        // Remove passwords from response
+        const usersResponse = users.map((user) => {
+          const { password, ...userWithoutPassword } = user;
+          return userWithoutPassword;
+        });
+        res.json(usersResponse);
+      } catch (error) {
+        console.error("Get users by team error:", error);
+        res.status(500).json({ message: "Failed to get team users" });
+      }
+    },
+  );
+
   app.patch(
     "/api/teams/:id/status",
     isSupervisor,

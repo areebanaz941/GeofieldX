@@ -40,6 +40,8 @@ export async function getFieldUsers() {
   return await res.json();
 }
 
+
+
 export async function updateUserLocation(lat: number, lng: number) {
   const res = await apiRequest('POST', '/api/users/location', { lat, lng });
   return await res.json();
@@ -177,5 +179,10 @@ export async function getTeamMembers(teamId: number) {
 
 export async function assignUserToTeam(userId: number, teamId: number) {
   const res = await apiRequest('POST', `/api/users/${userId}/assign-team`, { teamId });
+  return await res.json();
+}
+
+export async function getUsersByTeam(teamId: string) {
+  const res = await apiRequest('GET', `/api/teams/${teamId}/users`);
   return await res.json();
 }
