@@ -26,7 +26,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-function getInitials(name: string) {
+function getInitials(name: string | undefined) {
+  if (!name) return "??";
   return name
     .split(" ")
     .map((n) => n[0])
