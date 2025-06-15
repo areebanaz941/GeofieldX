@@ -50,17 +50,24 @@ function getActiveStatus(lastActive: Date | null | undefined) {
 
 // TeamCard component for displaying team information
 interface TeamCardProps {
-  team: Team;
-  fieldUsers: User[];
-  handleTeamStatusChange: (teamId: number, status: string) => void;
+  team: any;
+  fieldUsers: any[];
+  handleTeamStatusChange: (teamId: string, status: string) => void;
 }
 
 function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
-  // Find members of this team
-  const teamMembers = fieldUsers.filter(user => user.teamId === team.id);
+  // Find members of this team using MongoDB IDs
+  const teamMembers = fieldUsers.filter(user => user.teamId === team._id);
+  
+  // Get task data using the team functions defined in the parent component
+  const [tasks] = useState<any[]>([]);
+  const teamTasks = tasks.filter((task: any) => task.assignedTo === team._id);
+  const completedTasks = teamTasks.filter((task: any) => task.status === "Completed");
+  const inProgressTasks = teamTasks.filter((task: any) => task.status === "In Progress");
+  const pendingTasks = teamTasks.filter((task: any) => task.status === "Assigned");
   
   return (
-    <Card key={team.id} className="overflow-hidden">
+    <Card key={team._id} className="overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle>{team.name}</CardTitle>
@@ -95,7 +102,7 @@ function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
             <h4 className="text-xs font-medium uppercase text-gray-500 mb-2">Team Members</h4>
             <div className="space-y-2">
               {teamMembers.slice(0, 3).map((member) => (
-                <div key={member.id} className="flex items-center gap-2">
+                <div key={member._id} className="flex items-center gap-2">
                   <Avatar className="h-6 w-6 bg-primary-100 text-primary-600">
                     <AvatarFallback className="text-xs">{getInitials(member.name)}</AvatarFallback>
                   </Avatar>
@@ -118,7 +125,7 @@ function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
               size="sm" 
               variant="outline" 
               className="border-red-500 text-red-500 hover:bg-red-50"
-              onClick={() => handleTeamStatusChange(team.id, "Rejected")}
+              onClick={() => handleTeamStatusChange(team._id, "Rejected")}
             >
               Reject
             </Button>
@@ -137,7 +144,7 @@ function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
             size="sm" 
             variant="outline" 
             className="border-green-500 text-green-500 hover:bg-green-50"
-            onClick={() => handleTeamStatusChange(team.id, "Approved")}
+            onClick={() => handleTeamStatusChange(team._id, "Approved")}
           >
             Approve
           </Button>
@@ -147,7 +154,7 @@ function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
             size="sm" 
             variant="outline" 
             className="border-red-500 text-red-500 hover:bg-red-50"
-            onClick={() => handleTeamStatusChange(team.id, "Rejected")}
+            onClick={() => handleTeamStatusChange(team._id, "Rejected")}
           >
             Deactivate
           </Button>
@@ -594,8 +601,8 @@ export default function FieldTeams() {
               
               {/* No teams found after filtering */}
               {teams.length > 0 && 
-               teams.filter(team => isSupervisor ? true : (user?.teamId === team.id))
-                 .filter(team => 
+               teams.filter((team: any) => isSupervisor ? true : (user?.teamId === team._id))
+                 .filter((team: any) => 
                    searchTerm === "" || 
                    team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                    (team.description || "").toLowerCase().includes(searchTerm.toLowerCase())
