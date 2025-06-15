@@ -52,15 +52,15 @@ function getActiveStatus(lastActive: Date | null | undefined) {
 interface TeamCardProps {
   team: any;
   fieldUsers: any[];
+  tasks: any[];
   handleTeamStatusChange: (teamId: string, status: string) => void;
 }
 
-function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
+function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange }: TeamCardProps) {
   // Find members of this team using MongoDB IDs
   const teamMembers = fieldUsers.filter(user => user.teamId === team._id);
   
-  // Get task data using the team functions defined in the parent component
-  const [tasks] = useState<any[]>([]);
+  // Filter tasks assigned to this team
   const teamTasks = tasks.filter((task: any) => task.assignedTo === team._id);
   const completedTasks = teamTasks.filter((task: any) => task.status === "Completed");
   const inProgressTasks = teamTasks.filter((task: any) => task.status === "In Progress");
@@ -114,6 +114,27 @@ function TeamCard({ team, fieldUsers, handleTeamStatusChange }: TeamCardProps) {
                   +{teamMembers.length - 3} more members
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Task Assignment Summary */}
+        {teamTasks.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="text-xs font-medium uppercase text-gray-500 mb-2">Task Status</h4>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-blue-50 p-2 rounded">
+                <div className="text-sm font-medium text-blue-600">{pendingTasks.length}</div>
+                <div className="text-xs text-blue-500">Assigned</div>
+              </div>
+              <div className="bg-yellow-50 p-2 rounded">
+                <div className="text-sm font-medium text-yellow-600">{inProgressTasks.length}</div>
+                <div className="text-xs text-yellow-500">In Progress</div>
+              </div>
+              <div className="bg-green-50 p-2 rounded">
+                <div className="text-sm font-medium text-green-600">{completedTasks.length}</div>
+                <div className="text-xs text-green-500">Completed</div>
+              </div>
             </div>
           </div>
         )}
@@ -585,6 +606,7 @@ export default function FieldTeams() {
                       key={team._id} 
                       team={team} 
                       fieldUsers={fieldUsers} 
+                      tasks={tasks || []}
                       handleTeamStatusChange={handleTeamStatusChange} 
                     />
                   ))
