@@ -78,27 +78,27 @@ async function addInitialData(storage: IStorage) {
 
       const teams: InsertTeam[] = [
         {
-          name: "Field Team Alpha",
+          name: "Alpha",
           description:
             "Primary field operations team for towers and infrastructure",
           status: "Approved",
           createdBy: supervisorId,
         },
         {
-          name: "Field Team Beta",
+          name: "Beta",
           description: "Secondary field operations team for maintenance tasks",
           status: "Approved",
           createdBy: supervisorId,
         },
         {
-          name: "Maintenance Team",
+          name: "Charlie",
           description:
             "Specialized team for infrastructure maintenance and repairs",
           status: "Approved",
           createdBy: supervisorId,
         },
         {
-          name: "Survey Team",
+          name: "Delta",
           description: "Team responsible for site surveys and boundary mapping",
           status: "Approved",
           createdBy: supervisorId,
