@@ -72,6 +72,7 @@ const LeafletMap = ({
   const tasksLayerRef = useRef<L.LayerGroup | null>(null);
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
   const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const selectedLocationMarkerRef = useRef<L.Marker | null>(null);
   
   // Initialize map
   useEffect(() => {
@@ -95,7 +96,30 @@ const LeafletMap = ({
       
       if (onMapClick) {
         map.on('click', (e) => {
-          if (selectionMode) {
+          // Allow map clicks when in selection mode or when not drawing
+          if (selectionMode || !drawingMode) {
+            // Remove existing selection marker
+            if (selectedLocationMarkerRef.current) {
+              map.removeLayer(selectedLocationMarkerRef.current);
+            }
+            
+            // Create new selection marker
+            const selectedIcon = L.divIcon({
+              className: 'selected-location-marker',
+              html: `
+                <div class="animate-pulse">
+                  <div class="rounded-full bg-red-500 w-6 h-6 flex items-center justify-center shadow-lg border-2 border-white">
+                    <div class="rounded-full bg-white w-2 h-2"></div>
+                  </div>
+                </div>
+              `,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            });
+            
+            selectedLocationMarkerRef.current = L.marker([e.latlng.lat, e.latlng.lng], { icon: selectedIcon });
+            selectedLocationMarkerRef.current.addTo(map);
+            
             onMapClick(e.latlng);
           }
         });

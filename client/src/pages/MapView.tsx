@@ -123,8 +123,10 @@ export default function MapView() {
   }, [user]);
 
   const handleMapClick = (latlng: { lat: number; lng: number }) => {
-    if (selectionMode) {
+    // Always allow location clicks when not in drawing mode
+    if (!drawingMode) {
       setSelectedLocation(latlng);
+      setSelectionMode(true);
       toast({
         title: "Location Selected",
         description: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`,
@@ -211,6 +213,22 @@ export default function MapView() {
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
                 <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
+              </svg>
+            </Button>
+          )}
+          
+          {selectedLocation && (
+            <Button
+              onClick={() => {
+                setSelectedLocation(null);
+                setSelectionMode(false);
+              }}
+              className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+              title="Clear Selection"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </Button>
           )}
