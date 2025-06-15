@@ -321,7 +321,7 @@ export default function CreateFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {maintenanceEnum.enumValues.map((status) => (
+                      {maintenanceEnum.options.map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
                         </SelectItem>
