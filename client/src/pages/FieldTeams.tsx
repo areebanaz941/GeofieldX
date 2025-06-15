@@ -267,25 +267,41 @@ export default function FieldTeams() {
     (user.username?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
   
-  // Get tasks assigned to each user
-  const getUserTasks = (userId: number) => {
-    return tasks.filter((task: Task) => task.assignedTo === userId);
+  // Get tasks assigned to each user's team
+  const getUserTasks = (userId: string) => {
+    const user = fieldUsers.find((u: any) => u._id === userId);
+    if (!user?.teamId) return [];
+    return tasks.filter((task: any) => task.assignedTo === user.teamId);
   };
   
   // Calculate completion rate for each user
-  const getUserCompletionRate = (userId: number) => {
+  const getUserCompletionRate = (userId: string) => {
     const userTasks = getUserTasks(userId);
     if (userTasks.length === 0) return 0;
     
-    const completedTasks = userTasks.filter((task: Task) => task.status === "Completed");
+    const completedTasks = userTasks.filter((task: any) => task.status === "Completed");
     return Math.round((completedTasks.length / userTasks.length) * 100);
   };
   
   // Get team details for a user
-  const getUserTeam = (userId: number) => {
-    const user = fieldUsers.find((u: User) => u.id === userId);
+  const getUserTeam = (userId: string) => {
+    const user = fieldUsers.find((u: any) => u._id === userId);
     if (!user?.teamId) return null;
-    return teams.find((team: Team) => team.id === user.teamId) || null;
+    return teams.find((team: any) => team._id === user.teamId) || null;
+  };
+
+  // Get tasks assigned to a specific team
+  const getTeamTasks = (teamId: string) => {
+    return tasks.filter((task: any) => task.assignedTo === teamId);
+  };
+
+  // Calculate team completion rate
+  const getTeamCompletionRate = (teamId: string) => {
+    const teamTasks = getTeamTasks(teamId);
+    if (teamTasks.length === 0) return 0;
+    
+    const completedTasks = teamTasks.filter((task: any) => task.status === "Completed");
+    return Math.round((completedTasks.length / teamTasks.length) * 100);
   };
   
   // Handle team creation form submission
@@ -294,7 +310,7 @@ export default function FieldTeams() {
   };
   
   // Handle team status changes
-  const handleTeamStatusChange = (teamId: number, status: string) => {
+  const handleTeamStatusChange = (teamId: string, status: string) => {
     updateTeamStatusMutation.mutate({ teamId, status });
   };
   
@@ -400,14 +416,14 @@ export default function FieldTeams() {
           <TabsContent value="members" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredUsers.length > 0 ? (
-                filteredUsers.map((fieldUser: User) => {
-                  const userTasks = getUserTasks(fieldUser.id);
-                  const completionRate = getUserCompletionRate(fieldUser.id);
+                filteredUsers.map((fieldUser: any) => {
+                  const userTasks = getUserTasks(fieldUser._id);
+                  const completionRate = getUserCompletionRate(fieldUser._id);
                   const activeStatus = getActiveStatus(fieldUser.lastActive);
-                  const userTeam = getUserTeam(fieldUser.id);
+                  const userTeam = getUserTeam(fieldUser._id);
                   
                   return (
-                    <Card key={fieldUser.id} className="overflow-hidden">
+                    <Card key={fieldUser._id} className="overflow-hidden">
                       <CardContent className="p-0">
                         <div className="p-5">
                           <div className="flex items-start justify-between">
@@ -548,18 +564,18 @@ export default function FieldTeams() {
                   // Filter teams based on user role:
                   // - Supervisors can see all teams
                   // - Field users can only see their own team
-                  .filter(team => 
-                    isSupervisor ? true : (user?.teamId === team.id)
+                  .filter((team: any) => 
+                    isSupervisor ? true : (user?.teamId === team._id)
                   )
                   // Apply text search filtering
-                  .filter(team => 
+                  .filter((team: any) => 
                     searchTerm === "" || 
                     team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                     (team.description || "").toLowerCase().includes(searchTerm.toLowerCase())
                   )
-                  .map((team: Team) => (
+                  .map((team: any) => (
                     <TeamCard 
-                      key={team.id} 
+                      key={team._id} 
                       team={team} 
                       fieldUsers={fieldUsers} 
                       handleTeamStatusChange={handleTeamStatusChange} 
