@@ -203,7 +203,7 @@ function setupGracefulShutdown(server: any, storage: IStorage) {
 
 (async () => {
   try {
-    log("Starting GeoWhats application...");
+    log("Starting GeoFieldX application...");
 
     // Initialize storage (MongoDB with file storage fallback)
     const storage = await initializeStorage();
@@ -251,7 +251,7 @@ function setupGracefulShutdown(server: any, storage: IStorage) {
         reusePort: true,
       },
       () => {
-        log(`🚀 GeoWhats server running on http://${host}:${port}`);
+        log(`🚀 GeoFieldX server running on http://${host}:${port}`);
         log(`📊 Environment: ${app.get("env") || "development"}`);
         log(`💾 Storage: ${storage.constructor.name}`);
 

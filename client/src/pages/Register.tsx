@@ -127,8 +127,8 @@ export default function Register() {
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center mb-3">
             <div className="flex items-center mb-2">
-              <img src={GeoPilotLogo} alt="GeoPilot Logo" className="h-12 w-auto mr-2" />
-              <CardTitle className="text-2xl bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">GeoPilot</CardTitle>
+              <img src={GeoPilotLogo} alt="GeoFieldX Logo" className="h-12 w-auto mr-2" />
+              <CardTitle className="text-2xl bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">GeoFieldX</CardTitle>
             </div>
             <CardDescription className="text-center italic font-medium text-[#F9973E]">
               {t('auth.subtitle')}
