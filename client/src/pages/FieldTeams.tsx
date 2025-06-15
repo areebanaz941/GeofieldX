@@ -263,8 +263,8 @@ export default function FieldTeams() {
   
   // Filter users based on search
   const filteredUsers = fieldUsers.filter((user: User) =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (user.username?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
   
   // Get tasks assigned to each user
