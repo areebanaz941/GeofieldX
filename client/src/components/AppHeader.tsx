@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import useAuth from "@/hooks/useAuth";
 import LanguageSwitcher from "./LanguageSwitcher";
+import GeoPilotLogo from "../assets/GeoPilot Logo.png";
 
 export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -66,8 +67,8 @@ export default function AppHeader() {
           <span className="sr-only">Toggle menu</span>
         </Button>
         <div className="flex items-center">
-          <i className="ri-map-pin-line text-primary-500 text-2xl mr-2"></i>
-          <h1 className="text-xl font-medium text-primary-600">GeoFieldX</h1>
+          <img src={GeoPilotLogo} alt="GeoFieldX Logo" className="h-8 w-auto mr-2" />
+          <h1 className="text-xl font-medium bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">GeoFieldX</h1>
         </div>
       </div>
       <div className="flex items-center space-x-4">
