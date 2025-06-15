@@ -163,11 +163,7 @@ export default function MapView() {
         
         <MapControls />
         
-        <MapFilterControls 
-          activeFilters={activeFilters}
-          setActiveFilters={setActiveFilters}
-          onAdvancedSearchClick={() => setAdvancedSearchModalOpen(true)}
-        />
+
         
         <div className="absolute bottom-4 left-4 z-[1000]">
           <Button
