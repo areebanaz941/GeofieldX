@@ -66,10 +66,10 @@ export default function Dashboard() {
     .slice(0, 5);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary-custom">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-on-primary">{t('dashboard.title')}</h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{t('dashboard.title')}</h1>
           {isSupervisor && (
             <Button 
               onClick={() => setCreateTaskModalOpen(true)}
@@ -85,47 +85,47 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 responsive-grid">
-          <Card className="bg-primary-custom border-0 shadow-sm">
+          <Card className="bg-white border-0 shadow-lg">
             <CardContent className="p-4 sm:p-6">
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 font-medium">{t('dashboard.totalTasks')}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-on-primary">{taskStats.total}</p>
+                <p className="text-sm text-[#1E5CB3] font-medium">{t('dashboard.totalTasks')}</p>
+                <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{taskStats.total}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-primary-custom border-0 shadow-sm">
+          <Card className="bg-white border-0 shadow-lg">
             <CardContent className="p-4 sm:p-6">
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 font-medium">Features Tracked</p>
-                <p className="text-2xl sm:text-3xl font-bold text-on-primary">{featureStats.total}</p>
+                <p className="text-sm text-[#1E5CB3] font-medium">Features Tracked</p>
+                <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{featureStats.total}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-primary-custom border-0 shadow-sm">
+          <Card className="bg-white border-0 shadow-lg">
             <CardContent className="p-4 sm:p-6">
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 font-medium">Completion Rate</p>
-                <p className="text-2xl sm:text-3xl font-bold text-on-primary">
+                <p className="text-sm text-[#1E5CB3] font-medium">Completion Rate</p>
+                <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
                   {taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%
                 </p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-primary-custom border-0 shadow-sm">
+          <Card className="bg-white border-0 shadow-lg">
             <CardContent className="p-4 sm:p-6">
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 font-medium">Field Teams</p>
-                <p className="text-2xl sm:text-3xl font-bold text-on-primary">{fieldUsers.length || 0}</p>
+                <p className="text-sm text-[#1E5CB3] font-medium">Field Teams</p>
+                <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{fieldUsers.length || 0}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 responsive-grid">
-          <Card className="border-0 shadow-sm overflow-hidden">
-            <CardHeader className="bg-primary-custom">
-              <CardTitle className="text-on-primary">Task Status Distribution</CardTitle>
-              <CardDescription className="text-gray-600">
+          <Card className="bg-white border-0 shadow-lg overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] text-white">
+              <CardTitle className="text-white">Task Status Distribution</CardTitle>
+              <CardDescription className="text-gray-100">
                 Overview of current task statuses
               </CardDescription>
             </CardHeader>
@@ -202,10 +202,10 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
-          <Card className="border-0 shadow-sm overflow-hidden">
-            <CardHeader className="bg-primary-custom">
-              <CardTitle className="text-on-primary">Feature Type Distribution</CardTitle>
-              <CardDescription className="text-gray-600">
+          <Card className="bg-white border-0 shadow-lg overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] text-white">
+              <CardTitle className="text-white">Feature Type Distribution</CardTitle>
+              <CardDescription className="text-gray-100">
                 Breakdown of features by type
               </CardDescription>
             </CardHeader>
@@ -283,10 +283,10 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          <Card className="border-0 shadow-sm overflow-hidden">
-            <CardHeader className="bg-primary-custom pb-3">
-              <CardTitle className="text-on-primary">Recent Tasks</CardTitle>
-              <CardDescription className="text-gray-600">
+          <Card className="bg-white border-0 shadow-lg overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] text-white pb-3">
+              <CardTitle className="text-white">Recent Tasks</CardTitle>
+              <CardDescription className="text-gray-100">
                 Latest updated tasks in the system
               </CardDescription>
             </CardHeader>

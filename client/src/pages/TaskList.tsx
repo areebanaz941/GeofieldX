@@ -51,10 +51,10 @@ export default function TaskList() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+    <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold">{t('tasks.title')}</h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{t('tasks.title')}</h1>
           <Button onClick={() => setCreateTaskModalOpen(true)} className="bg-primary-500 hover:bg-primary-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
               <path d="M5 12h14"></path>
