@@ -37,6 +37,7 @@ interface MapProps {
   tasks?: Task[];
   activeFilters?: string[];
   onFeatureClick?: (feature: Feature) => void;
+  onBoundaryClick?: (boundary: Boundary) => void;
   onTeamClick?: (team: User) => void;
   onMapClick?: (latlng: { lat: number; lng: number }) => void;
   selectionMode?: boolean;

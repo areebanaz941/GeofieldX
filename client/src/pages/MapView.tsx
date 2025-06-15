@@ -16,8 +16,8 @@ import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getAllFeatures, getAllTasks, getFieldUsers, updateUserLocation } from "@/lib/api";
-import { Feature, Task, User } from "@shared/schema";
+import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation } from "@/lib/api";
+import { Feature, Task, User, Boundary } from "@shared/schema";
 
 export default function MapView() {
   const { user } = useAuth();
@@ -33,6 +33,10 @@ export default function MapView() {
   const [advancedSearchModalOpen, setAdvancedSearchModalOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [featureAssignmentModalOpen, setFeatureAssignmentModalOpen] = useState(false);
+  const [boundaryAssignmentModalOpen, setBoundaryAssignmentModalOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
+  const [selectedBoundary, setSelectedBoundary] = useState<any | null>(null);
   
   // Fetch data
   const { data: features = [] } = useQuery({
@@ -48,6 +52,11 @@ export default function MapView() {
   const { data: fieldUsers = [] } = useQuery({
     queryKey: ["/api/users/field"],
     queryFn: getFieldUsers,
+  });
+
+  const { data: boundaries = [] } = useQuery({
+    queryKey: ["/api/boundaries"],
+    queryFn: getAllBoundaries,
   });
 
   // Update user location
@@ -102,11 +111,30 @@ export default function MapView() {
     }
   };
 
-  const handleFeatureClick = (feature: Feature) => {
-    toast({
-      title: "Feature Clicked",
-      description: `${feature.feaType} #${feature.feaNo}`,
-    });
+  const handleFeatureClick = (feature: any) => {
+    // If user is supervisor, show assignment modal
+    if (user?.role === "Supervisor") {
+      setSelectedFeature(feature);
+      setFeatureAssignmentModalOpen(true);
+    } else {
+      toast({
+        title: "Feature Clicked",
+        description: `${feature.feaType} #${feature.feaNo}`,
+      });
+    }
+  };
+
+  const handleBoundaryClick = (boundary: any) => {
+    // If user is supervisor, show assignment modal
+    if (user?.role === "Supervisor") {
+      setSelectedBoundary(boundary);
+      setBoundaryAssignmentModalOpen(true);
+    } else {
+      toast({
+        title: "Area Selected",
+        description: `Area boundary selected`,
+      });
+    }
   };
 
   const handleTeamClick = (team: User) => {
@@ -123,9 +151,11 @@ export default function MapView() {
         <LeafletMap
           features={features}
           teams={fieldUsers}
+          boundaries={boundaries}
           tasks={tasks}
           activeFilters={activeFilters}
           onFeatureClick={handleFeatureClick}
+          onBoundaryClick={handleBoundaryClick}
           onTeamClick={handleTeamClick}
           onMapClick={handleMapClick}
           selectionMode={selectionMode}
@@ -218,6 +248,20 @@ export default function MapView() {
           onOpenChange={setAdvancedSearchModalOpen}
         />
       )}
+      
+      {/* Feature Assignment Modal for Supervisors */}
+      <FeatureAssignmentModal
+        open={featureAssignmentModalOpen}
+        onOpenChange={setFeatureAssignmentModalOpen}
+        feature={selectedFeature}
+      />
+      
+      {/* Boundary Assignment Modal for Supervisors */}
+      <BoundaryAssignmentModal
+        open={boundaryAssignmentModalOpen}
+        onOpenChange={setBoundaryAssignmentModalOpen}
+        boundary={selectedBoundary}
+      />
     </>
   );
 }
