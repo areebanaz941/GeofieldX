@@ -84,7 +84,7 @@ export default function AppHeader() {
             <Button variant="ghost" className="relative h-8 w-8 rounded-full bg-primary-100 text-primary-600">
               <Avatar className="h-8 w-8">
                 <AvatarFallback>
-                  {user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                  {user.name ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
             </Button>

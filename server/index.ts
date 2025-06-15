@@ -127,7 +127,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Tower",
           specificType: "Mobillink",
           feaNo: "TWR-001",
+          feaState: "As-Built",
           feaStatus: "Completed",
+          maintenance: "None",
           geometry: {
             type: "Point",
             coordinates: [67.0011, 24.8607] // [lng, lat]
@@ -139,7 +141,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Tower",
           specificType: "Ptcl",
           feaNo: "TWR-002",
+          feaState: "As-Built",
           feaStatus: "Active",
+          maintenance: true,
           geometry: {
             type: "Point",
             coordinates: [67.0051, 24.8647] // [lng, lat]
@@ -151,7 +155,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Tower",
           specificType: "Mobillink",
           feaNo: "TWR-003",
+          feaState: "Plan",
           feaStatus: "New",
+          maintenance: false,
           geometry: {
             type: "Point",
             coordinates: [66.9971, 24.8567] // [lng, lat]
@@ -164,7 +170,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Manhole",
           specificType: "2-way",
           feaNo: "MH-001",
+          feaState: "As-Built",
           feaStatus: "Completed",
+          maintenance: false,
           geometry: {
             type: "Point",
             coordinates: [67.0031, 24.8627] // [lng, lat]
@@ -176,7 +184,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Manhole",
           specificType: "4-way",
           feaNo: "MH-002",
+          feaState: "Under Construction",
           feaStatus: "In-Completed",
+          maintenance: false,
           geometry: {
             type: "Point",
             coordinates: [67.0071, 24.8587] // [lng, lat]
@@ -188,7 +198,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Manhole",
           specificType: "2-way",
           feaNo: "MH-003",
+          feaState: "As-Built",
           feaStatus: "Active",
+          maintenance: true,
           geometry: {
             type: "Point",
             coordinates: [66.9991, 24.8547] // [lng, lat]
@@ -201,7 +213,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "FiberCable",
           specificType: "24F",
           feaNo: "FC-001",
+          feaState: "As-Built",
           feaStatus: "Completed",
+          maintenance: false,
           geometry: {
             type: "LineString",
             coordinates: [
@@ -217,7 +231,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "FiberCable",
           specificType: "10F",
           feaNo: "FC-002",
+          feaState: "As-Built",
           feaStatus: "Active",
+          maintenance: true,
           geometry: {
             type: "LineString",
             coordinates: [
@@ -233,7 +249,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "FiberCable",
           specificType: "10F",
           feaNo: "FC-003",
+          feaState: "Plan",
           feaStatus: "New",
+          maintenance: false,
           geometry: {
             type: "LineString",
             coordinates: [
@@ -249,7 +267,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Parcel",
           specificType: "Commercial",
           feaNo: "PCL-001",
+          feaState: "As-Built",
           feaStatus: "Completed",
+          maintenance: false,
           geometry: {
             type: "Polygon",
             coordinates: [[
@@ -267,7 +287,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Parcel",
           specificType: "Residential",
           feaNo: "PCL-002",
+          feaState: "Under Construction",
           feaStatus: "In-Completed",
+          maintenance: false,
           geometry: {
             type: "Polygon",
             coordinates: [[
