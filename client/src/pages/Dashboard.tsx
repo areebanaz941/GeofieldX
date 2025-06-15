@@ -69,7 +69,7 @@ export default function Dashboard() {
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary-custom">
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-on-primary">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-on-primary">{t('dashboard.title')}</h1>
           {isSupervisor && (
             <Button 
               onClick={() => setCreateTaskModalOpen(true)}
@@ -79,7 +79,7 @@ export default function Dashboard() {
                 <path d="M5 12h14"></path>
                 <path d="M12 5v14"></path>
               </svg>
-              Create Task
+              {t('tasks.createTask')}
             </Button>
           )}
         </div>
@@ -88,7 +88,7 @@ export default function Dashboard() {
           <Card className="bg-primary-custom border-0 shadow-sm">
             <CardContent className="p-4 sm:p-6">
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 font-medium">Total Tasks</p>
+                <p className="text-sm text-gray-600 font-medium">{t('dashboard.totalTasks')}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-on-primary">{taskStats.total}</p>
               </div>
             </CardContent>

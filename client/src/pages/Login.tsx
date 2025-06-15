@@ -3,12 +3,14 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import GeoPilotLogo from "../assets/GeoPilot Logo.png";
 
 const loginSchema = z.object({
@@ -23,6 +25,7 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   // Redirect if already logged in
   // Using useEffect hook to handle navigation after render
@@ -88,6 +91,9 @@ export default function Login() {
   
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] px-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-md border-0 shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center mb-3">
@@ -96,10 +102,10 @@ export default function Login() {
               <CardTitle className="text-2xl bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
             <CardDescription className="text-center italic font-medium text-[#F9973E]">
-              Your Field. Your Team. Your Control.
+              {t('auth.subtitle')}
             </CardDescription>
             <CardDescription className="text-center mt-2">
-              Enter your credentials to access the field operations management system
+              {t('auth.welcome')}
             </CardDescription>
           </div>
         </CardHeader>
@@ -111,9 +117,9 @@ export default function Login() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel>{t('auth.username')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your username" {...field} />
+                      <Input placeholder={t('auth.usernamePlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -124,9 +130,9 @@ export default function Login() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t('auth.password')}</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter your password" {...field} />
+                      <Input type="password" placeholder={t('auth.passwordPlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
