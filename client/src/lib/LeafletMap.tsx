@@ -53,6 +53,7 @@ const LeafletMap = ({
   tasks = [],
   activeFilters = [],
   onFeatureClick,
+  onBoundaryClick,
   onTeamClick,
   onMapClick,
   selectionMode = false,
@@ -268,6 +269,10 @@ const LeafletMap = ({
               <div class="text-xs mt-1">Status: ${boundary.status}</div>
             </div>
           `);
+          
+          if (onBoundaryClick) {
+            polygon.on('click', () => onBoundaryClick(boundary));
+          }
           
           boundariesLayerRef.current?.addLayer(polygon);
         }
