@@ -541,6 +541,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  app.put(
+    "/api/features/:id/assign",
+    isAuthenticated,
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const featureId = req.params.id;
+        const { teamId } = req.body;
+
+        if (!teamId) {
+          return res.status(400).json({ message: "Team ID is required" });
+        }
+
+        const feature = await storage.getFeature(featureId);
+        if (!feature) {
+          return res.status(404).json({ message: "Feature not found" });
+        }
+
+        const team = await storage.getTeam(teamId);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
+
+        // Update feature with assigned team
+        const updatedFeature = await storage.updateFeature(featureId, {
+          assignedTo: teamId,
+          feaStatus: "Assigned"
+        });
+
+        res.json(updatedFeature);
+      } catch (error) {
+        console.error("Assign feature to team error:", error);
+        res.status(500).json({ message: "Failed to assign feature to team" });
+      }
+    },
+  );
+
   // Boundary routes
   app.post("/api/boundaries", isSupervisor, async (req, res) => {
     try {
@@ -598,26 +636,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const boundaryId = req.params.id;
-        const { assignedTo } = req.body;
+        const { teamId } = req.body;
 
-        if (!assignedTo) {
-          return res.status(400).json({ message: "AssignedTo is required" });
+        if (!teamId) {
+          return res.status(400).json({ message: "Team ID is required" });
         }
 
-        if (!isValidObjectId(assignedTo)) {
-          return res
-            .status(400)
-            .json({ message: "Invalid assignedTo ID format" });
+        const boundary = await storage.getBoundary(boundaryId);
+        if (!boundary) {
+          return res.status(404).json({ message: "Boundary not found" });
+        }
+
+        const team = await storage.getTeam(teamId);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
         }
 
         const updatedBoundary = await storage.assignBoundary(
           boundaryId,
-          assignedTo,
+          teamId,
         );
         res.json(updatedBoundary);
       } catch (error) {
-        console.error("Assign boundary error:", error);
-        res.status(500).json({ message: "Failed to assign boundary" });
+        console.error("Assign boundary to team error:", error);
+        res.status(500).json({ message: "Failed to assign boundary to team" });
       }
     },
   );

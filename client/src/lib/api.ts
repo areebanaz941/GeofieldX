@@ -130,6 +130,16 @@ export async function deleteFeature(featureId: number) {
   return await res.json();
 }
 
+export async function assignFeatureToTeam(featureId: string, teamId: string) {
+  const res = await apiRequest('PUT', `/api/features/${featureId}/assign`, { teamId });
+  return await res.json();
+}
+
+export async function assignBoundaryToTeam(boundaryId: string, teamId: string) {
+  const res = await apiRequest('PUT', `/api/boundaries/${boundaryId}/assign`, { teamId });
+  return await res.json();
+}
+
 // Boundary API
 export async function createBoundary(boundaryData: any) {
   const res = await apiRequest('POST', '/api/boundaries', boundaryData);
