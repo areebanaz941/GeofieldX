@@ -55,6 +55,8 @@ interface CreateFeatureModalProps {
   onOpenChange: (open: boolean) => void;
   selectedLocation: { lat: number; lng: number } | null;
   setSelectionMode: (mode: boolean) => void;
+  setDrawingMode: (mode: boolean) => void;
+  drawnPolygon: { coordinates: number[][][] } | null;
 }
 
 export default function CreateFeatureModal({
@@ -63,6 +65,8 @@ export default function CreateFeatureModal({
   onOpenChange,
   selectedLocation,
   setSelectionMode,
+  setDrawingMode,
+  drawnPolygon,
 }: CreateFeatureModalProps) {
   const { toast } = useToast();
   const [specificTypeOptions, setSpecificTypeOptions] = useState<string[]>([]);
@@ -109,16 +113,22 @@ export default function CreateFeatureModal({
     form.setValue("specificType", options[0] || "");
   }, [feaType]);
 
-  // Update geometry when selectedLocation changes
+  // Update geometry when selectedLocation or drawnPolygon changes
   useEffect(() => {
-    if (selectedLocation) {
+    if (feaType === "Parcel" && drawnPolygon) {
+      const geometry = {
+        type: "Polygon",
+        coordinates: drawnPolygon.coordinates,
+      };
+      form.setValue("geometry", geometry);
+    } else if (feaType !== "Parcel" && selectedLocation) {
       const geometry = {
         type: "Point",
         coordinates: [selectedLocation.lng, selectedLocation.lat],
       };
       form.setValue("geometry", geometry);
     }
-  }, [selectedLocation]);
+  }, [selectedLocation, drawnPolygon, feaType]);
 
   // Create feature mutation
   const createFeatureMutation = useMutation({
@@ -144,9 +154,12 @@ export default function CreateFeatureModal({
 
   const onSubmit = (values: FeatureFormValues) => {
     if (!values.geometry) {
+      const message = values.feaType === "Parcel" 
+        ? "Please draw a polygon on the map for the parcel"
+        : "Please select a location on the map";
       toast({
-        title: "Location required",
-        description: "Please select a location on the map",
+        title: "Geometry required",
+        description: message,
         variant: "destructive",
       });
       return;
@@ -368,31 +381,61 @@ export default function CreateFeatureModal({
             />
             
             <div>
-              <FormLabel>Location</FormLabel>
-              <div className="flex items-center mt-1">
-                <Input
-                  type="text"
-                  readOnly
-                  placeholder="Select location on map"
-                  value={selectedLocation ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` : ""}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="ml-2"
-                  onClick={() => {
-                    setSelectionMode(true);
-                    toast({
-                      title: "Select location",
-                      description: "Click on the map to select a location",
-                    });
-                  }}
-                >
-                  <i className="ri-map-pin-line"></i>
-                </Button>
-              </div>
-              <p className="text-xs text-neutral-500 mt-1">Click on the map to select location</p>
+              <FormLabel>{feaType === "Parcel" ? "Parcel Area" : "Location"}</FormLabel>
+              {feaType === "Parcel" ? (
+                <div className="flex items-center mt-1">
+                  <Input
+                    type="text"
+                    readOnly
+                    placeholder="Draw polygon on map"
+                    value={drawnPolygon ? "Polygon drawn successfully" : ""}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="ml-2"
+                    onClick={() => {
+                      setDrawingMode(true);
+                      toast({
+                        title: "Draw parcel",
+                        description: "Use the polygon drawing tool on the map",
+                      });
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
+                    </svg>
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center mt-1">
+                  <Input
+                    type="text"
+                    readOnly
+                    placeholder="Select location on map"
+                    value={selectedLocation ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` : ""}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="ml-2"
+                    onClick={() => {
+                      setSelectionMode(true);
+                      toast({
+                        title: "Select location",
+                        description: "Click on the map to select a location",
+                      });
+                    }}
+                  >
+                    <i className="ri-map-pin-line"></i>
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-neutral-500 mt-1">
+                {feaType === "Parcel" ? "Draw a polygon on the map to define the parcel area" : "Click on the map to select location"}
+              </p>
             </div>
           </form>
         </Form>
