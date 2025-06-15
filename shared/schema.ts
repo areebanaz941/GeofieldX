@@ -603,7 +603,7 @@ export const insertTeamSchema = z.object({
   name: z.string().min(1).trim(),
   description: z.string().optional(),
   status: z.enum(TEAM_STATUSES).default("Pending"),
-  createdBy: z.string(),
+  createdBy: z.string().optional(),
 });
 
 // Infer types from Zod schemas

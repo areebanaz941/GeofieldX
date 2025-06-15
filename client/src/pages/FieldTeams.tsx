@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
-import { User, Task, Team, InsertTeam } from "@shared/schema";
+import { IUser, ITask, ITeam, InsertTeam } from "@shared/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -198,7 +198,7 @@ export default function FieldTeams() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<ITeam | null>(null);
   
   // Create a form for team creation
   const form = useForm<z.infer<typeof teamFormSchema>>({
@@ -291,7 +291,7 @@ export default function FieldTeams() {
   });
   
   // Filter users based on search
-  const filteredUsers = fieldUsers.filter((user: User) =>
+  const filteredUsers = fieldUsers.filter((user: IUser) =>
     (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (user.username?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
