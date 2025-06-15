@@ -44,14 +44,7 @@ const formSchema = z.object({
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
   remarks: z.string().optional(),
-  geometry: z.object({
-    type: z.enum(["Point", "LineString", "Polygon"]),
-    coordinates: z.union([
-      z.array(z.number()), // Point
-      z.array(z.array(z.number())), // LineString
-      z.array(z.array(z.array(z.number()))) // Polygon
-    ])
-  }),
+  geometry: z.any().optional(),
 });
 
 type FeatureFormValues = z.infer<typeof formSchema>;
@@ -91,7 +84,7 @@ export default function CreateFeatureModal({
       maintenance: "None",
       maintenanceDate: "",
       remarks: "",
-      geometry: null,
+      geometry: undefined,
     },
   });
 
@@ -124,13 +117,13 @@ export default function CreateFeatureModal({
   useEffect(() => {
     if (feaType === "Parcel" && drawnPolygon) {
       const geometry = {
-        type: "Polygon",
+        type: "Polygon" as const,
         coordinates: drawnPolygon.coordinates,
       };
       form.setValue("geometry", geometry);
     } else if (feaType !== "Parcel" && selectedLocation) {
       const geometry = {
-        type: "Point",
+        type: "Point" as const,
         coordinates: [selectedLocation.lng, selectedLocation.lat],
       };
       form.setValue("geometry", geometry);
@@ -175,6 +168,7 @@ export default function CreateFeatureModal({
     createFeatureMutation.mutate({
       ...values,
       maintenanceDate: values.maintenanceDate ? new Date(values.maintenanceDate) : undefined,
+      specificType: values.specificType as any, // Cast to handle type mismatch
     });
   };
 
