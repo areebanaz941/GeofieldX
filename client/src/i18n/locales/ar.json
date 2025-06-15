@@ -16,7 +16,14 @@
     "filter": "تصفية",
     "back": "رجوع",
     "next": "التالي",
-    "submit": "إرسال"
+    "submit": "إرسال",
+    "profile": "الملف الشخصي",
+    "settings": "الإعدادات",
+    "unknown": "غير معروف",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "offline": "غير متصل",
+    "online": "متصل"
   },
   "auth": {
     "login": "تسجيل الدخول",

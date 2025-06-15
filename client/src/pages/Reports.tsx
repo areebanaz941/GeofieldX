@@ -11,6 +11,7 @@ import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
 
 export default function Reports() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [reportPeriod, setReportPeriod] = useState("week");
   const [selectedTab, setSelectedTab] = useState("project");
   

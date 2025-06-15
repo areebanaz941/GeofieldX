@@ -16,7 +16,14 @@
     "filter": "Filter",
     "back": "Back",
     "next": "Next",
-    "submit": "Submit"
+    "submit": "Submit",
+    "profile": "Profile",
+    "settings": "Settings",
+    "unknown": "Unknown",
+    "active": "Active",
+    "inactive": "Inactive",
+    "offline": "Offline",
+    "online": "Online"
   },
   "auth": {
     "login": "Login",

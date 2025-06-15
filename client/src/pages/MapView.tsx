@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
 import LeafletMap from "@/lib/LeafletMap";
 import MapControls from "@/components/MapControls";
@@ -19,6 +20,7 @@ import { Feature, Task, User } from "@shared/schema";
 export default function MapView() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [activeFilters, setActiveFilters] = useState<string[]>(["All"]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<User | null>(null);
