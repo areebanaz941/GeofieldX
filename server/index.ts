@@ -215,7 +215,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "FC-001",
           feaState: "As-Built",
           feaStatus: "Completed",
-          maintenance: false,
+          maintenance: "None",
           geometry: {
             type: "LineString",
             coordinates: [
@@ -233,7 +233,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "FC-002",
           feaState: "As-Built",
           feaStatus: "Active",
-          maintenance: true,
+          maintenance: "Required",
           geometry: {
             type: "LineString",
             coordinates: [
@@ -251,7 +251,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "FC-003",
           feaState: "Plan",
           feaStatus: "New",
-          maintenance: false,
+          maintenance: "None",
           geometry: {
             type: "LineString",
             coordinates: [
@@ -269,7 +269,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "PCL-001",
           feaState: "As-Built",
           feaStatus: "Completed",
-          maintenance: false,
+          maintenance: "None",
           geometry: {
             type: "Polygon",
             coordinates: [[
@@ -289,7 +289,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "PCL-002",
           feaState: "Under Construction",
           feaStatus: "In-Completed",
-          maintenance: false,
+          maintenance: "None",
           geometry: {
             type: "Polygon",
             coordinates: [[
@@ -307,7 +307,9 @@ async function addInitialData(storage: IStorage) {
           feaType: "Parcel",
           specificType: "Commercial",
           feaNo: "PCL-003",
+          feaState: "As-Built",
           feaStatus: "Active",
+          maintenance: "None",
           geometry: {
             type: "Polygon",
             coordinates: [[
@@ -330,6 +332,189 @@ async function addInitialData(storage: IStorage) {
       log("Sample infrastructure features created successfully");
     } else {
       log(`Found ${allFeatures.length} existing features`);
+    }
+
+    // Create sample tasks assigned to features and teams
+    const existingTasks = await storage.getAllTasks();
+    if (existingTasks.length === 0) {
+      const allFeatures = await storage.getAllFeatures();
+      const allTeamsData = await storage.getAllTeams();
+      
+      // Get team references
+      const fieldTeamAlpha = allTeamsData.find(t => t.name === "Field Team Alpha");
+      const fieldTeamBeta = allTeamsData.find(t => t.name === "Field Team Beta");
+      const maintenanceTeam = allTeamsData.find(t => t.name === "Maintenance Team");
+      const surveyTeam = allTeamsData.find(t => t.name === "Survey Team");
+      
+      const sampleTasks = [
+        // Tower maintenance tasks
+        {
+          title: "Tower Inspection - Site Alpha",
+          description: "Quarterly inspection of communication tower including structural integrity, equipment status, and safety compliance check.",
+          taskType: "Inspection",
+          priority: "High",
+          status: "New",
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+          assignedTo: fieldTeamAlpha!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8607,
+            lng: 67.0011
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "TWR-001")?._id.toString()
+        },
+        {
+          title: "Equipment Upgrade - Tower Beta",
+          description: "Install new 5G equipment and upgrade power systems. Requires coordination with electrical team.",
+          taskType: "Maintenance",
+          priority: "Medium",
+          status: "In Progress",
+          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+          assignedTo: fieldTeamBeta!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8647,
+            lng: 67.0051
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "TWR-002")?._id.toString()
+        },
+        // Manhole maintenance tasks
+        {
+          title: "Manhole Cover Replacement",
+          description: "Replace damaged manhole cover and inspect underground infrastructure. Safety protocols required.",
+          taskType: "Repair",
+          priority: "High",
+          status: "Unassigned",
+          dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+          assignedTo: maintenanceTeam!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8567,
+            lng: 66.9971
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "MH-001")?._id.toString()
+        },
+        {
+          title: "Underground Cable Inspection",
+          description: "Monthly inspection of underground cables and junction points. Document any wear or damage.",
+          taskType: "Inspection",
+          priority: "Medium",
+          status: "Completed",
+          dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+          assignedTo: maintenanceTeam!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8587,
+            lng: 67.0031
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "MH-002")?._id.toString()
+        },
+        // Fiber cable tasks
+        {
+          title: "Fiber Optic Testing",
+          description: "Comprehensive testing of fiber optic connections including signal strength and data integrity checks.",
+          taskType: "Testing",
+          priority: "Medium",
+          status: "In Progress",
+          dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
+          assignedTo: fieldTeamAlpha!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8627,
+            lng: 67.0031
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "FC-002")?._id.toString()
+        },
+        {
+          title: "New Fiber Installation Planning",
+          description: "Survey and plan new fiber cable installation route. Coordinate with municipal authorities.",
+          taskType: "Survey",
+          priority: "Low",
+          status: "Unassigned",
+          dueDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21 days from now
+          assignedTo: surveyTeam!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8567,
+            lng: 66.9971
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "FC-003")?._id.toString()
+        },
+        // Parcel development tasks
+        {
+          title: "Commercial Property Assessment",
+          description: "Conduct comprehensive assessment of commercial parcel for development potential and infrastructure requirements.",
+          taskType: "Assessment",
+          priority: "Medium",
+          status: "In Progress",
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          assignedTo: surveyTeam!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8670,
+            lng: 67.0100
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "PCL-001")?._id.toString()
+        },
+        {
+          title: "Residential Zone Utility Setup",
+          description: "Install utility connections for new residential development. Coordinate with power and water utilities.",
+          taskType: "Installation",
+          priority: "High",
+          status: "Assigned",
+          dueDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000), // 45 days from now
+          assignedTo: maintenanceTeam!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8530,
+            lng: 66.9960
+          },
+          relatedFeatureId: allFeatures.find(f => f.feaNo === "PCL-002")?._id.toString()
+        },
+        // General area tasks
+        {
+          title: "Quarterly Safety Audit",
+          description: "Comprehensive safety audit of all field operations including equipment, procedures, and team compliance.",
+          taskType: "Audit",
+          priority: "High",
+          status: "Unassigned",
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+          assignedTo: fieldTeamAlpha!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8600,
+            lng: 67.0000
+          }
+        },
+        {
+          title: "Equipment Inventory Check",
+          description: "Monthly inventory check of all field equipment, tools, and safety gear. Update maintenance schedules.",
+          taskType: "Inventory",
+          priority: "Low",
+          status: "Completed",
+          dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+          assignedTo: maintenanceTeam!._id.toString(),
+          createdBy: supervisorId,
+          location: {
+            lat: 24.8580,
+            lng: 67.0020
+          }
+        }
+      ];
+
+      for (const taskData of sampleTasks) {
+        const task = await storage.createTask(taskData);
+        const relatedFeature = taskData.relatedFeatureId 
+          ? allFeatures.find(f => f._id.toString() === taskData.relatedFeatureId)
+          : null;
+        const assignedTeam = allTeams.find(t => t._id.toString() === taskData.assignedTo);
+        
+        log(`Created task: ${task.title} - Assigned to: ${assignedTeam?.name}${relatedFeature ? ` (Feature: ${relatedFeature.feaNo})` : ''}`);
+      }
+
+      log("Sample tasks with team assignments created successfully");
+    } else {
+      log(`Found ${existingTasks.length} existing tasks`);
     }
 
     // Create a sample field user for testing (optional)
