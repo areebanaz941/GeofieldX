@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setStorage, type IStorage } from "./storage";
 import { MongoStorage } from "./mongoStorage";
 import { connectToMongoDB } from "./mongoDb";
-import { InsertUser, InsertTeam } from "@shared/schema";
+import { InsertUser, InsertTeam, InsertFeature } from "@shared/schema";
 import bcrypt from "bcryptjs";
 
 const app = express();
@@ -113,6 +113,201 @@ async function addInitialData(storage: IStorage) {
       log("Initial teams created successfully");
     } else {
       log(`Found ${allTeams.length} existing teams`);
+    }
+
+    // Create sample infrastructure features
+    const allFeatures = await storage.getAllFeatures();
+    if (allFeatures.length === 0) {
+      log("Creating sample infrastructure features");
+
+      const sampleFeatures: InsertFeature[] = [
+        // Towers
+        {
+          name: "Communication Tower Alpha",
+          feaType: "Tower",
+          specificType: "Mobillink",
+          feaNo: "TWR-001",
+          feaStatus: "Completed",
+          geometry: {
+            type: "Point",
+            coordinates: [67.0011, 24.8607] // [lng, lat]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Radio Tower Beta",
+          feaType: "Tower",
+          specificType: "Ptcl",
+          feaNo: "TWR-002",
+          feaStatus: "Active",
+          geometry: {
+            type: "Point",
+            coordinates: [67.0051, 24.8647] // [lng, lat]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Microwave Tower",
+          feaType: "Tower",
+          specificType: "Mobillink",
+          feaNo: "TWR-003",
+          feaStatus: "New",
+          geometry: {
+            type: "Point",
+            coordinates: [66.9971, 24.8567] // [lng, lat]
+          },
+          createdBy: supervisorId,
+        },
+        // Manholes
+        {
+          name: "Main Street Manhole",
+          feaType: "Manhole",
+          specificType: "2-way",
+          feaNo: "MH-001",
+          feaStatus: "Completed",
+          geometry: {
+            type: "Point",
+            coordinates: [67.0031, 24.8627] // [lng, lat]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Junction Manhole A",
+          feaType: "Manhole",
+          specificType: "4-way",
+          feaNo: "MH-002",
+          feaStatus: "In-Completed",
+          geometry: {
+            type: "Point",
+            coordinates: [67.0071, 24.8587] // [lng, lat]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Distribution Manhole",
+          feaType: "Manhole",
+          specificType: "2-way",
+          feaNo: "MH-003",
+          feaStatus: "Active",
+          geometry: {
+            type: "Point",
+            coordinates: [66.9991, 24.8547] // [lng, lat]
+          },
+          createdBy: supervisorId,
+        },
+        // Fiber Cables
+        {
+          name: "Primary Fiber Route",
+          feaType: "FiberCable",
+          specificType: "24F",
+          feaNo: "FC-001",
+          feaStatus: "Completed",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [67.0011, 24.8607],
+              [67.0031, 24.8627],
+              [67.0051, 24.8647]
+            ]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Distribution Cable A",
+          feaType: "FiberCable",
+          specificType: "10F",
+          feaNo: "FC-002",
+          feaStatus: "Active",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [67.0031, 24.8627],
+              [67.0071, 24.8587],
+              [66.9991, 24.8547]
+            ]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Backup Fiber Link",
+          feaType: "FiberCable",
+          specificType: "10F",
+          feaNo: "FC-003",
+          feaStatus: "New",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [66.9971, 24.8567],
+              [67.0011, 24.8607]
+            ]
+          },
+          createdBy: supervisorId,
+        },
+        // Parcels
+        {
+          name: "Commercial Parcel Zone A",
+          feaType: "Parcel",
+          specificType: "Commercial",
+          feaNo: "PCL-001",
+          feaStatus: "Completed",
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [67.0090, 24.8660],
+              [67.0110, 24.8660],
+              [67.0110, 24.8680],
+              [67.0090, 24.8680],
+              [67.0090, 24.8660]
+            ]]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Residential Parcel B",
+          feaType: "Parcel",
+          specificType: "Residential",
+          feaNo: "PCL-002",
+          feaStatus: "In-Completed",
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [66.9950, 24.8520],
+              [66.9970, 24.8520],
+              [66.9970, 24.8540],
+              [66.9950, 24.8540],
+              [66.9950, 24.8520]
+            ]]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Industrial Parcel C",
+          feaType: "Parcel",
+          specificType: "Commercial",
+          feaNo: "PCL-003",
+          feaStatus: "Active",
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [67.0130, 24.8700],
+              [67.0160, 24.8700],
+              [67.0160, 24.8720],
+              [67.0130, 24.8720],
+              [67.0130, 24.8700]
+            ]]
+          },
+          createdBy: supervisorId,
+        }
+      ];
+
+      for (const featureData of sampleFeatures) {
+        const feature = await storage.createFeature(featureData);
+        log(`Created feature: ${feature.name} (${feature.feaType} ${feature.feaNo})`);
+      }
+
+      log("Sample infrastructure features created successfully");
+    } else {
+      log(`Found ${allFeatures.length} existing features`);
     }
 
     // Create a sample field user for testing (optional)
