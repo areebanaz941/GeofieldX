@@ -44,7 +44,7 @@ export default function TeamMembersFilter({
   };
   
   return (
-    <Card className="absolute bottom-4 left-4 z-[1000] w-60 shadow-md">
+    <Card className="absolute bottom-4 right-4 z-[1000] w-60 shadow-md">
       <CardContent className="p-0">
         <div className="p-2">
           <h3 className="text-sm font-medium text-neutral-700 px-2">Field Teams</h3>
