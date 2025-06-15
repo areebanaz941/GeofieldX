@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import useAuth from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { getAllTeams } from "@/lib/api";
 import { Team } from "@shared/schema";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import GeoPilotLogo from "../assets/GeoPilot Logo.png";
 
 const baseRegisterSchema = z.object({
@@ -47,6 +49,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function Register() {
   const { register, user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
   const [selectedRole, setSelectedRole] = useState<string>("Field");
@@ -117,6 +120,9 @@ export default function Register() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] px-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-md border-0 shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center mb-3">
@@ -125,10 +131,10 @@ export default function Register() {
               <CardTitle className="text-2xl bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">GeoPilot</CardTitle>
             </div>
             <CardDescription className="text-center italic font-medium text-[#F9973E]">
-              Your Field. Your Team. Your Control.
+              {t('auth.subtitle')}
             </CardDescription>
             <CardDescription className="text-center mt-2">
-              Create a new account to access the field operations management system
+              {t('auth.registerWelcome')}
             </CardDescription>
           </div>
         </CardHeader>
@@ -140,9 +146,9 @@ export default function Register() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel>{t('auth.username')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your username" {...field} />
+                      <Input placeholder={t('auth.usernamePlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,9 +159,9 @@ export default function Register() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>{t('auth.name')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your full name" {...field} />
+                      <Input placeholder={t('auth.namePlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,9 +172,9 @@ export default function Register() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t('auth.email')}</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="Enter your email" {...field} />
+                      <Input type="email" placeholder={t('auth.emailPlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -179,16 +185,16 @@ export default function Register() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel>{t('auth.role')}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select your role" />
+                          <SelectValue placeholder={t('auth.selectRole')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Supervisor">Supervisor</SelectItem>
-                        <SelectItem value="Field">Field Team</SelectItem>
+                        <SelectItem value="Supervisor">{t('auth.supervisor')}</SelectItem>
+                        <SelectItem value="Field">{t('auth.fieldUser')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
