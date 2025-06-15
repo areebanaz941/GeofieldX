@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const isSupervisor = user?.role === "Supervisor";
   const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
+  const { t } = useTranslation();
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],

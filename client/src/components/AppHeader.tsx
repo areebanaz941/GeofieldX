@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import useAuth from "@/hooks/useAuth";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   if (!user) return null;
 
@@ -68,6 +71,7 @@ export default function AppHeader() {
         </div>
       </div>
       <div className="flex items-center space-x-4">
+        <LanguageSwitcher />
         <div className="hidden md:flex items-center">
           <span className="text-xs bg-primary-100 text-primary-700 rounded-full px-2 py-0.5">
             {user.role}
@@ -105,7 +109,7 @@ export default function AppHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={handleLogout}>
               <i className="ri-logout-box-line mr-2"></i>
-              <span>Log out</span>
+              <span>{t('auth.logout')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

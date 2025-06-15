@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import useAuth from "@/hooks/useAuth";
@@ -7,6 +8,7 @@ import useAuth from "@/hooks/useAuth";
 export default function SideNavigation() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   if (!user) return null;
 
@@ -16,27 +18,27 @@ export default function SideNavigation() {
 
   const navigationItems = [
     {
-      name: "Dashboard",
+      name: t('navigation.dashboard'),
       path: "/",
       icon: "ri-dashboard-line",
     },
     {
-      name: "Map View",
+      name: t('navigation.map'),
       path: "/map",
       icon: "ri-map-pin-line",
     },
     {
-      name: "Tasks",
+      name: t('navigation.tasks'),
       path: "/tasks",
       icon: "ri-task-line",
     },
     {
-      name: "Field Teams",
+      name: t('navigation.teams'),
       path: "/teams",
       icon: "ri-team-line",
     },
     {
-      name: "Reports",
+      name: t('navigation.reports'),
       path: "/reports",
       icon: "ri-file-chart-line",
     },
