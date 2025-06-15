@@ -143,7 +143,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "TWR-002",
           feaState: "As-Built",
           feaStatus: "Active",
-          maintenance: true,
+          maintenance: "Required",
           geometry: {
             type: "Point",
             coordinates: [67.0051, 24.8647] // [lng, lat]
@@ -157,7 +157,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "TWR-003",
           feaState: "Plan",
           feaStatus: "New",
-          maintenance: false,
+          maintenance: "None",
           geometry: {
             type: "Point",
             coordinates: [66.9971, 24.8567] // [lng, lat]
@@ -172,7 +172,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "MH-001",
           feaState: "As-Built",
           feaStatus: "Completed",
-          maintenance: false,
+          maintenance: "None",
           geometry: {
             type: "Point",
             coordinates: [67.0031, 24.8627] // [lng, lat]
@@ -186,7 +186,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "MH-002",
           feaState: "Under Construction",
           feaStatus: "In-Completed",
-          maintenance: false,
+          maintenance: "None",
           geometry: {
             type: "Point",
             coordinates: [67.0071, 24.8587] // [lng, lat]
@@ -200,7 +200,7 @@ async function addInitialData(storage: IStorage) {
           feaNo: "MH-003",
           feaState: "As-Built",
           feaStatus: "Active",
-          maintenance: true,
+          maintenance: "Required",
           geometry: {
             type: "Point",
             coordinates: [66.9991, 24.8547] // [lng, lat]
