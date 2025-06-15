@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
-import LeafletMap from "@/lib/LeafletMap";
+import OpenLayersMap from "@/lib/OpenLayersMap";
 import MapControls from "@/components/MapControls";
 import MapFilterControls from "@/components/MapFilterControls";
 
@@ -175,7 +175,7 @@ export default function MapView() {
   return (
     <>
       <div className="relative flex-1 z-0">
-        <LeafletMap
+        <OpenLayersMap
           features={features}
           teams={fieldUsers}
           boundaries={boundaries}

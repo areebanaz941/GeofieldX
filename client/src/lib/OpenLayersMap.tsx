@@ -1,0 +1,504 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import Map from 'ol/Map';
+import View from 'ol/View';
+import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import OSM from 'ol/source/OSM';
+import { Feature } from 'ol';
+import { Point, Polygon, LineString } from 'ol/geom';
+import { Style, Fill, Stroke, Circle, Text, Icon } from 'ol/style';
+import { fromLonLat, toLonLat } from 'ol/proj';
+import { Draw, Modify, Select } from 'ol/interaction';
+import { click } from 'ol/events/condition';
+import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
+import 'ol/ol.css';
+
+// Define status colors
+const statusColors = {
+  'Unassigned': '#9E9E9E',
+  'Assigned': '#2196F3',
+  'In Progress': '#9C27B0',
+  'Completed': '#4CAF50',
+  'In-Complete': '#FFC107',
+  'Submit-Review': '#FF9800',
+  'Review_Accepted': '#8BC34A',
+  'Review_Reject': '#F44336',
+  'Review_inprogress': '#03A9F4'
+};
+
+const featureColors = {
+  'Tower': '#E91E63',
+  'Manhole': '#9C27B0',
+  'FiberCable': '#3F51B5',
+  'Parcel': '#009688'
+};
+
+interface MapProps {
+  center?: [number, number];
+  zoom?: number;
+  features?: IFeature[];
+  teams?: IUser[];
+  boundaries?: IBoundary[];
+  tasks?: ITask[];
+  activeFilters?: string[];
+  onFeatureClick?: (feature: IFeature) => void;
+  onBoundaryClick?: (boundary: IBoundary) => void;
+  onTeamClick?: (team: IUser) => void;
+  onMapClick?: (latlng: { lat: number; lng: number }) => void;
+  onPolygonCreated?: (polygon: { name: string; coordinates: number[][][] }) => void;
+  selectionMode?: boolean;
+  drawingMode?: boolean;
+  className?: string;
+}
+
+const OpenLayersMap = ({
+  center = [67.0011, 24.8607], // Default Karachi coordinates [lng, lat]
+  zoom = 13,
+  features = [],
+  teams = [],
+  boundaries = [],
+  tasks = [],
+  activeFilters = [],
+  onFeatureClick,
+  onBoundaryClick,
+  onTeamClick,
+  onMapClick,
+  onPolygonCreated,
+  selectionMode = false,
+  drawingMode = false,
+  className = 'h-full w-full'
+}: MapProps) => {
+  const mapRef = useRef<Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const featuresLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const teamsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const boundariesLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const tasksLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const selectedLocationLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const drawInteractionRef = useRef<Draw | null>(null);
+  const selectInteractionRef = useRef<Select | null>(null);
+
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    // Create vector sources for different layers
+    const featuresSource = new VectorSource();
+    const teamsSource = new VectorSource();
+    const boundariesSource = new VectorSource();
+    const tasksSource = new VectorSource();
+    const selectedLocationSource = new VectorSource();
+
+    // Create vector layers
+    featuresLayerRef.current = new VectorLayer({
+      source: featuresSource,
+      style: (feature) => {
+        const featureData = feature.get('featureData');
+        const featureType = featureData?.feaType || 'Tower';
+        const color = featureColors[featureType as keyof typeof featureColors] || '#E91E63';
+        
+        return new Style({
+          image: new Circle({
+            radius: 8,
+            fill: new Fill({ color }),
+            stroke: new Stroke({ color: '#ffffff', width: 2 })
+          }),
+          text: new Text({
+            text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
+            offsetY: -20,
+            fill: new Fill({ color: '#000' }),
+            stroke: new Stroke({ color: '#fff', width: 2 }),
+            font: '12px Arial'
+          })
+        });
+      }
+    });
+
+    teamsLayerRef.current = new VectorLayer({
+      source: teamsSource,
+      style: (feature) => {
+        const teamData = feature.get('teamData');
+        const isActive = teamData?.lastActive && 
+          (new Date().getTime() - new Date(teamData.lastActive).getTime() < 15 * 60 * 1000);
+        const statusColor = isActive ? '#4CAF50' : '#F44336';
+        
+        return new Style({
+          image: new Circle({
+            radius: 12,
+            fill: new Fill({ color: '#2196F3' }),
+            stroke: new Stroke({ color: statusColor, width: 3 })
+          }),
+          text: new Text({
+            text: teamData?.name?.slice(0, 1) || 'T',
+            fill: new Fill({ color: '#ffffff' }),
+            font: 'bold 14px Arial'
+          })
+        });
+      }
+    });
+
+    boundariesLayerRef.current = new VectorLayer({
+      source: boundariesSource,
+      style: new Style({
+        fill: new Fill({
+          color: 'rgba(0, 150, 136, 0.2)'
+        }),
+        stroke: new Stroke({
+          color: '#009688',
+          width: 2
+        })
+      })
+    });
+
+    tasksLayerRef.current = new VectorLayer({
+      source: tasksSource,
+      style: (feature) => {
+        const taskData = feature.get('taskData');
+        const status = taskData?.status || 'Unassigned';
+        const color = statusColors[status as keyof typeof statusColors] || '#9E9E9E';
+        
+        return new Style({
+          image: new Circle({
+            radius: 10,
+            fill: new Fill({ color }),
+            stroke: new Stroke({ color: '#ffffff', width: 2 })
+          }),
+          text: new Text({
+            text: 'T',
+            fill: new Fill({ color: '#ffffff' }),
+            font: 'bold 12px Arial'
+          })
+        });
+      }
+    });
+
+    selectedLocationLayerRef.current = new VectorLayer({
+      source: selectedLocationSource,
+      style: new Style({
+        image: new Circle({
+          radius: 8,
+          fill: new Fill({ color: '#FF0000' }),
+          stroke: new Stroke({ color: '#ffffff', width: 2 })
+        })
+      })
+    });
+
+    // Create map
+    const map = new Map({
+      target: mapContainerRef.current,
+      layers: [
+        new TileLayer({
+          source: new OSM()
+        }),
+        boundariesLayerRef.current,
+        featuresLayerRef.current,
+        teamsLayerRef.current,
+        tasksLayerRef.current,
+        selectedLocationLayerRef.current
+      ],
+      view: new View({
+        center: fromLonLat(center),
+        zoom: zoom
+      })
+    });
+
+    // Add click interaction for map clicks
+    if (onMapClick) {
+      map.on('click', (event) => {
+        if (!drawingMode) {
+          const coordinate = toLonLat(event.coordinate);
+          const [lng, lat] = coordinate;
+          
+          // Clear previous selection marker
+          selectedLocationSource.clear();
+          
+          // Add new selection marker
+          const marker = new Feature({
+            geometry: new Point(event.coordinate)
+          });
+          selectedLocationSource.addFeature(marker);
+          
+          onMapClick({ lat, lng });
+        }
+      });
+    }
+
+    // Add select interaction for feature clicks
+    selectInteractionRef.current = new Select({
+      condition: click,
+      layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current]
+    });
+
+    selectInteractionRef.current.on('select', (event) => {
+      const selected = event.selected;
+      if (selected.length > 0) {
+        const feature = selected[0];
+        const featureData = feature.get('featureData');
+        const teamData = feature.get('teamData');
+        const boundaryData = feature.get('boundaryData');
+        const taskData = feature.get('taskData');
+
+        if (featureData && onFeatureClick) {
+          onFeatureClick(featureData);
+        } else if (teamData && onTeamClick) {
+          onTeamClick(teamData);
+        } else if (boundaryData && onBoundaryClick) {
+          onBoundaryClick(boundaryData);
+        }
+      }
+    });
+
+    map.addInteraction(selectInteractionRef.current);
+    mapRef.current = map;
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.setTarget(undefined);
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  // Handle drawing mode
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove existing draw interaction
+    if (drawInteractionRef.current) {
+      mapRef.current.removeInteraction(drawInteractionRef.current);
+      drawInteractionRef.current = null;
+    }
+
+    if (drawingMode && onPolygonCreated) {
+      const source = new VectorSource();
+      const drawLayer = new VectorLayer({
+        source: source,
+        style: new Style({
+          fill: new Fill({
+            color: 'rgba(255, 0, 0, 0.2)'
+          }),
+          stroke: new Stroke({
+            color: '#FF0000',
+            width: 2
+          })
+        })
+      });
+
+      mapRef.current.addLayer(drawLayer);
+
+      drawInteractionRef.current = new Draw({
+        source: source,
+        type: 'Polygon'
+      });
+
+      drawInteractionRef.current.on('drawend', (event) => {
+        const geometry = event.feature.getGeometry() as Polygon;
+        const coordinates = geometry.getCoordinates();
+        
+        // Convert coordinates from map projection to longitude/latitude
+        const lonLatCoordinates = coordinates.map(ring =>
+          ring.map(coord => toLonLat(coord))
+        );
+
+        // Prompt for polygon name
+        const name = prompt('Enter parcel name:');
+        if (name) {
+          onPolygonCreated({
+            name,
+            coordinates: lonLatCoordinates
+          });
+        }
+
+        // Clear the drawing
+        source.clear();
+        mapRef.current?.removeLayer(drawLayer);
+      });
+
+      mapRef.current.addInteraction(drawInteractionRef.current);
+    }
+  }, [drawingMode, onPolygonCreated]);
+
+  // Update features on the map
+  useEffect(() => {
+    if (!featuresLayerRef.current) return;
+
+    const source = featuresLayerRef.current.getSource();
+    if (!source) return;
+
+    source.clear();
+
+    features.forEach(feature => {
+      if (!feature.geometry) return;
+
+      try {
+        const geometry = typeof feature.geometry === 'string'
+          ? JSON.parse(feature.geometry)
+          : feature.geometry;
+
+        let olFeature: Feature | null = null;
+
+        if (geometry.type === 'Point') {
+          const [lng, lat] = geometry.coordinates;
+          olFeature = new Feature({
+            geometry: new Point(fromLonLat([lng, lat])),
+            featureData: feature
+          });
+        } else if (geometry.type === 'LineString') {
+          const coords = geometry.coordinates.map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
+          olFeature = new Feature({
+            geometry: new LineString(coords),
+            featureData: feature
+          });
+        } else if (geometry.type === 'Polygon') {
+          const coords = geometry.coordinates.map((ring: number[][]) =>
+            ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
+          );
+          olFeature = new Feature({
+            geometry: new Polygon(coords),
+            featureData: feature
+          });
+        }
+
+        if (olFeature) {
+          source.addFeature(olFeature);
+        }
+      } catch (error) {
+        console.error('Error rendering feature geometry:', error);
+      }
+    });
+  }, [features, activeFilters]);
+
+  // Update team markers on the map
+  useEffect(() => {
+    if (!teamsLayerRef.current) return;
+
+    const source = teamsLayerRef.current.getSource();
+    if (!source) return;
+
+    source.clear();
+
+    teams.forEach(team => {
+      if (!team.currentLocation) return;
+
+      try {
+        const location = typeof team.currentLocation === 'string'
+          ? JSON.parse(team.currentLocation)
+          : team.currentLocation;
+
+        if (location.type === 'Point') {
+          const [lng, lat] = location.coordinates;
+          const teamFeature = new Feature({
+            geometry: new Point(fromLonLat([lng, lat])),
+            teamData: team
+          });
+          source.addFeature(teamFeature);
+        }
+      } catch (error) {
+        console.error('Error rendering team marker:', error);
+      }
+    });
+  }, [teams]);
+
+  // Update boundaries on the map
+  useEffect(() => {
+    if (!boundariesLayerRef.current) return;
+
+    const source = boundariesLayerRef.current.getSource();
+    if (!source) return;
+
+    source.clear();
+
+    boundaries.forEach(boundary => {
+      if (!boundary.geometry) return;
+
+      try {
+        const geometry = typeof boundary.geometry === 'string'
+          ? JSON.parse(boundary.geometry)
+          : boundary.geometry;
+
+        if (geometry.type === 'Polygon') {
+          const coords = geometry.coordinates.map((ring: number[][]) =>
+            ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
+          );
+          const boundaryFeature = new Feature({
+            geometry: new Polygon(coords),
+            boundaryData: boundary
+          });
+          source.addFeature(boundaryFeature);
+        }
+      } catch (error) {
+        console.error('Error rendering boundary:', error);
+      }
+    });
+  }, [boundaries]);
+
+  // Update tasks on the map
+  useEffect(() => {
+    if (!tasksLayerRef.current) return;
+
+    const source = tasksLayerRef.current.getSource();
+    if (!source) return;
+
+    source.clear();
+
+    tasks.forEach(task => {
+      if (!task.location) return;
+
+      try {
+        const location = typeof task.location === 'string'
+          ? JSON.parse(task.location)
+          : task.location;
+
+        if (location.type === 'Point') {
+          const [lng, lat] = location.coordinates;
+          const taskFeature = new Feature({
+            geometry: new Point(fromLonLat([lng, lat])),
+            taskData: task
+          });
+          source.addFeature(taskFeature);
+        }
+      } catch (error) {
+        console.error('Error rendering task marker:', error);
+      }
+    });
+  }, [tasks]);
+
+  const panTo = useCallback((lat: number, lng: number, zoom?: number) => {
+    if (mapRef.current) {
+      const view = mapRef.current.getView();
+      view.setCenter(fromLonLat([lng, lat]));
+      if (zoom) {
+        view.setZoom(zoom);
+      }
+    }
+  }, []);
+
+  const getUserLocation = useCallback(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          panTo(latitude, longitude, 16);
+        },
+        (error) => {
+          console.error('Error getting user location:', error);
+        }
+      );
+    } else {
+      console.error('Geolocation is not supported by this browser');
+    }
+  }, [panTo]);
+
+  return (
+    <div className={className}>
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full"
+        id="map"
+      />
+    </div>
+  );
+};
+
+export default OpenLayersMap;
