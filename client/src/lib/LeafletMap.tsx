@@ -132,11 +132,71 @@ const LeafletMap = ({
           
           // Create icon based on feature type
           const color = featureColors[feature.feaType as keyof typeof featureColors] || '#757575';
+          
+          // Define feature-specific icons
+          const getFeatureIcon = (featureType: string) => {
+            switch (featureType) {
+              case 'Tower':
+                return `
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+                    <path d="M12 2l-2 2v2l-2 2v2l-2 2v10h12V10l-2-2V6l-2-2V4l-2-2z"/>
+                    <circle cx="12" cy="4" r="1" fill="white"/>
+                    <rect x="10" y="6" width="4" height="1" fill="white"/>
+                    <rect x="9" y="8" width="6" height="1" fill="white"/>
+                    <rect x="8" y="10" width="8" height="1" fill="white"/>
+                  </svg>
+                `;
+              case 'Manhole':
+                return `
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+                    <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="5" fill="none" stroke="white" stroke-width="1"/>
+                    <circle cx="12" cy="12" r="2" fill="white"/>
+                    <rect x="6" y="11" width="12" height="2" fill="white"/>
+                    <rect x="11" y="6" width="2" height="12" fill="white"/>
+                  </svg>
+                `;
+              case 'FiberCable':
+                return `
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+                    <path d="M3 12h18M3 8h18M3 16h18" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="6" cy="12" r="2" fill="${color}"/>
+                    <circle cx="12" cy="12" r="2" fill="${color}"/>
+                    <circle cx="18" cy="12" r="2" fill="${color}"/>
+                    <rect x="2" y="6" width="20" height="12" fill="none" stroke="${color}" stroke-width="1" rx="2"/>
+                  </svg>
+                `;
+              case 'Parcel':
+                return `
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+                    <rect x="3" y="3" width="18" height="18" fill="${color}" stroke="white" stroke-width="2" rx="2"/>
+                    <path d="M3 3l9 9l9-9" stroke="white" stroke-width="2" fill="none"/>
+                    <path d="M3 21l9-9l9 9" stroke="white" stroke-width="2" fill="none"/>
+                    <circle cx="12" cy="12" r="2" fill="white"/>
+                  </svg>
+                `;
+              default:
+                return `
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}">
+                    <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2"/>
+                    <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${feature.feaNo || '?'}</text>
+                  </svg>
+                `;
+            }
+          };
+          
           const icon = L.divIcon({
             className: 'feature-icon',
-            html: `<div style="background-color: ${color}; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${feature.feaNo}</div>`,
-            iconSize: [28, 28],
-            iconAnchor: [14, 14]
+            html: `
+              <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: relative;">
+                ${getFeatureIcon(feature.feaType)}
+                <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); background: ${color}; color: white; padding: 1px 4px; border-radius: 8px; font-size: 8px; font-weight: bold; border: 1px solid white;">
+                  ${feature.feaNo || '?'}
+                </div>
+              </div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
           });
           
           layer = L.marker([lat, lng], { icon });

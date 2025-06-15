@@ -93,7 +93,7 @@ export default function MapControls() {
   };
   
   return (
-    <div className="absolute top-4 right-4 z-10 bg-white rounded-md shadow-md">
+    <div className="absolute top-4 right-4 z-[1000] bg-white rounded-md shadow-md">
       <div className="p-2 space-y-2">
         <TooltipProvider>
           <Tooltip>

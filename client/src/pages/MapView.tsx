@@ -169,7 +169,7 @@ export default function MapView() {
           onAdvancedSearchClick={() => setAdvancedSearchModalOpen(true)}
         />
         
-        <div className="absolute bottom-4 right-4 z-10">
+        <div className="absolute bottom-4 right-4 z-[1000]">
           <Button
             onClick={() => setCreateFeatureModalOpen(true)}
             className="bg-primary-500 hover:bg-primary-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"

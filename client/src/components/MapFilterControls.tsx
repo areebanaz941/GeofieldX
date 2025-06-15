@@ -41,7 +41,7 @@ export default function MapFilterControls({
   ];
 
   return (
-    <div className="absolute top-4 left-4 z-10 bg-white rounded-md shadow-md p-2">
+    <div className="absolute top-4 left-4 z-[1000] bg-white rounded-md shadow-md p-2">
       <div className="flex flex-col space-y-2">
         {statusOptions.map((option) => (
           <Button
