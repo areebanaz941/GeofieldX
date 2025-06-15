@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
-import { IUser, ITask, ITeam, InsertTeam } from "@shared/schema";
+import { IUser, ITask, ITeam, InsertTeam } from "../../../shared/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -340,7 +340,7 @@ export default function FieldTeams() {
   
   // Handle team status changes
   const handleTeamStatusChange = (teamId: string, status: string) => {
-    updateTeamStatusMutation.mutate({ teamId, status });
+    updateTeamStatusMutation.mutate({ teamId: teamId as any, status });
   };
   
   // Is the current user a supervisor
@@ -499,15 +499,15 @@ export default function FieldTeams() {
                             <div className="space-y-1">
                               <div className="flex justify-between items-center text-xs">
                                 <span>Completed</span>
-                                <span>{userTasks.filter((t: Task) => t.status === "Completed").length}</span>
+                                <span>{userTasks.filter((t: ITask) => t.status === "Completed").length}</span>
                               </div>
                               <div className="flex justify-between items-center text-xs">
                                 <span>In Progress</span>
-                                <span>{userTasks.filter((t: Task) => t.status === "In Progress").length}</span>
+                                <span>{userTasks.filter((t: ITask) => t.status === "InProgress").length}</span>
                               </div>
                               <div className="flex justify-between items-center text-xs">
                                 <span>Assigned</span>
-                                <span>{userTasks.filter((t: Task) => t.status === "Assigned").length}</span>
+                                <span>{userTasks.filter((t: ITask) => t.status === "Unassigned").length}</span>
                               </div>
                             </div>
                           </div>
