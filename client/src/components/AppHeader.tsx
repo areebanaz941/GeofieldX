@@ -100,11 +100,11 @@ export default function AppHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setLocation("/profile")}>
               <i className="ri-user-line mr-2"></i>
-              <span>Profile</span>
+              <span>{t('common.profile')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setLocation("/settings")}>
               <i className="ri-settings-3-line mr-2"></i>
-              <span>Settings</span>
+              <span>{t('common.settings')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={handleLogout}>

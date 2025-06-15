@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { getAllTasks, getFieldUsers } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { Task } from "@shared/schema";
 
 export default function TaskList() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -43,22 +45,22 @@ export default function TaskList() {
 
   // Get assignee name for each task
   const getAssigneeName = (assigneeId?: number) => {
-    if (!assigneeId) return "Unassigned";
-    const assignee = fieldUsers.find((user) => user.id === assigneeId);
-    return assignee ? assignee.name : "Unknown";
+    if (!assigneeId) return t('taskStatus.unassigned');
+    const assignee = fieldUsers.find((user: any) => user.id === assigneeId);
+    return assignee ? assignee.name : t('common.unknown');
   };
 
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold">Tasks</h1>
+          <h1 className="text-2xl font-bold">{t('tasks.title')}</h1>
           <Button onClick={() => setCreateTaskModalOpen(true)} className="bg-primary-500 hover:bg-primary-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
               <path d="M5 12h14"></path>
               <path d="M12 5v14"></path>
             </svg>
-            Create Task
+            {t('tasks.createTask')}
           </Button>
         </div>
 
@@ -67,7 +69,7 @@ export default function TaskList() {
             <div className="flex flex-wrap gap-4">
               <div className="flex-1 min-w-[200px]">
                 <Input
-                  placeholder="Search tasks..."
+                  placeholder={t('tasks.searchTasks')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full"
