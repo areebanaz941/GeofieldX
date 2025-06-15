@@ -1,0 +1,3 @@
+@echo off
+echo Starting GeoFieldX Development Server...
+npx cross-env NODE_ENV=development tsx server/index.ts
