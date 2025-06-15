@@ -5,7 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import LeafletMap from "@/lib/LeafletMap";
 import MapControls from "@/components/MapControls";
 import MapFilterControls from "@/components/MapFilterControls";
-import TeamMembersFilter from "@/components/TeamMembersFilter";
+
 import TaskPanel from "@/components/TaskPanel";
 import CreateFeatureModal from "@/components/CreateFeatureModal";
 import CreateTaskModal from "@/components/CreateTaskModal";
@@ -216,10 +216,7 @@ export default function MapView() {
           )}
         </div>
         
-        <TeamMembersFilter
-          teams={fieldUsers}
-          onTeamClick={handleTeamClick}
-        />
+
       </div>
       
       <TaskPanel
