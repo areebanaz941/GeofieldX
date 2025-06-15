@@ -302,13 +302,13 @@ export default function FieldTeams() {
   const isSupervisor = user?.role === "Supervisor";
   
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+    <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
       <div className="container mx-auto max-w-6xl">
         <Tabs defaultValue="members" className="w-full">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold">Field Teams</h1>
-              <p className="text-sm text-gray-500 mt-1">Manage your field teams and members</p>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">Field Teams</h1>
+              <p className="text-sm text-gray-600 mt-1">Manage your field teams and members</p>
             </div>
             <div className="flex gap-2">
               <TabsList>

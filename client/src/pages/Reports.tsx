@@ -104,10 +104,10 @@ export default function Reports() {
   }).sort((a, b) => b.completionRate - a.completionRate);
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+    <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold">Reports</h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">Reports</h1>
           <div className="flex items-center space-x-2">
             <Select value={reportPeriod} onValueChange={setReportPeriod}>
               <SelectTrigger className="w-[180px]">
