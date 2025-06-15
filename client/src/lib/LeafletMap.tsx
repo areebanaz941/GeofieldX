@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Task, User, Feature, Boundary } from '@shared/schema';
+import 'leaflet-draw/dist/leaflet.draw.css';
+import 'leaflet-draw';
+import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
 
 // Store legend control reference separately
 interface CustomMap extends L.Map {
@@ -31,16 +33,18 @@ const featureColors = {
 interface MapProps {
   center?: [number, number];
   zoom?: number;
-  features?: Feature[];
-  teams?: User[];
-  boundaries?: Boundary[];
-  tasks?: Task[];
+  features?: IFeature[];
+  teams?: IUser[];
+  boundaries?: IBoundary[];
+  tasks?: ITask[];
   activeFilters?: string[];
-  onFeatureClick?: (feature: Feature) => void;
-  onBoundaryClick?: (boundary: Boundary) => void;
-  onTeamClick?: (team: User) => void;
+  onFeatureClick?: (feature: IFeature) => void;
+  onBoundaryClick?: (boundary: IBoundary) => void;
+  onTeamClick?: (team: IUser) => void;
   onMapClick?: (latlng: { lat: number; lng: number }) => void;
+  onPolygonCreated?: (polygon: { name: string; coordinates: number[][][] }) => void;
   selectionMode?: boolean;
+  drawingMode?: boolean;
   className?: string;
 }
 
@@ -56,7 +60,9 @@ const LeafletMap = ({
   onBoundaryClick,
   onTeamClick,
   onMapClick,
+  onPolygonCreated,
   selectionMode = false,
+  drawingMode = false,
   className = 'h-full w-full'
 }: MapProps) => {
   const mapRef = useRef<L.Map | null>(null);
@@ -64,6 +70,8 @@ const LeafletMap = ({
   const teamsLayerRef = useRef<L.LayerGroup | null>(null);
   const boundariesLayerRef = useRef<L.LayerGroup | null>(null);
   const tasksLayerRef = useRef<L.LayerGroup | null>(null);
+  const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
   
   // Initialize map
   useEffect(() => {
@@ -78,6 +86,10 @@ const LeafletMap = ({
       teamsLayerRef.current = L.layerGroup().addTo(map);
       boundariesLayerRef.current = L.layerGroup().addTo(map);
       tasksLayerRef.current = L.layerGroup().addTo(map);
+      
+      // Initialize drawing layer
+      drawnItemsRef.current = new L.FeatureGroup();
+      map.addLayer(drawnItemsRef.current);
       
       mapRef.current = map;
       
@@ -104,6 +116,79 @@ const LeafletMap = ({
       mapRef.current.setView(center, zoom);
     }
   }, [center, zoom]);
+
+  // Handle drawing mode
+  useEffect(() => {
+    if (!mapRef.current || !drawnItemsRef.current) return;
+
+    const map = mapRef.current;
+    const drawnItems = drawnItemsRef.current;
+
+    if (drawingMode) {
+      // Add drawing controls
+      const drawControl = new L.Control.Draw({
+        edit: {
+          featureGroup: drawnItems,
+          remove: true
+        },
+        draw: {
+          polygon: {
+            allowIntersection: false,
+            drawError: {
+              color: '#e1e100',
+              message: '<strong>Error:</strong> Shape edges cannot cross!'
+            },
+            shapeOptions: {
+              color: '#97009c'
+            }
+          },
+          polyline: false,
+          rectangle: false,
+          circle: false,
+          marker: false,
+          circlemarker: false
+        }
+      });
+
+      map.addControl(drawControl);
+      drawControlRef.current = drawControl;
+
+      // Handle polygon creation
+      const onDrawCreated = (e: any) => {
+        const layer = e.layer;
+        const coordinates = layer.getLatLngs()[0].map((latlng: any) => [latlng.lng, latlng.lat]);
+        
+        if (onPolygonCreated) {
+          // Prompt for parcel name
+          const name = prompt('Enter parcel name:');
+          if (name) {
+            onPolygonCreated({
+              name,
+              coordinates: [coordinates]
+            });
+          }
+        }
+        
+        drawnItems.addLayer(layer);
+      };
+
+      map.on(L.Draw.Event.CREATED, onDrawCreated);
+
+      return () => {
+        map.off(L.Draw.Event.CREATED, onDrawCreated);
+        if (drawControlRef.current) {
+          map.removeControl(drawControlRef.current);
+          drawControlRef.current = null;
+        }
+      };
+    } else {
+      // Remove drawing controls
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
+      }
+    }
+  }, [drawingMode, onPolygonCreated]);
   
   // Update features on the map
   useEffect(() => {
