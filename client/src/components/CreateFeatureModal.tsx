@@ -44,7 +44,14 @@ const formSchema = z.object({
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
   remarks: z.string().optional(),
-  geometry: z.any(),
+  geometry: z.object({
+    type: z.enum(["Point", "LineString", "Polygon"]),
+    coordinates: z.union([
+      z.array(z.number()), // Point
+      z.array(z.array(z.number())), // LineString
+      z.array(z.array(z.array(z.number()))) // Polygon
+    ])
+  }),
 });
 
 type FeatureFormValues = z.infer<typeof formSchema>;

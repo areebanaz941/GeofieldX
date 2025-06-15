@@ -301,11 +301,9 @@ const OpenLayersMap = ({
           ring.map(coord => toLonLat(coord))
         );
 
-        // Prompt for polygon name
-        const name = prompt('Enter parcel name:');
-        if (name) {
+        if (onPolygonCreated) {
           onPolygonCreated({
-            name,
+            name: '',
             coordinates: lonLatCoordinates
           });
         }

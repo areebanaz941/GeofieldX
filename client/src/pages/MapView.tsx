@@ -34,6 +34,7 @@ export default function MapView() {
   const [advancedSearchModalOpen, setAdvancedSearchModalOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [drawnPolygon, setDrawnPolygon] = useState<{ coordinates: number[][][] } | null>(null);
   const [featureAssignmentModalOpen, setFeatureAssignmentModalOpen] = useState(false);
   const [boundaryAssignmentModalOpen, setBoundaryAssignmentModalOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
@@ -169,7 +170,13 @@ export default function MapView() {
   };
 
   const handlePolygonCreated = (polygonData: { name: string; coordinates: number[][][] }) => {
-    createParcelMutation.mutate(polygonData);
+    // Store the drawn polygon for feature creation
+    setDrawnPolygon({ coordinates: polygonData.coordinates });
+    setDrawingMode(false);
+    toast({
+      title: "Polygon drawn",
+      description: "Polygon created successfully. You can now create the parcel feature.",
+    });
   };
 
   return (
@@ -255,13 +262,19 @@ export default function MapView() {
           onClose={() => {
             setCreateFeatureModalOpen(false);
             setSelectionMode(false);
+            setDrawnPolygon(null);
           }}
           onOpenChange={(open) => {
             setCreateFeatureModalOpen(open);
-            if (!open) setSelectionMode(false);
+            if (!open) {
+              setSelectionMode(false);
+              setDrawnPolygon(null);
+            }
           }}
           selectedLocation={selectedLocation}
           setSelectionMode={setSelectionMode}
+          setDrawingMode={setDrawingMode}
+          drawnPolygon={drawnPolygon}
         />
       )}
       
