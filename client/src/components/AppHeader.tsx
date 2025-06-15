@@ -67,7 +67,7 @@ export default function AppHeader() {
         </Button>
         <div className="flex items-center">
           <i className="ri-map-pin-line text-primary-500 text-2xl mr-2"></i>
-          <h1 className="text-xl font-medium text-primary-600">GeoWhats</h1>
+          <h1 className="text-xl font-medium text-primary-600">GeoFieldX</h1>
         </div>
       </div>
       <div className="flex items-center space-x-4">
