@@ -102,15 +102,15 @@ export default function Register() {
         
       await register(formattedValues);
       toast({
-        title: "Success",
-        description: "Your account has been created",
+        title: t('common.success'),
+        description: t('auth.registrationSuccess'),
         variant: "default",
       });
       setLocation("/login");
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to create account. Username or email may already be in use.",
+        title: t('common.error'),
+        description: t('auth.registrationError'),
         variant: "destructive",
       });
     } finally {
@@ -209,19 +209,19 @@ export default function Register() {
                   name="teamId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Team</FormLabel>
+                      <FormLabel>{t('auth.team')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={isLoadingTeams ? "Loading teams..." : "Select your team"} />
+                            <SelectValue placeholder={isLoadingTeams ? t('common.loading') : t('auth.selectTeam')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {approvedTeams.length === 0 ? (
-                            <SelectItem value="_none" disabled>No approved teams available</SelectItem>
+                            <SelectItem value="_none" disabled>{t('teams.noTeamsFound')}</SelectItem>
                           ) : (
                             <>
-                              <SelectItem value="_placeholder" disabled>Select a team</SelectItem>
+                              <SelectItem value="_placeholder" disabled>{t('auth.selectTeam')}</SelectItem>
                               {approvedTeams.map((team: any) => (
                                 <SelectItem key={team._id} value={team._id.toString()}>
                                   {team.name}
@@ -234,7 +234,7 @@ export default function Register() {
                       <FormMessage />
                       {approvedTeams.length === 0 && !isLoadingTeams && (
                         <p className="text-xs text-amber-600 mt-1">
-                          No approved teams available. Please contact a supervisor to create and approve a team.
+                          {t('teams.noTeamsAvailable')}
                         </p>
                       )}
                     </FormItem>
@@ -247,9 +247,9 @@ export default function Register() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t('auth.password')}</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Create a password" {...field} />
+                      <Input type="password" placeholder={t('auth.passwordPlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -260,16 +260,16 @@ export default function Register() {
                 className="w-full bg-gradient-to-r from-[#1E5CB3] to-[#3F7ED5] hover:from-[#164785] hover:to-[#2B5999]" 
                 disabled={isLoading}
               >
-                {isLoading ? "Creating account..." : "Register"}
+                {isLoading ? t('auth.creatingAccount') : t('auth.createAccount')}
               </Button>
             </form>
           </Form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <div className="text-sm">
-            Already have an account?{" "}
+            {t('auth.alreadyHaveAccount')}{" "}
             <a href="/login" className="font-medium text-[#1E5CB3] hover:text-[#164785]">
-              Login
+              {t('auth.loginHere')}
             </a>
           </div>
         </CardFooter>

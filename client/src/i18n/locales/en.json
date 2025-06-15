@@ -58,7 +58,10 @@
     "createAccount": "Create Account",
     "creatingAccount": "Creating account...",
     "alreadyHaveAccount": "Already have an account?",
-    "loginHere": "Login here"
+    "loginHere": "Login here",
+    "passwordPlaceholder": "Create a password",
+    "registrationSuccess": "Account created successfully",
+    "registrationError": "Failed to create account. Username or email may already be in use."
   },
   "navigation": {
     "dashboard": "Dashboard",

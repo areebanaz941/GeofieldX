@@ -58,7 +58,10 @@
     "createAccount": "إنشاء حساب",
     "creatingAccount": "جارٍ إنشاء الحساب...",
     "alreadyHaveAccount": "لديك حساب بالفعل؟",
-    "loginHere": "سجل دخولك هنا"
+    "loginHere": "سجل دخولك هنا",
+    "passwordPlaceholder": "أنشئ كلمة مرور",
+    "registrationSuccess": "تم إنشاء الحساب بنجاح",
+    "registrationError": "فشل في إنشاء الحساب. قد يكون اسم المستخدم أو البريد الإلكتروني مستخدماً بالفعل."
   },
   "navigation": {
     "dashboard": "لوحة التحكم",
