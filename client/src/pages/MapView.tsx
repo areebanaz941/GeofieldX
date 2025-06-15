@@ -16,16 +16,17 @@ import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation } from "@/lib/api";
-import { Feature, Task, User, Boundary } from "@shared/schema";
+import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation, createParcel } from "@/lib/api";
+import { IFeature, ITask, IUser, IBoundary } from "../../../shared/schema";
 
 export default function MapView() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [activeFilters, setActiveFilters] = useState<string[]>(["All"]);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedTeam, setSelectedTeam] = useState<User | null>(null);
+  const [selectedTask, setSelectedTask] = useState<ITask | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<IUser | null>(null);
+  const [drawingMode, setDrawingMode] = useState(false);
   const [taskPanelExpanded, setTaskPanelExpanded] = useState(true);
   const [createFeatureModalOpen, setCreateFeatureModalOpen] = useState(false);
   const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
@@ -66,6 +67,26 @@ export default function MapView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users/field"] });
     },
+  });
+
+  // Create parcel mutation
+  const createParcelMutation = useMutation({
+    mutationFn: createParcel,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/boundaries"] });
+      toast({
+        title: "Success",
+        description: "Parcel created successfully"
+      });
+      setDrawingMode(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create parcel",
+        variant: "destructive"
+      });
+    }
   });
 
   // Update user's location periodically
@@ -137,12 +158,16 @@ export default function MapView() {
     }
   };
 
-  const handleTeamClick = (team: User) => {
+  const handleTeamClick = (team: IUser) => {
     setSelectedTeam(team);
     toast({
       title: "Team Selected",
       description: `${team.name}`,
     });
+  };
+
+  const handlePolygonCreated = (polygonData: { name: string; coordinates: number[][][] }) => {
+    createParcelMutation.mutate(polygonData);
   };
 
   return (
@@ -158,14 +183,16 @@ export default function MapView() {
           onBoundaryClick={handleBoundaryClick}
           onTeamClick={handleTeamClick}
           onMapClick={handleMapClick}
+          onPolygonCreated={handlePolygonCreated}
           selectionMode={selectionMode}
+          drawingMode={drawingMode}
         />
         
         <MapControls />
         
 
         
-        <div className="absolute bottom-4 left-4 z-[1000]">
+        <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
           <Button
             onClick={() => setCreateFeatureModalOpen(true)}
             className="bg-primary-500 hover:bg-primary-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
@@ -175,6 +202,18 @@ export default function MapView() {
               <path d="M12 5v14"></path>
             </svg>
           </Button>
+          
+          {user?.role === "Supervisor" && (
+            <Button
+              onClick={() => setDrawingMode(!drawingMode)}
+              className={`${drawingMode ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
+              title={drawingMode ? "Stop Drawing" : "Draw Parcel"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
+              </svg>
+            </Button>
+          )}
         </div>
         
         <TeamMembersFilter

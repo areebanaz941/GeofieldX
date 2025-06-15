@@ -146,6 +146,20 @@ export async function createBoundary(boundaryData: any) {
   return await res.json();
 }
 
+export async function createParcel(parcelData: { name: string; coordinates: number[][][] }) {
+  const boundaryData = {
+    name: parcelData.name,
+    description: `Parcel drawn on map - ${parcelData.name}`,
+    geometry: {
+      type: "Polygon",
+      coordinates: parcelData.coordinates
+    },
+    status: "New"
+  };
+  const res = await apiRequest('POST', '/api/boundaries', boundaryData);
+  return await res.json();
+}
+
 export async function getAllBoundaries() {
   const res = await apiRequest('GET', '/api/boundaries');
   return await res.json();
