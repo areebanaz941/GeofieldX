@@ -353,7 +353,7 @@ async function addInitialData(storage: IStorage) {
           description: "Quarterly inspection of communication tower including structural integrity, equipment status, and safety compliance check.",
           taskType: "Inspection",
           priority: "High",
-          status: "New",
+          status: "Assigned",
           dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
           assignedTo: fieldTeamAlpha!._id.toString(),
           createdBy: supervisorId,
@@ -503,11 +503,11 @@ async function addInitialData(storage: IStorage) {
       ];
 
       for (const taskData of sampleTasks) {
-        const task = await storage.createTask(taskData);
+        const task = await storage.createTask(taskData as any);
         const relatedFeature = taskData.relatedFeatureId 
           ? allFeatures.find(f => f._id.toString() === taskData.relatedFeatureId)
           : null;
-        const assignedTeam = allTeams.find(t => t._id.toString() === taskData.assignedTo);
+        const assignedTeam = allTeamsData.find(t => t._id.toString() === taskData.assignedTo);
         
         log(`Created task: ${task.title} - Assigned to: ${assignedTeam?.name}${relatedFeature ? ` (Feature: ${relatedFeature.feaNo})` : ''}`);
       }
