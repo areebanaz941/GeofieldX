@@ -1,0 +1,158 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search",
+    "filter": "Filter",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "username": "Username",
+    "password": "Password",
+    "loginButton": "Sign In",
+    "welcome": "Welcome to GeoPilot",
+    "subtitle": "Your Field. Your Team. Your Control.",
+    "invalidCredentials": "Invalid username or password",
+    "loginSuccess": "Logged in successfully",
+    "logoutSuccess": "Logged out successfully",
+    "demoAccounts": "Demo Accounts",
+    "supervisorDemo": "Supervisor Demo",
+    "fieldUserDemo": "Field User Demo"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "teams": "Field Teams",
+    "map": "Map View",
+    "reports": "Reports"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalTasks": "Total Tasks",
+    "featuresTracked": "Features Tracked",
+    "completionRate": "Completion Rate",
+    "fieldTeams": "Field Teams",
+    "taskStatusDistribution": "Task Status Distribution",
+    "taskStatusDescription": "Overview of current task statuses",
+    "featureTypeDistribution": "Feature Type Distribution",
+    "featureTypeDescription": "Breakdown of features by type",
+    "recentTasks": "Recent Tasks",
+    "recentTasksDescription": "Latest updated tasks in the system",
+    "noTasksFound": "No tasks found",
+    "createTasksToGetStarted": "Create tasks to get started",
+    "noTaskData": "No task data available",
+    "noFeatureData": "No feature data available"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "createTask": "Create Task",
+    "taskTitle": "Task Title",
+    "description": "Description",
+    "priority": "Priority",
+    "status": "Status",
+    "dueDate": "Due Date",
+    "assignedTo": "Assigned To",
+    "selectTeam": "Select Team",
+    "assignToTeamMember": "Assign To Team Member",
+    "noSpecificTeam": "No specific team",
+    "leaveUnassigned": "Leave unassigned",
+    "assignToMyself": "Assign to myself",
+    "noTeamMembers": "No team members available",
+    "selectTeamMember": "Select team member",
+    "searchTasks": "Search tasks...",
+    "filterByStatus": "Filter by status",
+    "allStatuses": "All Statuses",
+    "noTasksMatch": "No tasks match your search criteria",
+    "noTasksCreate": "No tasks found. Create your first task!",
+    "updated": "Updated",
+    "due": "Due",
+    "taskCreated": "Task created successfully",
+    "taskCreateError": "Failed to create task"
+  },
+  "taskStatus": {
+    "unassigned": "Unassigned",
+    "assigned": "Assigned",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "incomplete": "Incomplete",
+    "submitReview": "Submit Review",
+    "reviewAccepted": "Review Accepted",
+    "reviewRejected": "Review Rejected",
+    "reviewInProgress": "Review In Progress"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "teams": {
+    "title": "Field Teams",
+    "teamName": "Team Name",
+    "teamLead": "Team Lead",
+    "teamLeadContact": "Team Lead Contact",
+    "teamStatus": "Team Status",
+    "members": "Members",
+    "actions": "Actions",
+    "approve": "Approve",
+    "reject": "Reject",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "noTeamsFound": "No teams found",
+    "teamApproved": "Team approved successfully",
+    "teamRejected": "Team rejected successfully"
+  },
+  "features": {
+    "towers": "Towers",
+    "manholes": "Manholes",
+    "fiberCables": "Fiber Cables",
+    "parcels": "Parcels"
+  },
+  "map": {
+    "title": "Map View",
+    "selectLocation": "Select Location on Map",
+    "clickToSelect": "Click on the map to select a location for the task"
+  },
+  "reports": {
+    "title": "Reports",
+    "generateReport": "Generate Report",
+    "taskReport": "Task Report",
+    "teamReport": "Team Report",
+    "performanceReport": "Performance Report"
+  },
+  "validation": {
+    "required": "This field is required",
+    "titleRequired": "Title is required",
+    "usernameRequired": "Username is required",
+    "passwordRequired": "Password is required",
+    "emailInvalid": "Please enter a valid email address",
+    "phoneInvalid": "Please enter a valid phone number"
+  },
+  "errors": {
+    "networkError": "Network error. Please check your connection.",
+    "serverError": "Server error. Please try again later.",
+    "unauthorizedError": "You are not authorized to perform this action.",
+    "notFoundError": "The requested resource was not found.",
+    "validationError": "Please check your input and try again."
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية",
+    "selectLanguage": "Select Language"
+  }
+}

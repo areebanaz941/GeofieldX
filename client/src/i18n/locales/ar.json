@@ -1,0 +1,158 @@
+{
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "error": "خطأ",
+    "success": "نجح",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "close": "إغلاق",
+    "yes": "نعم",
+    "no": "لا",
+    "search": "بحث",
+    "filter": "تصفية",
+    "back": "رجوع",
+    "next": "التالي",
+    "submit": "إرسال"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "username": "اسم المستخدم",
+    "password": "كلمة المرور",
+    "loginButton": "دخول",
+    "welcome": "مرحباً بك في جيو بايلوت",
+    "subtitle": "حقلك. فريقك. سيطرتك.",
+    "invalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة",
+    "loginSuccess": "تم تسجيل الدخول بنجاح",
+    "logoutSuccess": "تم تسجيل الخروج بنجاح",
+    "demoAccounts": "حسابات تجريبية",
+    "supervisorDemo": "حساب المشرف التجريبي",
+    "fieldUserDemo": "حساب العامل الميداني التجريبي"
+  },
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "tasks": "المهام",
+    "teams": "الفرق الميدانية",
+    "map": "عرض الخريطة",
+    "reports": "التقارير"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "totalTasks": "إجمالي المهام",
+    "featuresTracked": "الميزات المتتبعة",
+    "completionRate": "معدل الإنجاز",
+    "fieldTeams": "الفرق الميدانية",
+    "taskStatusDistribution": "توزيع حالة المهام",
+    "taskStatusDescription": "نظرة عامة على حالات المهام الحالية",
+    "featureTypeDistribution": "توزيع أنواع الميزات",
+    "featureTypeDescription": "تفصيل الميزات حسب النوع",
+    "recentTasks": "المهام الأخيرة",
+    "recentTasksDescription": "آخر المهام المحدثة في النظام",
+    "noTasksFound": "لم يتم العثور على مهام",
+    "createTasksToGetStarted": "أنشئ مهاماً للبدء",
+    "noTaskData": "لا توجد بيانات مهام متاحة",
+    "noFeatureData": "لا توجد بيانات ميزات متاحة"
+  },
+  "tasks": {
+    "title": "المهام",
+    "createTask": "إنشاء مهمة",
+    "taskTitle": "عنوان المهمة",
+    "description": "الوصف",
+    "priority": "الأولوية",
+    "status": "الحالة",
+    "dueDate": "تاريخ الاستحقاق",
+    "assignedTo": "مسند إلى",
+    "selectTeam": "اختر الفريق",
+    "assignToTeamMember": "تعيين لعضو الفريق",
+    "noSpecificTeam": "لا يوجد فريق محدد",
+    "leaveUnassigned": "اتركه غير مسند",
+    "assignToMyself": "اسند لنفسي",
+    "noTeamMembers": "لا يوجد أعضاء فريق متاحون",
+    "selectTeamMember": "اختر عضو الفريق",
+    "searchTasks": "البحث في المهام...",
+    "filterByStatus": "تصفية بالحالة",
+    "allStatuses": "جميع الحالات",
+    "noTasksMatch": "لا توجد مهام تطابق معايير البحث",
+    "noTasksCreate": "لم يتم العثور على مهام. أنشئ أول مهمة لك!",
+    "updated": "محدث",
+    "due": "مستحق",
+    "taskCreated": "تم إنشاء المهمة بنجاح",
+    "taskCreateError": "فشل في إنشاء المهمة"
+  },
+  "taskStatus": {
+    "unassigned": "غير مسند",
+    "assigned": "مسند",
+    "inProgress": "قيد التقدم",
+    "completed": "مكتمل",
+    "incomplete": "غير مكتمل",
+    "submitReview": "إرسال للمراجعة",
+    "reviewAccepted": "مراجعة مقبولة",
+    "reviewRejected": "مراجعة مرفوضة",
+    "reviewInProgress": "مراجعة قيد التقدم"
+  },
+  "priority": {
+    "low": "منخفض",
+    "medium": "متوسط",
+    "high": "عالي",
+    "urgent": "عاجل"
+  },
+  "teams": {
+    "title": "الفرق الميدانية",
+    "teamName": "اسم الفريق",
+    "teamLead": "قائد الفريق",
+    "teamLeadContact": "تواصل قائد الفريق",
+    "teamStatus": "حالة الفريق",
+    "members": "الأعضاء",
+    "actions": "الإجراءات",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "pending": "في الانتظار",
+    "approved": "موافق عليه",
+    "rejected": "مرفوض",
+    "noTeamsFound": "لم يتم العثور على فرق",
+    "teamApproved": "تم الموافقة على الفريق بنجاح",
+    "teamRejected": "تم رفض الفريق بنجاح"
+  },
+  "features": {
+    "towers": "الأبراج",
+    "manholes": "فتحات التفتيش",
+    "fiberCables": "كابلات الألياف",
+    "parcels": "القطع"
+  },
+  "map": {
+    "title": "عرض الخريطة",
+    "selectLocation": "حدد الموقع على الخريطة",
+    "clickToSelect": "انقر على الخريطة لتحديد موقع للمهمة"
+  },
+  "reports": {
+    "title": "التقارير",
+    "generateReport": "توليد التقرير",
+    "taskReport": "تقرير المهام",
+    "teamReport": "تقرير الفريق",
+    "performanceReport": "تقرير الأداء"
+  },
+  "validation": {
+    "required": "هذا الحقل مطلوب",
+    "titleRequired": "العنوان مطلوب",
+    "usernameRequired": "اسم المستخدم مطلوب",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "emailInvalid": "يرجى إدخال عنوان بريد إلكتروني صالح",
+    "phoneInvalid": "يرجى إدخال رقم هاتف صالح"
+  },
+  "errors": {
+    "networkError": "خطأ في الشبكة. يرجى فحص الاتصال.",
+    "serverError": "خطأ في الخادم. يرجى المحاولة لاحقاً.",
+    "unauthorizedError": "غير مصرح لك بتنفيذ هذا الإجراء.",
+    "notFoundError": "المورد المطلوب غير موجود.",
+    "validationError": "يرجى فحص المدخلات والمحاولة مرة أخرى."
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية",
+    "selectLanguage": "اختر اللغة"
+  }
+}

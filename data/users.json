@@ -29,9 +29,9 @@
       "email": "areebanaz941@gmail.com",
       "role": "Field",
       "teamId": "682fa264529cca1564dd2f56",
-      "lastActive": "2025-06-02T20:36:11.185Z",
+      "lastActive": "2025-06-03T17:39:41.922Z",
       "createdAt": "2025-06-02T20:36:02.864Z",
-      "updatedAt": "2025-06-02T20:36:11.185Z"
+      "updatedAt": "2025-06-03T17:39:41.922Z"
     },
     {
       "_id": "683e0b884fd2f0f70dfc7e1b",
@@ -40,9 +40,20 @@
       "name": "kashifAli",
       "email": "kali.be20igis@gmail.com",
       "role": "Supervisor",
-      "lastActive": "2025-06-02T20:55:40.394Z",
+      "lastActive": "2025-06-03T17:52:43.058Z",
       "createdAt": "2025-06-02T20:37:28.103Z",
-      "updatedAt": "2025-06-02T20:55:40.394Z"
+      "updatedAt": "2025-06-03T17:52:43.058Z"
+    },
+    {
+      "_id": "683f334d8b62446a13ac2251",
+      "username": "areeba123",
+      "password": "$2b$10$TUKahyAMe60MMRa3fwgTfOKeIjgqp160s6x7PNv19t7S/qarQyvam",
+      "name": "Areeba Naz",
+      "email": "areebanaz941@gmail.com",
+      "role": "Field",
+      "teamId": "682fa264529cca1564dd2f56",
+      "createdAt": "2025-06-03T17:39:25.994Z",
+      "updatedAt": "2025-06-03T17:39:25.994Z"
     }
   ]
 }
