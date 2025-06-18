@@ -295,15 +295,17 @@ const OpenLayersMap = ({
           const [lng, lat] = coordinate;
           
           // Clear previous selection marker for point selection only
-          if (pointSelectionMode) {
-            selectedLocationSource.clear();
+          if (pointSelectionMode && selectedLocationSourceRef.current) {
+            selectedLocationSourceRef.current.clear();
           }
           
           // Add new selection marker
           const marker = new Feature({
             geometry: new Point(event.coordinate)
           });
-          selectedLocationSource.addFeature(marker);
+          if (selectedLocationSourceRef.current) {
+            selectedLocationSourceRef.current.addFeature(marker);
+          }
           
           onMapClick({ lat, lng });
         }
