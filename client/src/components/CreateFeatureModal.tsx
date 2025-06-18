@@ -476,27 +476,74 @@ export default function CreateFeatureModal({
                       type="text"
                       readOnly
                       placeholder="Select route points (minimum 2 points)"
-                      value="Click 'Select Points' to define fiber cable route"
+                      value={multiplePoints.length > 0 ? `${multiplePoints.length} points selected` : "Click 'Start' to define fiber cable route"}
                       className="flex-1"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectionMode(true);
-                        toast({
-                          title: "Fiber Route Points",
-                          description: "Click multiple points on the map to create the fiber cable route. Click finish when done.",
-                        });
-                      }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="4,17 10,11 16,11 22,5"></polyline>
-                        <polyline points="22,5 18,5 22,9"></polyline>
-                      </svg>
-                    </Button>
+                    {!collectingPoints ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setCollectingPoints(true);
+                          setMultiplePoints([]);
+                          setSelectionMode(true);
+                          toast({
+                            title: "Point Collection Mode",
+                            description: "Click on map to select route points. Need minimum 2 points.",
+                          });
+                        }}
+                      >
+                        Start
+                      </Button>
+                    ) : (
+                      <div className="flex gap-1">
+                        {multiplePoints.length >= 2 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setCollectingPoints(false);
+                              setSelectionMode(false);
+                              toast({
+                                title: "Route completed",
+                                description: `Fiber cable route defined with ${multiplePoints.length} points`,
+                              });
+                            }}
+                            className="bg-green-50 border-green-200 text-green-700"
+                          >
+                            Finish
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setMultiplePoints([]);
+                            setCollectingPoints(false);
+                            setSelectionMode(false);
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-neutral-500">Select minimum 2 points to create the fiber cable route</p>
+                  {multiplePoints.length > 0 && (
+                    <div className="text-xs text-neutral-600 max-h-24 overflow-y-auto border rounded p-2 bg-gray-50">
+                      <div className="font-medium mb-1">Route Points:</div>
+                      {multiplePoints.map((point, index) => (
+                        <div key={index} className="py-0.5">
+                          {index + 1}. {point.lat.toFixed(6)}, {point.lng.toFixed(6)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-neutral-500">
+                    Select minimum 2 points to create the fiber cable route
+                    {collectingPoints && ` (${multiplePoints.length}/10 points)`}
+                  </p>
                 </div>
               )}
             </div>
