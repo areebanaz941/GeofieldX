@@ -8,6 +8,8 @@ import MapFilterControls from "@/components/MapFilterControls";
 
 import TaskPanel from "@/components/TaskPanel";
 import CreateFeatureModal from "@/components/CreateFeatureModal";
+import PointFeatureModal from "@/components/PointFeatureModal";
+import LineFeatureModal from "@/components/LineFeatureModal";
 import CreateTaskModal from "@/components/CreateTaskModal";
 import TaskDetailsModal from "@/components/TaskDetailsModal";
 import AdvancedSearchModal from "@/components/AdvancedSearchModal";
@@ -29,6 +31,8 @@ export default function MapView() {
   const [drawingMode, setDrawingMode] = useState(false);
   const [taskPanelExpanded, setTaskPanelExpanded] = useState(true);
   const [createFeatureModalOpen, setCreateFeatureModalOpen] = useState(false);
+  const [pointFeatureModalOpen, setPointFeatureModalOpen] = useState(false);
+  const [lineFeatureModalOpen, setLineFeatureModalOpen] = useState(false);
   const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
   const [taskDetailsModalOpen, setTaskDetailsModalOpen] = useState(false);
   const [advancedSearchModalOpen, setAdvancedSearchModalOpen] = useState(false);
@@ -210,16 +214,32 @@ export default function MapView() {
           <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
             <Button
               onClick={() => {
-                setCreateFeatureModalOpen(true);
+                setPointFeatureModalOpen(true);
+                setSelectionMode(false);
+                setSelectedLocation(null);
+              }}
+              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+              title="Create Point Feature (Tower/Manhole)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </Button>
+            
+            <Button
+              onClick={() => {
+                setLineFeatureModalOpen(true);
                 setSelectionMode(false);
                 setSelectedLocation(null);
               }}
               className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-              title="Create New Feature"
+              title="Create Line Feature (Fiber Cable)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
+                <path d="M3 12h18m-9-9v18"></path>
+                <path d="m8 8 8 8"></path>
+                <path d="m16 8-8 8"></path>
               </svg>
             </Button>
             
@@ -346,6 +366,48 @@ export default function MapView() {
         onOpenChange={setBoundaryAssignmentModalOpen}
         boundary={selectedBoundary}
       />
+      
+      {/* Point Feature Modal */}
+      {pointFeatureModalOpen && (
+        <PointFeatureModal
+          open={pointFeatureModalOpen}
+          onClose={() => {
+            setPointFeatureModalOpen(false);
+            setSelectionMode(false);
+            setSelectedLocation(null);
+          }}
+          onOpenChange={(open) => {
+            setPointFeatureModalOpen(open);
+            if (!open) {
+              setSelectionMode(false);
+              setSelectedLocation(null);
+            }
+          }}
+          selectedLocation={selectedLocation}
+          setSelectionMode={setSelectionMode}
+        />
+      )}
+      
+      {/* Line Feature Modal */}
+      {lineFeatureModalOpen && (
+        <LineFeatureModal
+          open={lineFeatureModalOpen}
+          onClose={() => {
+            setLineFeatureModalOpen(false);
+            setSelectionMode(false);
+            setSelectedLocation(null);
+          }}
+          onOpenChange={(open) => {
+            setLineFeatureModalOpen(open);
+            if (!open) {
+              setSelectionMode(false);
+              setSelectedLocation(null);
+            }
+          }}
+          selectedLocation={selectedLocation}
+          setSelectionMode={setSelectionMode}
+        />
+      )}
     </>
   );
 }
