@@ -70,6 +70,8 @@ export default function CreateFeatureModal({
 }: CreateFeatureModalProps) {
   const { toast } = useToast();
   const [specificTypeOptions, setSpecificTypeOptions] = useState<string[]>([]);
+  const [multiplePoints, setMultiplePoints] = useState<{ lat: number; lng: number }[]>([]);
+  const [collectingPoints, setCollectingPoints] = useState(false);
 
   // Initialize form
   const form = useForm<FeatureFormValues>({
@@ -113,7 +115,20 @@ export default function CreateFeatureModal({
     form.setValue("specificType", options[0] || "");
   }, [feaType]);
 
-  // Update geometry when selectedLocation or drawnPolygon changes
+  // Handle multi-point collection for fiber cables
+  useEffect(() => {
+    if (collectingPoints && selectedLocation && feaType === "FiberCable") {
+      if (multiplePoints.length < 10) { // Maximum 10 points
+        setMultiplePoints(prev => [...prev, selectedLocation]);
+        toast({
+          title: `Point ${multiplePoints.length + 1} added`,
+          description: multiplePoints.length + 1 >= 2 ? "You can finish or add more points" : "Add at least one more point",
+        });
+      }
+    }
+  }, [selectedLocation, collectingPoints, feaType, multiplePoints.length]);
+
+  // Update geometry when coordinates change
   useEffect(() => {
     if (feaType === "Parcel" && drawnPolygon) {
       const geometry = {
@@ -121,14 +136,20 @@ export default function CreateFeatureModal({
         coordinates: drawnPolygon.coordinates,
       };
       form.setValue("geometry", geometry);
-    } else if (feaType !== "Parcel" && selectedLocation) {
+    } else if (feaType === "FiberCable" && multiplePoints.length >= 2) {
+      const geometry = {
+        type: "LineString" as const,
+        coordinates: multiplePoints.map(point => [point.lng, point.lat]),
+      };
+      form.setValue("geometry", geometry);
+    } else if ((feaType === "Tower" || feaType === "Manhole") && selectedLocation) {
       const geometry = {
         type: "Point" as const,
         coordinates: [selectedLocation.lng, selectedLocation.lat],
       };
       form.setValue("geometry", geometry);
     }
-  }, [selectedLocation, drawnPolygon, feaType]);
+  }, [selectedLocation, drawnPolygon, multiplePoints, feaType]);
 
   // Create feature mutation
   const createFeatureMutation = useMutation({
@@ -382,61 +403,102 @@ export default function CreateFeatureModal({
             />
             
             <div>
-              <FormLabel>{feaType === "Parcel" ? "Parcel Area" : "Location"}</FormLabel>
-              {feaType === "Parcel" ? (
-                <div className="flex items-center mt-1">
-                  <Input
-                    type="text"
-                    readOnly
-                    placeholder="Draw polygon on map"
-                    value={drawnPolygon ? "Polygon drawn successfully" : ""}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="ml-2"
-                    onClick={() => {
-                      setDrawingMode(true);
-                      toast({
-                        title: "Draw parcel",
-                        description: "Use the polygon drawing tool on the map",
-                      });
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
-                    </svg>
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center mt-1">
-                  <Input
-                    type="text"
-                    readOnly
-                    placeholder="Select location on map"
-                    value={selectedLocation ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` : ""}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="ml-2"
-                    onClick={() => {
-                      setSelectionMode(true);
-                      toast({
-                        title: "Select location",
-                        description: "Click on the map to select a location",
-                      });
-                    }}
-                  >
-                    <i className="ri-map-pin-line"></i>
-                  </Button>
+              <FormLabel>
+                {feaType === "Parcel" ? "Parcel Area" : 
+                 feaType === "FiberCable" ? "Fiber Route Points" : "Location"}
+              </FormLabel>
+              
+              {feaType === "Parcel" && (
+                <div className="mt-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      readOnly
+                      placeholder="Draw polygon on map"
+                      value={drawnPolygon ? "Polygon drawn successfully" : ""}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setDrawingMode(true);
+                        toast({
+                          title: "Draw parcel",
+                          description: "Use the polygon drawing tool on the map",
+                        });
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
+                      </svg>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-neutral-500">Draw a polygon on the map to define the parcel area (minimum 4 points)</p>
                 </div>
               )}
-              <p className="text-xs text-neutral-500 mt-1">
-                {feaType === "Parcel" ? "Draw a polygon on the map to define the parcel area" : "Click on the map to select location"}
-              </p>
+
+              {(feaType === "Tower" || feaType === "Manhole") && (
+                <div className="mt-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      readOnly
+                      placeholder="Click on the map to select location"
+                      value={selectedLocation ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` : ""}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectionMode(true);
+                        toast({
+                          title: "Select location",
+                          description: "Click on the map to select a location",
+                        });
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                      </svg>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-neutral-500">Click on the map to select exact location (1 point required)</p>
+                </div>
+              )}
+
+              {feaType === "FiberCable" && (
+                <div className="mt-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      readOnly
+                      placeholder="Select route points (minimum 2 points)"
+                      value="Click 'Select Points' to define fiber cable route"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectionMode(true);
+                        toast({
+                          title: "Fiber Route Points",
+                          description: "Click multiple points on the map to create the fiber cable route. Click finish when done.",
+                        });
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="4,17 10,11 16,11 22,5"></polyline>
+                        <polyline points="22,5 18,5 22,9"></polyline>
+                      </svg>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-neutral-500">Select minimum 2 points to create the fiber cable route</p>
+                </div>
+              )}
             </div>
           </form>
         </Form>
