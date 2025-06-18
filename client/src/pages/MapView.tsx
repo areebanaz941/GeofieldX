@@ -204,13 +204,20 @@ export default function MapView() {
         {user?.role === "Supervisor" && (
           <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
             <Button
-              onClick={() => setCreateFeatureModalOpen(true)}
-              className="bg-primary-500 hover:bg-primary-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-              title="Add Feature"
+              onClick={() => {
+                setSelectionMode(true);
+                setSelectedLocation(null);
+                toast({
+                  title: "Selection Mode",
+                  description: "Click on the map to select coordinates for your feature",
+                });
+              }}
+              className={`${selectionMode ? 'bg-green-500 hover:bg-green-600' : 'bg-primary-500 hover:bg-primary-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
+              title={selectionMode ? "Selection Active - Click Map" : "Select Location"}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
               </svg>
             </Button>
             
@@ -225,19 +232,34 @@ export default function MapView() {
             </Button>
             
             {selectedLocation && (
-              <Button
-                onClick={() => {
-                  setSelectedLocation(null);
-                  setSelectionMode(false);
-                }}
-                className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-                title="Clear Selection"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </Button>
+              <>
+                <Button
+                  onClick={() => {
+                    setCreateFeatureModalOpen(true);
+                    setSelectionMode(false);
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+                  title="Add Feature Here"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                  </svg>
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedLocation(null);
+                    setSelectionMode(false);
+                  }}
+                  className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+                  title="Clear Selection"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </Button>
+              </>
             )}
           </div>
         )}

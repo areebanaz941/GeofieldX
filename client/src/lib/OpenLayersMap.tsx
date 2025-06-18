@@ -274,10 +274,10 @@ const OpenLayersMap = ({
       })
     });
 
-    // Add click interaction for map clicks
+    // Add click interaction for map clicks (only when in selection mode)
     if (onMapClick) {
       map.on('click', (event) => {
-        if (!drawingMode) {
+        if (!drawingMode && selectionMode) {
           const coordinate = toLonLat(event.coordinate);
           const [lng, lat] = coordinate;
           
