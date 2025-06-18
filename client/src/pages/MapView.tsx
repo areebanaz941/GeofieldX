@@ -276,7 +276,7 @@ export default function MapView() {
                 setSelectionMode(false);
                 toast({
                   title: "Line Drawing Mode",
-                  description: "Draw fiber cable route on map. Double-click to finish.",
+                  description: "Draw fiber route (2-20 points). Double-click to finish.",
                 });
               }}
               className={`${lineDrawingMode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}

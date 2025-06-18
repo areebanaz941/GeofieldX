@@ -476,12 +476,26 @@ const OpenLayersMap = ({
 
       drawInteractionRef.current = new Draw({
         source: source,
-        type: 'LineString'
+        type: 'LineString',
+        minPoints: 2,
+        maxPoints: 20
       });
 
       drawInteractionRef.current.on('drawend', (event) => {
         const geometry = event.feature.getGeometry() as LineString;
         const coordinates = geometry.getCoordinates();
+        
+        // Validate point count
+        if (coordinates.length < 2) {
+          console.warn('Line must have at least 2 points');
+          return;
+        }
+        
+        if (coordinates.length > 20) {
+          console.warn('Line cannot have more than 20 points');
+          return;
+        }
+
         const lonLatCoordinates = coordinates.map(coord => {
           const [lng, lat] = toLonLat(coord);
           return { lat, lng };
