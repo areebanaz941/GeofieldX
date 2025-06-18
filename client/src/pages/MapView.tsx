@@ -238,9 +238,13 @@ export default function MapView() {
           onBoundaryClick={handleBoundaryClick}
           onTeamClick={handleTeamClick}
           onMapClick={handleMapClick}
+          onMapDoubleClick={handleMapDoubleClick}
           onPolygonCreated={handlePolygonCreated}
           selectionMode={selectionMode}
           drawingMode={drawingMode}
+          pointSelectionMode={pointSelectionMode}
+          lineDrawingMode={lineDrawingMode}
+          linePoints={linePoints}
           clearDrawnPolygon={clearPolygon}
         />
         
@@ -293,18 +297,7 @@ export default function MapView() {
             </Button>
             
             <Button
-              onClick={() => {
-                setDrawingMode(!drawingMode);
-                setPointSelectionMode(false);
-                setLineDrawingMode(false);
-                setSelectionMode(false);
-                if (!drawingMode) {
-                  toast({
-                    title: "Polygon Drawing Mode",
-                    description: "Draw polygon on map. Form will open when completed.",
-                  });
-                }
-              }}
+              onClick={() => setDrawingMode(!drawingMode)}
               className={`${drawingMode ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
               title={drawingMode ? "Stop Drawing Parcel" : "Draw Parcel"}
             >
@@ -454,18 +447,17 @@ export default function MapView() {
           open={lineFeatureModalOpen}
           onClose={() => {
             setLineFeatureModalOpen(false);
-            setSelectionMode(false);
-            setSelectedLocation(null);
+            setLineDrawingMode(false);
+            setLinePoints([]);
           }}
           onOpenChange={(open) => {
             setLineFeatureModalOpen(open);
             if (!open) {
-              setSelectionMode(false);
-              setSelectedLocation(null);
+              setLineDrawingMode(false);
+              setLinePoints([]);
             }
           }}
-          selectedLocation={selectedLocation}
-          setSelectionMode={setSelectionMode}
+          preFilledPoints={linePoints}
         />
       )}
     </>
