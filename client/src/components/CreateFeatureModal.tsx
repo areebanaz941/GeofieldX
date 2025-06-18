@@ -272,7 +272,7 @@ export default function CreateFeatureModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto fixed left-4 top-1/2 transform -translate-y-1/2 translate-x-0">
         <DialogHeader>
           <DialogTitle>Add New Feature</DialogTitle>
         </DialogHeader>
@@ -657,7 +657,7 @@ export default function CreateFeatureModal({
           </form>
         </Form>
         <DialogFooter className="flex justify-between gap-2 pt-4">
-          <Button variant="outline" onClick={onClose} type="button">
+          <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
             Cancel
           </Button>
           <Button 
