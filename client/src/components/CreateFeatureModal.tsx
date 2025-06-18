@@ -116,16 +116,42 @@ export default function CreateFeatureModal({
     }
     setSpecificTypeOptions(options);
     form.setValue("specificType", options[0] || "");
+    
+    // Reset coordinate states when feature type changes
+    if (feaType !== "FiberCable") {
+      setMultiplePoints([]);
+      setCollectingPoints(false);
+    }
+    if (feaType === "Parcel") {
+      // Clear point selection when switching to parcel
+      setSelectionMode(false);
+    }
+    // Clear geometry when switching feature types
+    form.setValue("geometry", undefined);
   }, [feaType]);
 
   // Handle multi-point collection for fiber cables
   useEffect(() => {
     if (collectingPoints && selectedLocation && feaType === "FiberCable") {
       if (multiplePoints.length < 10) { // Maximum 10 points
-        setMultiplePoints(prev => [...prev, selectedLocation]);
+        // Check if this point is already added (avoid duplicates)
+        const isDuplicate = multiplePoints.some(
+          point => Math.abs(point.lat - selectedLocation.lat) < 0.000001 && 
+                   Math.abs(point.lng - selectedLocation.lng) < 0.000001
+        );
+        
+        if (!isDuplicate) {
+          setMultiplePoints(prev => [...prev, selectedLocation]);
+          toast({
+            title: `Point ${multiplePoints.length + 1} added`,
+            description: multiplePoints.length + 1 >= 2 ? "You can finish or add more points" : "Add at least one more point",
+          });
+        }
+      } else {
         toast({
-          title: `Point ${multiplePoints.length + 1} added`,
-          description: multiplePoints.length + 1 >= 2 ? "You can finish or add more points" : "Add at least one more point",
+          title: "Maximum points reached",
+          description: "You can add up to 10 points for fiber cable route",
+          variant: "destructive",
         });
       }
     }
@@ -178,13 +204,43 @@ export default function CreateFeatureModal({
   });
 
   const onSubmit = (values: FeatureFormValues) => {
+    // Validate geometry based on feature type
     if (!values.geometry) {
-      const message = values.feaType === "Parcel" 
-        ? "Please draw a polygon on the map for the parcel"
-        : "Please select a location on the map";
+      let message = "Please provide location coordinates";
+      switch (values.feaType) {
+        case "Parcel":
+          message = "Please draw a polygon on the map for the parcel";
+          break;
+        case "FiberCable":
+          message = "Please select at least 2 points for the fiber cable route";
+          break;
+        case "Tower":
+        case "Manhole":
+          message = "Please select a location point on the map";
+          break;
+      }
       toast({
         title: "Geometry required",
         description: message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Additional validation for specific feature types
+    if (values.feaType === "FiberCable" && multiplePoints.length < 2) {
+      toast({
+        title: "Insufficient points",
+        description: "Fiber cable requires at least 2 points to define the route",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((values.feaType === "Tower" || values.feaType === "Manhole") && !selectedLocation) {
+      toast({
+        title: "Location required",
+        description: "Please select a location point on the map",
         variant: "destructive",
       });
       return;
