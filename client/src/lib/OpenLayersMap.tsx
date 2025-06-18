@@ -99,9 +99,13 @@ const OpenLayersMap = ({
     // Create vector layers
     featuresLayerRef.current = new VectorLayer({
       source: featuresSource,
-      style: (feature) => {
+      style: (feature, resolution) => {
         const featureData = feature.get('featureData');
         const featureType = featureData?.feaType || 'Tower';
+        
+        // Calculate zoom-responsive scale
+        const zoom = mapRef.current?.getView().getZoom() || 13;
+        const baseScale = Math.max(0.2, Math.min(0.8, zoom / 20));
         
         // Select appropriate icon based on feature type
         let iconSrc = towerIcon;
@@ -128,34 +132,36 @@ const OpenLayersMap = ({
         
         if (geometryType === 'LineString' || featureType === 'FiberCable') {
           // For line features (fiber cables), use stroke styling
+          const lineWidth = Math.max(2, Math.min(6, zoom / 3));
           return new Style({
             stroke: new Stroke({
               color: featureColors[featureType as keyof typeof featureColors] || '#3F51B5',
-              width: 4
+              width: lineWidth
             }),
             text: new Text({
               text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
               placement: 'line',
               fill: new Fill({ color: '#000' }),
               stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: '12px Arial'
+              font: `${Math.max(10, Math.min(14, zoom))}px Arial`
             })
           });
         } else if (geometryType === 'Polygon' || featureType === 'Parcel') {
           // For polygon features (parcels), use fill and stroke
+          const strokeWidth = Math.max(1, Math.min(3, zoom / 5));
           return new Style({
             fill: new Fill({
               color: `${featureColors[featureType as keyof typeof featureColors] || '#009688'}40` // 25% opacity
             }),
             stroke: new Stroke({
               color: featureColors[featureType as keyof typeof featureColors] || '#009688',
-              width: 2
+              width: strokeWidth
             }),
             text: new Text({
               text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
               fill: new Fill({ color: '#000' }),
               stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: '12px Arial'
+              font: `${Math.max(10, Math.min(14, zoom))}px Arial`
             })
           });
         } else {
@@ -163,17 +169,17 @@ const OpenLayersMap = ({
           return new Style({
             image: new Icon({
               src: iconSrc,
-              scale: 0.5,
+              scale: baseScale,
               anchor: [0.5, 1],
               anchorXUnits: 'fraction',
               anchorYUnits: 'fraction'
             }),
             text: new Text({
               text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
-              offsetY: -30,
+              offsetY: -30 * baseScale,
               fill: new Fill({ color: '#000' }),
               stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: '12px Arial'
+              font: `${Math.max(10, Math.min(14, zoom))}px Arial`
             })
           });
         }
@@ -315,6 +321,21 @@ const OpenLayersMap = ({
     });
 
     map.addInteraction(selectInteractionRef.current);
+
+    // Add zoom change listener to update icon sizes
+    map.getView().on('change:resolution', () => {
+      // Trigger layer re-render when zoom changes
+      if (featuresLayerRef.current) {
+        featuresLayerRef.current.changed();
+      }
+      if (teamsLayerRef.current) {
+        teamsLayerRef.current.changed();
+      }
+      if (tasksLayerRef.current) {
+        tasksLayerRef.current.changed();
+      }
+    });
+
     mapRef.current = map;
 
     return () => {
