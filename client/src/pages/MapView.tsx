@@ -132,29 +132,14 @@ export default function MapView() {
   }, [user]);
 
   const handleMapClick = (latlng: { lat: number; lng: number }) => {
-    console.log('handleMapClick called:', { latlng, pointSelectionMode, lineDrawingMode });
-    
-    // Handle point feature selection
+    // Handle point feature selection - called from Draw interaction
     if (pointSelectionMode) {
-      console.log('Processing point selection');
       setSelectedLocation(latlng);
       setPointSelectionMode(false);
       setPointFeatureModalOpen(true);
       toast({
         title: "Point Selected",
         description: "Form opened with location pre-filled",
-      });
-      return;
-    }
-    
-    // Handle line feature point collection
-    if (lineDrawingMode) {
-      console.log('Processing line point collection');
-      const newPoints = [...linePoints, latlng];
-      setLinePoints(newPoints);
-      toast({
-        title: `Point ${newPoints.length} added`,
-        description: newPoints.length >= 2 ? "Double-click to finish route" : "Click to add more points",
       });
       return;
     }
@@ -170,13 +155,13 @@ export default function MapView() {
   };
 
   const handleMapDoubleClick = () => {
-    // Finish line drawing on double-click
-    if (lineDrawingMode && linePoints.length >= 2) {
+    // Finish line drawing - called from Draw interaction
+    if (lineDrawingMode) {
       setLineDrawingMode(false);
       setLineFeatureModalOpen(true);
       toast({
         title: "Route Completed",
-        description: `Fiber cable route with ${linePoints.length} points created`,
+        description: "Fiber cable route created",
       });
     }
   };
@@ -260,14 +245,13 @@ export default function MapView() {
           <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
             <Button
               onClick={() => {
-                console.log('Point tool clicked - activating point selection mode');
                 setPointSelectionMode(true);
                 setLineDrawingMode(false);
                 setDrawingMode(false);
                 setSelectionMode(false);
                 toast({
                   title: "Point Selection Mode",
-                  description: "Click on map to select location for Tower/Manhole",
+                  description: "Click on map to place Tower/Manhole",
                 });
               }}
               className={`${pointSelectionMode ? 'bg-green-700 hover:bg-green-800' : 'bg-green-500 hover:bg-green-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
@@ -281,7 +265,6 @@ export default function MapView() {
             
             <Button
               onClick={() => {
-                console.log('Line tool clicked - activating line drawing mode');
                 setLineDrawingMode(true);
                 setLinePoints([]);
                 setPointSelectionMode(false);
@@ -289,7 +272,7 @@ export default function MapView() {
                 setSelectionMode(false);
                 toast({
                   title: "Line Drawing Mode",
-                  description: "Click points on map to create fiber route. Double-click to finish.",
+                  description: "Draw fiber cable route on map. Double-click to finish.",
                 });
               }}
               className={`${lineDrawingMode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}

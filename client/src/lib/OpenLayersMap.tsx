@@ -287,19 +287,16 @@ const OpenLayersMap = ({
       })
     });
 
-    // Add click interaction for map clicks (only when in selection mode)
+    // Add click interaction for legacy selection mode only
     if (onMapClick) {
       map.on('click', (event) => {
-        console.log('Map clicked:', { pointSelectionMode, lineDrawingMode, selectionMode, drawingMode });
-        
-        if (!drawingMode && (selectionMode || pointSelectionMode || lineDrawingMode)) {
+        // Only handle legacy selection mode, not the new drawing modes
+        if (!drawingMode && !pointSelectionMode && !lineDrawingMode && selectionMode) {
           const coordinate = toLonLat(event.coordinate);
           const [lng, lat] = coordinate;
           
-          console.log('Processing map click:', { lat, lng, pointSelectionMode, lineDrawingMode });
-          
-          // Clear previous selection marker for point selection only
-          if (pointSelectionMode && selectedLocationSourceRef.current) {
+          // Clear previous selection marker
+          if (selectedLocationSourceRef.current) {
             selectedLocationSourceRef.current.clear();
           }
           
@@ -314,16 +311,6 @@ const OpenLayersMap = ({
           onMapClick({ lat, lng });
         }
       });
-
-      // Handle double-click events for line drawing
-      if (onMapDoubleClick) {
-        map.on('dblclick', (event) => {
-          if (lineDrawingMode) {
-            event.preventDefault();
-            onMapDoubleClick();
-          }
-        });
-      }
     }
 
     // Store map reference for later use
@@ -353,7 +340,7 @@ const OpenLayersMap = ({
     };
   }, []);
 
-  // Handle drawing mode
+  // Handle drawing modes (polygon, point, line)
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -363,6 +350,13 @@ const OpenLayersMap = ({
       drawInteractionRef.current = null;
     }
 
+    // Remove existing draw layer
+    if (drawLayerRef.current) {
+      mapRef.current.removeLayer(drawLayerRef.current);
+      drawLayerRef.current = null;
+    }
+
+    // Handle polygon drawing
     if (drawingMode && onPolygonCreated) {
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
@@ -379,6 +373,7 @@ const OpenLayersMap = ({
       });
 
       mapRef.current.addLayer(drawLayer);
+      drawLayerRef.current = drawLayer;
 
       drawInteractionRef.current = new Draw({
         source: source,
@@ -414,7 +409,94 @@ const OpenLayersMap = ({
 
       mapRef.current.addInteraction(drawInteractionRef.current);
     }
-  }, [drawingMode, onPolygonCreated]);
+
+    // Handle point selection mode
+    if (pointSelectionMode && onMapClick) {
+      const source = new VectorSource();
+      const drawLayer = new VectorLayer({
+        source: source,
+        style: new Style({
+          image: new Circle({
+            radius: 8,
+            fill: new Fill({ color: '#4CAF50' }),
+            stroke: new Stroke({ color: '#ffffff', width: 2 })
+          })
+        })
+      });
+
+      mapRef.current.addLayer(drawLayer);
+      drawLayerRef.current = drawLayer;
+
+      drawInteractionRef.current = new Draw({
+        source: source,
+        type: 'Point'
+      });
+
+      drawInteractionRef.current.on('drawend', (event) => {
+        const geometry = event.feature.getGeometry() as Point;
+        const coordinates = geometry.getCoordinates();
+        const [lng, lat] = toLonLat(coordinates);
+
+        if (onMapClick) {
+          onMapClick({ lat, lng });
+        }
+
+        // Remove the draw interaction after single point
+        if (drawInteractionRef.current) {
+          mapRef.current?.removeInteraction(drawInteractionRef.current);
+          drawInteractionRef.current = null;
+        }
+      });
+
+      mapRef.current.addInteraction(drawInteractionRef.current);
+    }
+
+    // Handle line drawing mode
+    if (lineDrawingMode && onMapClick && onMapDoubleClick) {
+      const source = new VectorSource();
+      const drawLayer = new VectorLayer({
+        source: source,
+        style: new Style({
+          stroke: new Stroke({
+            color: '#2196F3',
+            width: 3
+          }),
+          image: new Circle({
+            radius: 6,
+            fill: new Fill({ color: '#2196F3' }),
+            stroke: new Stroke({ color: '#ffffff', width: 2 })
+          })
+        })
+      });
+
+      mapRef.current.addLayer(drawLayer);
+      drawLayerRef.current = drawLayer;
+
+      drawInteractionRef.current = new Draw({
+        source: source,
+        type: 'LineString'
+      });
+
+      drawInteractionRef.current.on('drawend', (event) => {
+        const geometry = event.feature.getGeometry() as LineString;
+        const coordinates = geometry.getCoordinates();
+        const lonLatCoordinates = coordinates.map(coord => toLonLat(coord));
+
+        // Trigger double-click handler to finish line
+        if (onMapDoubleClick) {
+          onMapDoubleClick();
+        }
+
+        // Remove the draw interaction after line completion
+        if (drawInteractionRef.current) {
+          mapRef.current?.removeInteraction(drawInteractionRef.current);
+          drawInteractionRef.current = null;
+        }
+      });
+
+      mapRef.current.addInteraction(drawInteractionRef.current);
+    }
+  }, [drawingMode, pointSelectionMode, lineDrawingMode, onPolygonCreated, onMapClick, onMapDoubleClick]);
 
   // Handle clearing drawn polygon
   useEffect(() => {
@@ -595,35 +677,7 @@ const OpenLayersMap = ({
     }
   }, [panTo]);
 
-  // Effect to handle line points visualization
-  useEffect(() => {
-    if (!mapRef.current || !selectedLocationSourceRef.current) return;
 
-    const source = selectedLocationSourceRef.current;
-    
-    if (lineDrawingMode && linePoints.length > 0) {
-      // Clear existing features
-      source.clear();
-      
-      // Add points as markers
-      linePoints.forEach((point, index) => {
-        const coordinate = fromLonLat([point.lng, point.lat]);
-        const marker = new Feature({
-          geometry: new Point(coordinate)
-        });
-        source.addFeature(marker);
-      });
-      
-      // Add line connecting the points if we have more than one
-      if (linePoints.length > 1) {
-        const coordinates = linePoints.map(point => fromLonLat([point.lng, point.lat]));
-        const lineFeature = new Feature({
-          geometry: new LineString(coordinates)
-        });
-        source.addFeature(lineFeature);
-      }
-    }
-  }, [lineDrawingMode, linePoints]);
 
   // Effect to manage select interaction based on selection modes
   useEffect(() => {
