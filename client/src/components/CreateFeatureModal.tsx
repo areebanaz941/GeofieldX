@@ -190,25 +190,27 @@ export default function CreateFeatureModal({
       return;
     }
 
-    // Prepare the data for submission
-    const submitData: any = {
-      name: values.name,
-      feaNo: values.feaNo,
-      feaType: values.feaType,
-      specificType: values.specificType,
-      feaState: values.feaState,
-      feaStatus: values.feaStatus,
-      maintenance: values.maintenance,
-      geometry: values.geometry!,
-      remarks: values.remarks || undefined,
+    // Prepare the data for submission with proper type casting
+    const submitData = {
+      name: values.name.trim(),
+      feaNo: values.feaNo.trim(),
+      feaType: values.feaType as "Tower" | "Manhole" | "FiberCable" | "Parcel",
+      specificType: values.specificType as "Mobillink" | "Ptcl" | "2-way" | "4-way" | "10F" | "24F" | "Commercial" | "Residential",
+      feaState: values.feaState as "Plan" | "Under Construction" | "As-Built" | "Abandoned",
+      feaStatus: values.feaStatus as "New" | "InProgress" | "Completed" | "In-Completed" | "Submit-Review" | "Active",
+      maintenance: values.maintenance as "Required" | "None",
+      geometry: {
+        type: values.geometry!.type,
+        coordinates: values.geometry!.coordinates
+      },
+      ...(values.remarks && values.remarks.trim() && { remarks: values.remarks.trim() }),
+      ...(values.maintenanceDate && values.maintenanceDate.trim() && { 
+        maintenanceDate: new Date(values.maintenanceDate) 
+      })
     };
 
-    // Only add maintenanceDate if it's provided and not empty
-    if (values.maintenanceDate && values.maintenanceDate.trim() !== "") {
-      submitData.maintenanceDate = new Date(values.maintenanceDate);
-    }
-
-    console.log("Submitting feature data:", submitData);
+    console.log("Submitting feature data:", JSON.stringify(submitData, null, 2));
+    console.log("Geometry coordinates:", submitData.geometry.coordinates);
     createFeatureMutation.mutate(submitData);
   };
 
