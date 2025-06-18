@@ -522,7 +522,9 @@ export default function CreateFeatureModal({
                       type="text"
                       readOnly
                       placeholder="Click on the map to select location"
-                      value={selectedLocation ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` : ""}
+                      value={selectedLocation 
+                        ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` 
+                        : "Click 'Select' to choose location"}
                       className="flex-1"
                     />
                     <Button
@@ -531,18 +533,30 @@ export default function CreateFeatureModal({
                       onClick={() => {
                         setSelectionMode(true);
                         toast({
-                          title: "Select location",
-                          description: "Click on the map to select a location",
+                          title: "Point Selection",
+                          description: "Click on the map to select exact location",
                         });
                       }}
+                      className={selectedLocation ? "bg-green-50 border-green-200 text-green-700" : ""}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                         <circle cx="12" cy="10" r="3"></circle>
                       </svg>
+                      {selectedLocation ? "Update" : "Select"}
                     </Button>
                   </div>
-                  <p className="text-xs text-neutral-500">Click on the map to select exact location (1 point required)</p>
+                  {selectedLocation && (
+                    <div className="bg-green-50 border border-green-200 rounded p-2 text-sm text-green-700">
+                      <div className="font-medium">✓ Location Selected</div>
+                      <div className="text-xs mt-1">
+                        {feaType} position marked on map
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-neutral-500">
+                    Select exact coordinates for {feaType.toLowerCase()} installation
+                  </p>
                 </div>
               )}
 
@@ -553,7 +567,9 @@ export default function CreateFeatureModal({
                       type="text"
                       readOnly
                       placeholder="Select route points (minimum 2 points)"
-                      value={multiplePoints.length > 0 ? `${multiplePoints.length} points selected` : "Click 'Start' to define fiber cable route"}
+                      value={multiplePoints.length > 0 
+                        ? `${multiplePoints.length} point${multiplePoints.length > 1 ? 's' : ''} selected` 
+                        : "Click 'Start' to define fiber cable route"}
                       className="flex-1"
                     />
                     {!collectingPoints ? (
@@ -565,12 +581,13 @@ export default function CreateFeatureModal({
                           setMultiplePoints([]);
                           setSelectionMode(true);
                           toast({
-                            title: "Point Collection Mode",
-                            description: "Click on map to select route points. Need minimum 2 points.",
+                            title: "Route Planning",
+                            description: "Click on map to select route points. Minimum 2 points required.",
                           });
                         }}
+                        className="whitespace-nowrap"
                       >
-                        Start
+                        Start Route
                       </Button>
                     ) : (
                       <div className="flex gap-1">
@@ -584,10 +601,10 @@ export default function CreateFeatureModal({
                               setSelectionMode(false);
                               toast({
                                 title: "Route completed",
-                                description: `Fiber cable route defined with ${multiplePoints.length} points`,
+                                description: `Fiber cable route with ${multiplePoints.length} points saved`,
                               });
                             }}
-                            className="bg-green-50 border-green-200 text-green-700"
+                            className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                           >
                             Finish
                           </Button>
@@ -600,26 +617,39 @@ export default function CreateFeatureModal({
                             setMultiplePoints([]);
                             setCollectingPoints(false);
                             setSelectionMode(false);
+                            toast({
+                              title: "Route cleared",
+                              description: "All points removed. Click 'Start Route' to begin again.",
+                            });
                           }}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
                         >
                           Clear
                         </Button>
                       </div>
                     )}
                   </div>
+                  {collectingPoints && (
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2 text-sm text-blue-700">
+                      <div className="font-medium">🎯 Route Planning Active</div>
+                      <div className="text-xs mt-1">
+                        Click on map to add points • {multiplePoints.length}/10 points selected
+                        {multiplePoints.length < 2 && " • Need at least 2 points"}
+                      </div>
+                    </div>
+                  )}
                   {multiplePoints.length > 0 && (
                     <div className="text-xs text-neutral-600 max-h-24 overflow-y-auto border rounded p-2 bg-gray-50">
-                      <div className="font-medium mb-1">Route Points:</div>
+                      <div className="font-medium mb-1">Route Points ({multiplePoints.length}):</div>
                       {multiplePoints.map((point, index) => (
-                        <div key={index} className="py-0.5">
-                          {index + 1}. {point.lat.toFixed(6)}, {point.lng.toFixed(6)}
+                        <div key={index} className="py-0.5 flex justify-between">
+                          <span>{index + 1}. {point.lat.toFixed(6)}, {point.lng.toFixed(6)}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   <p className="text-xs text-neutral-500">
-                    Select minimum 2 points to create the fiber cable route
-                    {collectingPoints && ` (${multiplePoints.length}/10 points)`}
+                    Define fiber cable route by selecting 2-10 points on the map
                   </p>
                 </div>
               )}
