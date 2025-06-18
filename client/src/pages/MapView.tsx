@@ -154,16 +154,19 @@ export default function MapView() {
     }
   };
 
+  const handleLineCreated = (line: { coordinates: { lat: number; lng: number }[] }) => {
+    // Store the line coordinates and open the modal
+    setLinePoints(line.coordinates);
+    setLineDrawingMode(false);
+    setLineFeatureModalOpen(true);
+    toast({
+      title: "Route Completed",
+      description: `Fiber cable route with ${line.coordinates.length} points created`,
+    });
+  };
+
   const handleMapDoubleClick = () => {
-    // Finish line drawing - called from Draw interaction
-    if (lineDrawingMode) {
-      setLineDrawingMode(false);
-      setLineFeatureModalOpen(true);
-      toast({
-        title: "Route Completed",
-        description: "Fiber cable route created",
-      });
-    }
+    // Legacy handler - now handled by handleLineCreated
   };
 
   const handleFeatureClick = (feature: any) => {
@@ -229,6 +232,7 @@ export default function MapView() {
           onMapClick={handleMapClick}
           onMapDoubleClick={handleMapDoubleClick}
           onPolygonCreated={handlePolygonCreated}
+          onLineCreated={handleLineCreated}
           selectionMode={selectionMode}
           drawingMode={drawingMode}
           pointSelectionMode={pointSelectionMode}

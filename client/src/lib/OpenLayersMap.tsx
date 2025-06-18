@@ -54,6 +54,7 @@ interface MapProps {
   onMapClick?: (latlng: { lat: number; lng: number }) => void;
   onMapDoubleClick?: () => void;
   onPolygonCreated?: (polygon: { name: string; coordinates: number[][][] }) => void;
+  onLineCreated?: (line: { coordinates: { lat: number; lng: number }[] }) => void;
   selectionMode?: boolean;
   drawingMode?: boolean;
   pointSelectionMode?: boolean;
@@ -77,6 +78,7 @@ const OpenLayersMap = ({
   onMapClick,
   onMapDoubleClick,
   onPolygonCreated,
+  onLineCreated,
   selectionMode = false,
   drawingMode = false,
   pointSelectionMode = false,
@@ -480,11 +482,14 @@ const OpenLayersMap = ({
       drawInteractionRef.current.on('drawend', (event) => {
         const geometry = event.feature.getGeometry() as LineString;
         const coordinates = geometry.getCoordinates();
-        const lonLatCoordinates = coordinates.map(coord => toLonLat(coord));
+        const lonLatCoordinates = coordinates.map(coord => {
+          const [lng, lat] = toLonLat(coord);
+          return { lat, lng };
+        });
 
-        // Trigger double-click handler to finish line
-        if (onMapDoubleClick) {
-          onMapDoubleClick();
+        // Pass the line coordinates to the completion handler
+        if (onLineCreated) {
+          onLineCreated({ coordinates: lonLatCoordinates });
         }
 
         // Remove the draw interaction after line completion
@@ -496,7 +501,7 @@ const OpenLayersMap = ({
 
       mapRef.current.addInteraction(drawInteractionRef.current);
     }
-  }, [drawingMode, pointSelectionMode, lineDrawingMode, onPolygonCreated, onMapClick, onMapDoubleClick]);
+  }, [drawingMode, pointSelectionMode, lineDrawingMode, onPolygonCreated, onMapClick, onLineCreated]);
 
   // Handle clearing drawn polygon
   useEffect(() => {
