@@ -8,6 +8,7 @@ import MapFilterControls from "@/components/MapFilterControls";
 
 import TaskPanel from "@/components/TaskPanel";
 import CreateFeatureModal from "@/components/CreateFeatureModal";
+import SupervisorPolygonModal from "@/components/SupervisorPolygonModal";
 import PointFeatureModal from "@/components/PointFeatureModal";
 import LineFeatureModal from "@/components/LineFeatureModal";
 import CreateTaskModal from "@/components/CreateTaskModal";
@@ -356,7 +357,30 @@ export default function MapView() {
         onCreateTask={() => setCreateTaskModalOpen(true)}
       />
       
-      {createFeatureModalOpen && (
+      {/* Show appropriate modal based on user role and feature type */}
+      {createFeatureModalOpen && user?.role === "Supervisor" && drawnPolygon && (
+        <SupervisorPolygonModal
+          open={createFeatureModalOpen}
+          onClose={() => {
+            setCreateFeatureModalOpen(false);
+            setDrawnPolygon(null);
+            setClearPolygon(true);
+            setTimeout(() => setClearPolygon(false), 100);
+          }}
+          onOpenChange={(open) => {
+            setCreateFeatureModalOpen(open);
+            if (!open) {
+              setDrawnPolygon(null);
+              setClearPolygon(true);
+              setTimeout(() => setClearPolygon(false), 100);
+            }
+          }}
+          drawnPolygon={drawnPolygon}
+          setDrawingMode={setDrawingMode}
+        />
+      )}
+
+      {createFeatureModalOpen && (user?.role !== "Supervisor" || !drawnPolygon) && (
         <CreateFeatureModal
           open={createFeatureModalOpen}
           onClose={() => {
