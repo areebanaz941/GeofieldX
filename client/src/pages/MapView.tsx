@@ -132,8 +132,11 @@ export default function MapView() {
   }, [user]);
 
   const handleMapClick = (latlng: { lat: number; lng: number }) => {
+    console.log('handleMapClick called:', { latlng, pointSelectionMode, lineDrawingMode });
+    
     // Handle point feature selection
     if (pointSelectionMode) {
+      console.log('Processing point selection');
       setSelectedLocation(latlng);
       setPointSelectionMode(false);
       setPointFeatureModalOpen(true);
@@ -146,6 +149,7 @@ export default function MapView() {
     
     // Handle line feature point collection
     if (lineDrawingMode) {
+      console.log('Processing line point collection');
       const newPoints = [...linePoints, latlng];
       setLinePoints(newPoints);
       toast({
@@ -256,6 +260,7 @@ export default function MapView() {
           <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
             <Button
               onClick={() => {
+                console.log('Point tool clicked - activating point selection mode');
                 setPointSelectionMode(true);
                 setLineDrawingMode(false);
                 setDrawingMode(false);
@@ -276,6 +281,7 @@ export default function MapView() {
             
             <Button
               onClick={() => {
+                console.log('Line tool clicked - activating line drawing mode');
                 setLineDrawingMode(true);
                 setLinePoints([]);
                 setPointSelectionMode(false);

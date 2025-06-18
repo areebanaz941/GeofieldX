@@ -290,9 +290,13 @@ const OpenLayersMap = ({
     // Add click interaction for map clicks (only when in selection mode)
     if (onMapClick) {
       map.on('click', (event) => {
+        console.log('Map clicked:', { pointSelectionMode, lineDrawingMode, selectionMode, drawingMode });
+        
         if (!drawingMode && (selectionMode || pointSelectionMode || lineDrawingMode)) {
           const coordinate = toLonLat(event.coordinate);
           const [lng, lat] = coordinate;
+          
+          console.log('Processing map click:', { lat, lng, pointSelectionMode, lineDrawingMode });
           
           // Clear previous selection marker for point selection only
           if (pointSelectionMode && selectedLocationSourceRef.current) {
@@ -322,32 +326,8 @@ const OpenLayersMap = ({
       }
     }
 
-    // Add select interaction for feature clicks
-    selectInteractionRef.current = new Select({
-      condition: click,
-      layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current]
-    });
-
-    selectInteractionRef.current.on('select', (event) => {
-      const selected = event.selected;
-      if (selected.length > 0) {
-        const feature = selected[0];
-        const featureData = feature.get('featureData');
-        const teamData = feature.get('teamData');
-        const boundaryData = feature.get('boundaryData');
-        const taskData = feature.get('taskData');
-
-        if (featureData && onFeatureClick) {
-          onFeatureClick(featureData);
-        } else if (teamData && onTeamClick) {
-          onTeamClick(teamData);
-        } else if (boundaryData && onBoundaryClick) {
-          onBoundaryClick(boundaryData);
-        }
-      }
-    });
-
-    map.addInteraction(selectInteractionRef.current);
+    // Store map reference for later use
+    mapRef.current = map;
 
     // Add zoom change listener to update icon sizes
     map.getView().on('change:resolution', () => {
@@ -644,6 +624,48 @@ const OpenLayersMap = ({
       }
     }
   }, [lineDrawingMode, linePoints]);
+
+  // Effect to manage select interaction based on selection modes
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+
+    // Remove existing select interaction
+    if (selectInteractionRef.current) {
+      map.removeInteraction(selectInteractionRef.current);
+      selectInteractionRef.current = null;
+    }
+
+    // Add select interaction only when not in selection modes
+    if (!pointSelectionMode && !lineDrawingMode && !selectionMode) {
+      selectInteractionRef.current = new Select({
+        condition: click,
+        layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current].filter(Boolean)
+      });
+
+      selectInteractionRef.current.on('select', (event) => {
+        const selected = event.selected;
+        if (selected.length > 0) {
+          const feature = selected[0];
+          const featureData = feature.get('featureData');
+          const teamData = feature.get('teamData');
+          const boundaryData = feature.get('boundaryData');
+          const taskData = feature.get('taskData');
+
+          if (featureData && onFeatureClick) {
+            onFeatureClick(featureData);
+          } else if (teamData && onTeamClick) {
+            onTeamClick(teamData);
+          } else if (boundaryData && onBoundaryClick) {
+            onBoundaryClick(boundaryData);
+          }
+        }
+      });
+
+      map.addInteraction(selectInteractionRef.current);
+    }
+  }, [pointSelectionMode, lineDrawingMode, selectionMode, onFeatureClick, onTeamClick, onBoundaryClick]);
 
   return (
     <div className={className}>
