@@ -125,10 +125,9 @@ export default function MapView() {
   }, [user]);
 
   const handleMapClick = (latlng: { lat: number; lng: number }) => {
-    // Always allow location clicks when not in drawing mode
-    if (!drawingMode) {
+    // Only handle clicks when in selection mode and not drawing
+    if (selectionMode && !drawingMode) {
       setSelectedLocation(latlng);
-      setSelectionMode(true);
       toast({
         title: "Location Selected",
         description: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`,
@@ -211,61 +210,50 @@ export default function MapView() {
           <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
             <Button
               onClick={() => {
-                setSelectionMode(true);
+                setCreateFeatureModalOpen(true);
+                setSelectionMode(false);
                 setSelectedLocation(null);
-                toast({
-                  title: "Selection Mode",
-                  description: "Click on the map to select coordinates for your feature",
-                });
               }}
-              className={`${selectionMode ? 'bg-green-500 hover:bg-green-600' : 'bg-primary-500 hover:bg-primary-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
-              title={selectionMode ? "Selection Active - Click Map" : "Select Location"}
+              className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+              title="Create New Feature"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
+                <path d="M5 12h14"></path>
+                <path d="M12 5v14"></path>
               </svg>
             </Button>
             
             <Button
               onClick={() => setDrawingMode(!drawingMode)}
-              className={`${drawingMode ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
-              title={drawingMode ? "Stop Drawing" : "Draw Parcel"}
+              className={`${drawingMode ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
+              title={drawingMode ? "Stop Drawing Parcel" : "Draw Parcel"}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
                 <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
               </svg>
             </Button>
             
-            {selectedLocation && (
-              <>
-                <Button
-                  onClick={() => {
-                    setCreateFeatureModalOpen(true);
-                    setSelectionMode(false);
-                  }}
-                  className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-                  title="Add Feature Here"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                    <path d="M5 12h14"></path>
-                    <path d="M12 5v14"></path>
-                  </svg>
-                </Button>
+            {(selectionMode || selectedLocation) && (
+              <div className="bg-green-100 border-2 border-green-300 rounded-lg p-2 text-xs text-green-800 max-w-48">
+                <div className="font-medium">Selection Mode</div>
+                <div className="text-xs mt-1">
+                  {selectedLocation 
+                    ? `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`
+                    : "Click on map to select location"
+                  }
+                </div>
                 <Button
                   onClick={() => {
                     setSelectedLocation(null);
                     setSelectionMode(false);
                   }}
-                  className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-                  title="Clear Selection"
+                  size="sm"
+                  variant="ghost"
+                  className="mt-1 h-6 px-2 text-xs text-green-700 hover:text-green-900"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                  Clear
                 </Button>
-              </>
+              </div>
             )}
           </div>
         )}
