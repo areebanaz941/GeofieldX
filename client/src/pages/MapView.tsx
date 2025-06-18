@@ -173,9 +173,13 @@ export default function MapView() {
     // Store the drawn polygon for feature creation
     setDrawnPolygon({ coordinates: polygonData.coordinates });
     setDrawingMode(false);
+    
+    // Automatically open the CreateFeatureModal for parcel creation
+    setCreateFeatureModalOpen(true);
+    
     toast({
-      title: "Polygon drawn",
-      description: "Polygon created successfully. You can now create the parcel feature.",
+      title: "Polygon completed",
+      description: "Fill out the form to save this parcel feature.",
     });
   };
 

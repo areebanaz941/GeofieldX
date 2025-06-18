@@ -56,6 +56,7 @@ interface MapProps {
   selectionMode?: boolean;
   drawingMode?: boolean;
   className?: string;
+  clearDrawnPolygon?: boolean;
 }
 
 const OpenLayersMap = ({
@@ -73,7 +74,8 @@ const OpenLayersMap = ({
   onPolygonCreated,
   selectionMode = false,
   drawingMode = false,
-  className = 'h-full w-full'
+  className = 'h-full w-full',
+  clearDrawnPolygon = false
 }: MapProps) => {
   const mapRef = useRef<Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -83,6 +85,7 @@ const OpenLayersMap = ({
   const tasksLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectedLocationLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
+  const drawLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectInteractionRef = useRef<Select | null>(null);
 
   // Initialize map
@@ -394,9 +397,15 @@ const OpenLayersMap = ({
           });
         }
 
-        // Clear the drawing
-        source.clear();
-        mapRef.current?.removeLayer(drawLayer);
+        // Keep the polygon visible on map - don't clear it
+        // Store reference to the draw layer so it can be cleared later if needed
+        drawLayerRef.current = drawLayer;
+        
+        // Remove the draw interaction to prevent further drawing
+        if (drawInteractionRef.current) {
+          mapRef.current?.removeInteraction(drawInteractionRef.current);
+          drawInteractionRef.current = null;
+        }
       });
 
       mapRef.current.addInteraction(drawInteractionRef.current);
