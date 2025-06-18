@@ -103,9 +103,9 @@ const OpenLayersMap = ({
         const featureData = feature.get('featureData');
         const featureType = featureData?.feaType || 'Tower';
         
-        // Calculate zoom-responsive scale
+        // Calculate zoom-responsive scale (smaller icons)
         const zoom = mapRef.current?.getView().getZoom() || 13;
-        const baseScale = Math.max(0.2, Math.min(0.8, zoom / 20));
+        const baseScale = Math.max(0.1, Math.min(0.4, zoom / 30));
         
         // Select appropriate icon based on feature type
         let iconSrc = towerIcon;
