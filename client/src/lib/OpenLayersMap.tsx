@@ -162,21 +162,37 @@ const OpenLayersMap = ({
             })
           });
         } else if (geometryType === 'Polygon' || featureType === 'Parcel') {
-          // For polygon features (parcels), use fill and stroke
+          // For polygon features (parcels), use blue fill and stroke with team assignment
           const strokeWidth = Math.max(1, Math.min(3, zoom / 5));
+          const isParcel = featureType === 'Parcel';
+          
+          // Use blue color for parcels, original color for other polygons
+          const fillColor = isParcel ? 'rgba(33, 150, 243, 0.3)' : `${featureColors[featureType as keyof typeof featureColors] || '#009688'}40`;
+          const strokeColor = isParcel ? '#2196F3' : (featureColors[featureType as keyof typeof featureColors] || '#009688');
+          
+          // Get team assignment information for parcels
+          let labelText = featureData?.name || `${featureType} #${featureData?.feaNo}`;
+          if (isParcel && featureData?.assignedTo) {
+            // Add team assignment to the label - assignedTo contains team ID, need to find team name
+            const teamName = teams?.find((team: any) => team._id === featureData.assignedTo)?.name || 'Unknown Team';
+            labelText = `${labelText}\nAssigned to: ${teamName}`;
+          }
+          
           return new Style({
             fill: new Fill({
-              color: `${featureColors[featureType as keyof typeof featureColors] || '#009688'}40` // 25% opacity
+              color: fillColor
             }),
             stroke: new Stroke({
-              color: featureColors[featureType as keyof typeof featureColors] || '#009688',
+              color: strokeColor,
               width: strokeWidth
             }),
             text: new Text({
-              text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
+              text: labelText,
               fill: new Fill({ color: '#000' }),
               stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: `${Math.max(10, Math.min(14, zoom))}px Arial`
+              font: `${Math.max(10, Math.min(14, zoom))}px Arial`,
+              textAlign: 'center',
+              textBaseline: 'middle'
             })
           });
         } else {
