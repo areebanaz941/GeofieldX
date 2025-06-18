@@ -44,7 +44,10 @@ const formSchema = z.object({
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
   remarks: z.string().optional(),
-  geometry: z.any().optional(),
+  geometry: z.object({
+    type: z.enum(["Point", "LineString", "Polygon"]),
+    coordinates: z.array(z.any())
+  }).optional(),
 });
 
 type FeatureFormValues = z.infer<typeof formSchema>;
@@ -73,13 +76,13 @@ export default function CreateFeatureModal({
   const [multiplePoints, setMultiplePoints] = useState<{ lat: number; lng: number }[]>([]);
   const [collectingPoints, setCollectingPoints] = useState(false);
 
-  // Initialize form
+  // Initialize form with dynamic default based on whether polygon is drawn
   const form = useForm<FeatureFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       feaNo: "",
-      feaType: "Tower",
+      feaType: drawnPolygon ? "Parcel" : "Tower", // Default to Parcel if polygon exists
       specificType: "",
       feaState: "Plan",
       feaStatus: "New",
@@ -188,6 +191,7 @@ export default function CreateFeatureModal({
 
     createFeatureMutation.mutate({
       ...values,
+      geometry: values.geometry!, // Geometry is guaranteed to exist due to validation above
       maintenanceDate: values.maintenanceDate ? new Date(values.maintenanceDate) : undefined,
       specificType: values.specificType as any, // Cast to handle type mismatch
     });

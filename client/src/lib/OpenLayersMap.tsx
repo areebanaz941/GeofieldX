@@ -412,6 +412,14 @@ const OpenLayersMap = ({
     }
   }, [drawingMode, onPolygonCreated]);
 
+  // Handle clearing drawn polygon
+  useEffect(() => {
+    if (clearDrawnPolygon && drawLayerRef.current && mapRef.current) {
+      mapRef.current.removeLayer(drawLayerRef.current);
+      drawLayerRef.current = null;
+    }
+  }, [clearDrawnPolygon]);
+
   // Update features on the map
   useEffect(() => {
     if (!featuresLayerRef.current) return;

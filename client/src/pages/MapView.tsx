@@ -35,6 +35,7 @@ export default function MapView() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [drawnPolygon, setDrawnPolygon] = useState<{ coordinates: number[][][] } | null>(null);
+  const [clearPolygon, setClearPolygon] = useState(false);
   const [featureAssignmentModalOpen, setFeatureAssignmentModalOpen] = useState(false);
   const [boundaryAssignmentModalOpen, setBoundaryAssignmentModalOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
@@ -199,6 +200,7 @@ export default function MapView() {
           onPolygonCreated={handlePolygonCreated}
           selectionMode={selectionMode}
           drawingMode={drawingMode}
+          clearDrawnPolygon={clearPolygon}
         />
         
         <MapControls />
@@ -290,12 +292,16 @@ export default function MapView() {
             setCreateFeatureModalOpen(false);
             setSelectionMode(false);
             setDrawnPolygon(null);
+            setClearPolygon(true);
+            setTimeout(() => setClearPolygon(false), 100);
           }}
           onOpenChange={(open) => {
             setCreateFeatureModalOpen(open);
             if (!open) {
               setSelectionMode(false);
               setDrawnPolygon(null);
+              setClearPolygon(true);
+              setTimeout(() => setClearPolygon(false), 100);
             }
           }}
           selectedLocation={selectedLocation}
