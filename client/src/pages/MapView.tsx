@@ -245,7 +245,24 @@ export default function MapView() {
         
 
         
+        {/* Drawing Tools - Different sets for different roles */}
         {user?.role === "Supervisor" && (
+          <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
+            {/* Supervisors only get the polygon tool for parcel creation */}
+            <Button
+              onClick={() => setDrawingMode(!drawingMode)}
+              className={`${drawingMode ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
+              title={drawingMode ? "Stop Drawing Parcel" : "Draw Parcel"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
+              </svg>
+            </Button>
+          </div>
+        )}
+
+        {/* Field team members get all three drawing tools */}
+        {user?.role === "Field" && (
           <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
             <Button
               onClick={() => {
