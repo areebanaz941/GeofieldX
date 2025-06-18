@@ -272,7 +272,7 @@ export default function CreateFeatureModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto fixed left-4 top-1/2 transform -translate-y-1/2 translate-x-0">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto fixed left-4 top-4 transform translate-x-0 translate-y-0 bg-white/95 backdrop-blur-sm">
         <DialogHeader>
           <DialogTitle>Add New Feature</DialogTitle>
         </DialogHeader>
