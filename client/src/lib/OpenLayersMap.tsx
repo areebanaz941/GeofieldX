@@ -14,6 +14,12 @@ import { click } from 'ol/events/condition';
 import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
 import 'ol/ol.css';
 
+// Import custom icons
+import towerIcon from '@assets/tower-removebg-preview_1750282584510.png';
+import manholeIcon from '@assets/manhole-removebg-preview_1750282584509.png';
+import fibercableIcon from '@assets/fibercable-removebg-preview_1750282584507.png';
+import parcelIcon from '@assets/land-removebg-preview_1750282584509.png';
+
 // Define status colors
 const statusColors = {
   'Unassigned': '#9E9E9E',
@@ -96,22 +102,81 @@ const OpenLayersMap = ({
       style: (feature) => {
         const featureData = feature.get('featureData');
         const featureType = featureData?.feaType || 'Tower';
-        const color = featureColors[featureType as keyof typeof featureColors] || '#E91E63';
         
-        return new Style({
-          image: new Circle({
-            radius: 8,
-            fill: new Fill({ color }),
-            stroke: new Stroke({ color: '#ffffff', width: 2 })
-          }),
-          text: new Text({
-            text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
-            offsetY: -20,
-            fill: new Fill({ color: '#000' }),
-            stroke: new Stroke({ color: '#fff', width: 2 }),
-            font: '12px Arial'
-          })
-        });
+        // Select appropriate icon based on feature type
+        let iconSrc = towerIcon;
+        switch (featureType) {
+          case 'Tower':
+            iconSrc = towerIcon;
+            break;
+          case 'Manhole':
+            iconSrc = manholeIcon;
+            break;
+          case 'FiberCable':
+            iconSrc = fibercableIcon;
+            break;
+          case 'Parcel':
+            iconSrc = parcelIcon;
+            break;
+          default:
+            iconSrc = towerIcon;
+        }
+        
+        // Handle different geometry types
+        const geometry = feature.getGeometry();
+        const geometryType = geometry?.getType();
+        
+        if (geometryType === 'LineString' || featureType === 'FiberCable') {
+          // For line features (fiber cables), use stroke styling
+          return new Style({
+            stroke: new Stroke({
+              color: featureColors[featureType as keyof typeof featureColors] || '#3F51B5',
+              width: 4
+            }),
+            text: new Text({
+              text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
+              placement: 'line',
+              fill: new Fill({ color: '#000' }),
+              stroke: new Stroke({ color: '#fff', width: 2 }),
+              font: '12px Arial'
+            })
+          });
+        } else if (geometryType === 'Polygon' || featureType === 'Parcel') {
+          // For polygon features (parcels), use fill and stroke
+          return new Style({
+            fill: new Fill({
+              color: `${featureColors[featureType as keyof typeof featureColors] || '#009688'}40` // 25% opacity
+            }),
+            stroke: new Stroke({
+              color: featureColors[featureType as keyof typeof featureColors] || '#009688',
+              width: 2
+            }),
+            text: new Text({
+              text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
+              fill: new Fill({ color: '#000' }),
+              stroke: new Stroke({ color: '#fff', width: 2 }),
+              font: '12px Arial'
+            })
+          });
+        } else {
+          // For point features (towers, manholes), use custom icons
+          return new Style({
+            image: new Icon({
+              src: iconSrc,
+              scale: 0.5,
+              anchor: [0.5, 1],
+              anchorXUnits: 'fraction',
+              anchorYUnits: 'fraction'
+            }),
+            text: new Text({
+              text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
+              offsetY: -30,
+              fill: new Fill({ color: '#000' }),
+              stroke: new Stroke({ color: '#fff', width: 2 }),
+              font: '12px Arial'
+            })
+          });
+        }
       }
     });
 
