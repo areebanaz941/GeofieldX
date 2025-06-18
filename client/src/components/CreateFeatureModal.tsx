@@ -166,13 +166,14 @@ export default function CreateFeatureModal({
       onClose();
       form.reset();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Error creating feature:", error);
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to create feature";
       toast({
         title: "Error",
-        description: "Failed to create feature",
+        description: Array.isArray(errorMessage) ? errorMessage.map(e => e.message).join(", ") : errorMessage,
         variant: "destructive",
       });
-      console.error("Error creating feature:", error);
     },
   });
 
@@ -189,12 +190,26 @@ export default function CreateFeatureModal({
       return;
     }
 
-    createFeatureMutation.mutate({
-      ...values,
-      geometry: values.geometry!, // Geometry is guaranteed to exist due to validation above
-      maintenanceDate: values.maintenanceDate ? new Date(values.maintenanceDate) : undefined,
-      specificType: values.specificType as any, // Cast to handle type mismatch
-    });
+    // Prepare the data for submission
+    const submitData: any = {
+      name: values.name,
+      feaNo: values.feaNo,
+      feaType: values.feaType,
+      specificType: values.specificType,
+      feaState: values.feaState,
+      feaStatus: values.feaStatus,
+      maintenance: values.maintenance,
+      geometry: values.geometry!,
+      remarks: values.remarks || undefined,
+    };
+
+    // Only add maintenanceDate if it's provided and not empty
+    if (values.maintenanceDate && values.maintenanceDate.trim() !== "") {
+      submitData.maintenanceDate = new Date(values.maintenanceDate);
+    }
+
+    console.log("Submitting feature data:", submitData);
+    createFeatureMutation.mutate(submitData);
   };
 
   return (
@@ -553,13 +568,14 @@ export default function CreateFeatureModal({
             </div>
           </form>
         </Form>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="flex justify-between gap-2 pt-4">
+          <Button variant="outline" onClick={onClose} type="button">
             Cancel
           </Button>
           <Button 
             onClick={form.handleSubmit(onSubmit)} 
-            className="bg-primary-500 hover:bg-primary-600"
+            type="button"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
             disabled={createFeatureMutation.isPending}
           >
             {createFeatureMutation.isPending ? "Saving..." : "Save Feature"}
