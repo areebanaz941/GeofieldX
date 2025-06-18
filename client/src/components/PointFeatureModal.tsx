@@ -231,49 +231,24 @@ export default function PointFeatureModal({
               )}
             />
 
-            {/* Location Selection */}
+            {/* Location Display */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Location</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="text"
-                  readOnly
-                  placeholder="Click 'Select' to choose location"
-                  value={selectedLocation 
-                    ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` 
-                    : "Click 'Select' to choose location"}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectionMode(true);
-                    toast({
-                      title: "Point Selection",
-                      description: "Click on the map to select exact location",
-                    });
-                  }}
-                  className={selectedLocation ? "bg-green-50 border-green-200 text-green-700" : ""}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                  </svg>
-                  {selectedLocation ? "Update" : "Select"}
-                </Button>
-              </div>
-              {selectedLocation && (
-                <div className="bg-green-50 border border-green-200 rounded p-2 text-sm text-green-700">
-                  <div className="font-medium">✓ Location Selected</div>
-                  <div className="text-xs mt-1">
+              {selectedLocation ? (
+                <div className="bg-green-50 border border-green-200 rounded p-3">
+                  <div className="font-medium text-green-700 mb-1">✓ Location Selected</div>
+                  <div className="text-sm text-green-600">
+                    Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}
+                  </div>
+                  <div className="text-xs text-green-600 mt-1">
                     {feaType} position marked on map
                   </div>
                 </div>
+              ) : (
+                <div className="text-sm text-neutral-500 p-3 border rounded bg-gray-50">
+                  No location selected. Please use the point tool to select location first.
+                </div>
               )}
-              <p className="text-xs text-neutral-500">
-                Select exact coordinates for {feaType.toLowerCase()} installation
-              </p>
             </div>
 
             <FormField

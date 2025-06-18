@@ -52,28 +52,36 @@ interface MapProps {
   onBoundaryClick?: (boundary: IBoundary) => void;
   onTeamClick?: (team: IUser) => void;
   onMapClick?: (latlng: { lat: number; lng: number }) => void;
+  onMapDoubleClick?: () => void;
   onPolygonCreated?: (polygon: { name: string; coordinates: number[][][] }) => void;
   selectionMode?: boolean;
   drawingMode?: boolean;
+  pointSelectionMode?: boolean;
+  lineDrawingMode?: boolean;
+  linePoints?: { lat: number; lng: number }[];
   className?: string;
   clearDrawnPolygon?: boolean;
 }
 
 const OpenLayersMap = ({
-  center = [67.0011, 24.8607], // Default Karachi coordinates [lng, lat]
+  center = [67.0011, 24.8607],
   zoom = 13,
   features = [],
   teams = [],
   boundaries = [],
   tasks = [],
-  activeFilters = [],
+  activeFilters = ['All'],
   onFeatureClick,
   onBoundaryClick,
   onTeamClick,
   onMapClick,
+  onMapDoubleClick,
   onPolygonCreated,
   selectionMode = false,
   drawingMode = false,
+  pointSelectionMode = false,
+  lineDrawingMode = false,
+  linePoints = [],
   className = 'h-full w-full',
   clearDrawnPolygon = false
 }: MapProps) => {
