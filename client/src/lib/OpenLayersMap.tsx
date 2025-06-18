@@ -92,6 +92,7 @@ const OpenLayersMap = ({
   const boundariesLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const tasksLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectedLocationLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const selectedLocationSourceRef = useRef<VectorSource | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
   const drawLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectInteractionRef = useRef<Select | null>(null);
@@ -106,6 +107,7 @@ const OpenLayersMap = ({
     const boundariesSource = new VectorSource();
     const tasksSource = new VectorSource();
     const selectedLocationSource = new VectorSource();
+    selectedLocationSourceRef.current = selectedLocationSource;
 
     // Create vector layers
     featuresLayerRef.current = new VectorLayer({
@@ -288,12 +290,14 @@ const OpenLayersMap = ({
     // Add click interaction for map clicks (only when in selection mode)
     if (onMapClick) {
       map.on('click', (event) => {
-        if (!drawingMode && selectionMode) {
+        if (!drawingMode && (selectionMode || pointSelectionMode || lineDrawingMode)) {
           const coordinate = toLonLat(event.coordinate);
           const [lng, lat] = coordinate;
           
-          // Clear previous selection marker
-          selectedLocationSource.clear();
+          // Clear previous selection marker for point selection only
+          if (pointSelectionMode) {
+            selectedLocationSource.clear();
+          }
           
           // Add new selection marker
           const marker = new Feature({
@@ -304,6 +308,16 @@ const OpenLayersMap = ({
           onMapClick({ lat, lng });
         }
       });
+
+      // Handle double-click events for line drawing
+      if (onMapDoubleClick) {
+        map.on('dblclick', (event) => {
+          if (lineDrawingMode) {
+            event.preventDefault();
+            onMapDoubleClick();
+          }
+        });
+      }
     }
 
     // Add select interaction for feature clicks
@@ -598,6 +612,36 @@ const OpenLayersMap = ({
       console.error('Geolocation is not supported by this browser');
     }
   }, [panTo]);
+
+  // Effect to handle line points visualization
+  useEffect(() => {
+    if (!mapRef.current || !selectedLocationSourceRef.current) return;
+
+    const source = selectedLocationSourceRef.current;
+    
+    if (lineDrawingMode && linePoints.length > 0) {
+      // Clear existing features
+      source.clear();
+      
+      // Add points as markers
+      linePoints.forEach((point, index) => {
+        const coordinate = fromLonLat([point.lng, point.lat]);
+        const marker = new Feature({
+          geometry: new Point(coordinate)
+        });
+        source.addFeature(marker);
+      });
+      
+      // Add line connecting the points if we have more than one
+      if (linePoints.length > 1) {
+        const coordinates = linePoints.map(point => fromLonLat([point.lng, point.lat]));
+        const lineFeature = new Feature({
+          geometry: new LineString(coordinates)
+        });
+        source.addFeature(lineFeature);
+      }
+    }
+  }, [lineDrawingMode, linePoints]);
 
   return (
     <div className={className}>
