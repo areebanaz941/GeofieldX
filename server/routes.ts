@@ -229,6 +229,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users", isAuthenticated, async (req, res) => {
+    try {
+      // Get all users (field users + supervisors)
+      const fieldUsers = await storage.getAllFieldUsers();
+      
+      // Get supervisor users by finding users with role "Supervisor"
+      const allUsers = [...fieldUsers];
+      
+      // Try to find supervisors - we know there's at least the one created in initial data
+      // For now, we'll fetch by trying common supervisor usernames or IDs
+      try {
+        const supervisor = await storage.getUserByUsername("supervisor");
+        if (supervisor && !allUsers.find(u => u._id.toString() === supervisor._id.toString())) {
+          allUsers.push(supervisor);
+        }
+      } catch (e) {
+        // Supervisor might not exist or have different username
+      }
+      
+      // Remove passwords from response
+      const usersResponse = allUsers.map((user) => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(usersResponse);
+    } catch (error) {
+      console.error("Get all users error:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   app.post("/api/users/location", isAuthenticated, async (req, res) => {
     try {
       const { lat, lng } = req.body;

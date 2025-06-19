@@ -73,10 +73,9 @@ export default function TaskDetailsModal({
     enabled: open,
   });
 
-  // Fetch users to resolve user names
+  // Fetch users to resolve user names (including supervisors)
   const { data: users = [] } = useQuery({
-    queryKey: ["/api/users/field"],
-    queryFn: getFieldUsers,
+    queryKey: ["/api/users"],
     enabled: open,
   });
 
@@ -109,14 +108,14 @@ export default function TaskDetailsModal({
 
   // Update task status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: (newStatus: string) => updateTaskStatus(task.id, newStatus),
+    mutationFn: (newStatus: string) => updateTaskStatus(task._id.toString(), newStatus),
     onSuccess: () => {
       toast({
         title: "Status updated",
         description: `Task status changed to ${status}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", task.id, "updates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", task._id, "updates"] });
     },
     onError: () => {
       toast({
@@ -129,14 +128,14 @@ export default function TaskDetailsModal({
 
   // Add task update mutation
   const addUpdateMutation = useMutation({
-    mutationFn: () => createTaskUpdate(task.id, comment),
+    mutationFn: () => createTaskUpdate(task._id.toString(), comment),
     onSuccess: () => {
       toast({
         title: "Update added",
         description: "Your comment has been added to the task",
       });
       setComment("");
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", task.id, "updates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", task._id, "updates"] });
     },
     onError: () => {
       toast({
@@ -156,7 +155,7 @@ export default function TaskDetailsModal({
       formData.append("image", imageFile);
       formData.append("description", "Task evidence");
       
-      return addTaskEvidence(task.id, formData);
+      return addTaskEvidence(task._id.toString(), formData);
     },
     onSuccess: () => {
       toast({
