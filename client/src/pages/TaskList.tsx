@@ -1,23 +1,26 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { getAllTasks, getFieldUsers } from "@/lib/api";
+import { getAllTasks, getFieldUsers, getAllFeatures } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import CreateTaskModal from "@/components/CreateTaskModal";
 import TaskDetailsModal from "@/components/TaskDetailsModal";
 import useAuth from "@/hooks/useAuth";
-import { Task } from "@shared/schema";
+import { ITask, IFeature, ITeam } from "@shared/schema";
+import { MapPin, Users } from "lucide-react";
 
 export default function TaskList() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<ITask | null>(null);
   const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
   const [taskDetailsModalOpen, setTaskDetailsModalOpen] = useState(false);
 
@@ -31,8 +34,22 @@ export default function TaskList() {
     queryFn: getFieldUsers,
   });
 
+  const { data: features = [] } = useQuery({
+    queryKey: ["/api/features"],
+    queryFn: getAllFeatures,
+  });
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ["/api/teams"],
+  });
+
+  // Get assigned parcels (features with assignedTo)
+  const assignedParcels = features.filter((feature: IFeature) => 
+    feature.feaType === 'Parcel' && feature.assignedTo
+  );
+
   // Filter tasks based on search and status
-  const filteredTasks = tasks.filter((task) => {
+  const filteredTasks = tasks.filter((task: ITask) => {
     const matchesSearch =
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -43,6 +60,12 @@ export default function TaskList() {
     return matchesSearch && matchesStatus;
   });
 
+  // Filter parcels based on search
+  const filteredParcels = assignedParcels.filter((parcel: IFeature) => {
+    const matchesSearch = parcel.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
   // Get assignee name for each task
   const getAssigneeName = (assigneeId?: number) => {
     if (!assigneeId) return t('taskStatus.unassigned');
@@ -50,17 +73,24 @@ export default function TaskList() {
     return assignee ? assignee.name : t('common.unknown');
   };
 
+  // Get team name for parcels
+  const getTeamName = (teamId?: string) => {
+    if (!teamId) return 'Unassigned';
+    const team = teams.find((team: ITeam) => team._id.toString() === teamId);
+    return team ? team.name : 'Unknown Team';
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{t('tasks.title')}</h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">Tasks & Assignments</h1>
           <Button onClick={() => setCreateTaskModalOpen(true)} className="bg-primary-500 hover:bg-primary-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
               <path d="M5 12h14"></path>
               <path d="M12 5v14"></path>
             </svg>
-            {t('tasks.createTask')}
+            Create Task
           </Button>
         </div>
 
