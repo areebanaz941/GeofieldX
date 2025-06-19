@@ -490,6 +490,16 @@ export default function MapView() {
           preFilledPoints={linePoints}
         />
       )}
+      
+      {/* Feature Details Modal */}
+      <FeatureDetailsModal
+        open={featureDetailsModalOpen}
+        onClose={() => {
+          setFeatureDetailsModalOpen(false);
+          setClickedFeature(null);
+        }}
+        feature={clickedFeature}
+      />
     </>
   );
 }
