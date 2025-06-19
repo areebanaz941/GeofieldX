@@ -132,11 +132,11 @@ export default function CreateTaskModal({
     const taskData = {
       title: values.title,
       description: values.description,
-      status: values.assignedTo ? "Assigned" as const : "Unassigned" as const,
+      status: (values.assignedTo && values.assignedTo !== "unassigned") ? "Assigned" as const : "Unassigned" as const,
       priority: values.priority,
       dueDate: values.dueDate ? new Date(values.dueDate) : undefined,
-      teamId: values.teamId || undefined,
-      assignedTo: values.assignedTo || undefined,
+      teamId: (values.teamId && values.teamId !== "none") ? values.teamId : undefined,
+      assignedTo: (values.assignedTo && values.assignedTo !== "unassigned") ? values.assignedTo : undefined,
       location: selectedLocation ? {
         type: "Point" as const,
         coordinates: [selectedLocation.lng, selectedLocation.lat]
@@ -198,8 +198,8 @@ export default function CreateTaskModal({
                     <Select
                       onValueChange={(value) => {
                         field.onChange(value);
-                        setSelectedTeamId(value);
-                        form.setValue("assignedTo", ""); // Clear assignee when team changes
+                        setSelectedTeamId(value === "none" ? "" : value);
+                        form.setValue("assignedTo", "unassigned"); // Clear assignee when team changes
                       }}
                       value={field.value}
                     >
@@ -209,7 +209,7 @@ export default function CreateTaskModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No specific team</SelectItem>
+                        <SelectItem value="none">No specific team</SelectItem>
                         {teams.filter((team: any) => team.status === "Approved").map((team: any) => (
                           <SelectItem key={team._id} value={team._id}>
                             {team.name}
@@ -244,7 +244,7 @@ export default function CreateTaskModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Leave unassigned</SelectItem>
+                      <SelectItem value="unassigned">Leave unassigned</SelectItem>
                       {user?.role === "Supervisor" && selectedTeamId ? (
                         teamMembers.map((member: any) => (
                           <SelectItem key={member._id} value={member._id}>
