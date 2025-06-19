@@ -107,14 +107,13 @@ export default function CreateTaskModal({
     const taskData = {
       title: values.title,
       description: values.description,
-      status: "Unassigned" as const,
+      status: "New" as const,
       priority: values.priority,
       dueDate: values.dueDate ? new Date(values.dueDate) : undefined,
       assignedTo: (values.teamId && values.teamId !== "none") ? values.teamId : undefined,
       createdBy: user?._id
     };
 
-    // Remove teamId since it's not part of the schema, use assignedTo instead
     createTaskMutation.mutate(taskData);
   };
 

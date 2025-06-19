@@ -43,15 +43,16 @@ export const SPECIFIC_FEATURE_TYPES = [
 ] as const;
 export const USER_ROLES = ["Supervisor", "Field"] as const;
 export const TASK_STATUSES = [
-  "Unassigned",
+  "New",
   "Assigned",
-  "In Progress",
+  "InProgress",
   "Completed",
-  "In-Complete",
+  "In-Completed",
   "Submit-Review",
   "Review_Accepted",
   "Review_Reject",
   "Review_inprogress",
+  "Active",
 ] as const;
 export const TASK_PRIORITIES = ["Low", "Medium", "High", "Urgent"] as const;
 export const TEAM_STATUSES = ["Pending", "Approved", "Rejected"] as const;
@@ -389,7 +390,7 @@ const taskSchema = new Schema<ITask>(
     status: {
       type: String,
       enum: TASK_STATUSES,
-      default: "Unassigned",
+      default: "New",
       required: true,
     },
     priority: {
@@ -575,7 +576,7 @@ export const insertFeatureSchema = z.object({
 export const insertTaskSchema = z.object({
   title: z.string().min(1).trim(),
   description: z.string().optional(),
-  status: z.enum(TASK_STATUSES).default("Unassigned"),
+  status: z.enum(TASK_STATUSES).default("New"),
   priority: z.enum(TASK_PRIORITIES).default("Medium"),
   dueDate: z.date().optional(),
   location: z
