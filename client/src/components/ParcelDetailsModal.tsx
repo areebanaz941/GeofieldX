@@ -176,7 +176,7 @@ export default function ParcelDetailsModal({
             <h3 className="text-lg font-semibold mb-3">Update Status</h3>
             <div className="flex items-center gap-4">
               <div className="flex-1">
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as FeatureStatus)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>

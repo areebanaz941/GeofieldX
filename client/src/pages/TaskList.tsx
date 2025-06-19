@@ -49,6 +49,25 @@ export default function TaskList() {
     },
   });
 
+  // Delete feature mutation
+  const deleteFeatureMutation = useMutation({
+    mutationFn: (featureId: string) => deleteFeature(featureId),
+    onSuccess: () => {
+      toast({
+        title: "Parcel deleted",
+        description: "Parcel has been permanently deleted",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/features"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete parcel",
+        variant: "destructive",
+      });
+    },
+  });
+
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
     queryFn: getAllTasks,
@@ -313,17 +332,13 @@ export default function TaskList() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (confirm("Are you sure you want to delete this parcel? This action cannot be undone.")) {
-                                  // TODO: Add delete parcel mutation
-                                  toast({
-                                    title: "Feature not implemented",
-                                    description: "Parcel deletion will be implemented",
-                                    variant: "destructive",
-                                  });
+                                  deleteFeatureMutation.mutate(parcel._id.toString());
                                 }
                               }}
+                              disabled={deleteFeatureMutation.isPending}
                               className="text-xs px-3 py-1"
                             >
-                              Delete
+                              {deleteFeatureMutation.isPending ? "Deleting..." : "Delete"}
                             </Button>
                           </div>
                         )}
