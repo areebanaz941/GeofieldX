@@ -16,7 +16,7 @@ import TaskDetailsModal from "@/components/TaskDetailsModal";
 import AdvancedSearchModal from "@/components/AdvancedSearchModal";
 import FeatureAssignmentModal from "@/components/FeatureAssignmentModal";
 import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
-import FeatureDetailsModal from "@/components/FeatureDetailsModal";
+import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +49,8 @@ export default function MapView() {
   const [boundaryAssignmentModalOpen, setBoundaryAssignmentModalOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
   const [selectedBoundary, setSelectedBoundary] = useState<any | null>(null);
+  const [featureDetailsModalOpen, setFeatureDetailsModalOpen] = useState(false);
+  const [clickedFeature, setClickedFeature] = useState<IFeature | null>(null);
   
   // Fetch data
   const { data: features = [] } = useQuery({
@@ -172,16 +174,9 @@ export default function MapView() {
   };
 
   const handleFeatureClick = (feature: any) => {
-    // If user is supervisor, show assignment modal
-    if (user?.role === "Supervisor") {
-      setSelectedFeature(feature);
-      setFeatureAssignmentModalOpen(true);
-    } else {
-      toast({
-        title: "Feature Clicked",
-        description: `${feature.feaType} #${feature.feaNo}`,
-      });
-    }
+    // Show feature details popup for all users
+    setClickedFeature(feature);
+    setFeatureDetailsModalOpen(true);
   };
 
   const handleBoundaryClick = (boundary: any) => {

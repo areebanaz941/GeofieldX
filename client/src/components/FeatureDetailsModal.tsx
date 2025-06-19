@@ -82,14 +82,14 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Team Status:</span>
-                      <Badge variant={team.teamStatus === 'Active' ? 'default' : 'outline'}>
-                        {team.teamStatus}
+                      <Badge variant={team.status === 'Approved' ? 'default' : 'outline'}>
+                        {team.status}
                       </Badge>
                     </div>
-                    {team.teamLead && (
+                    {team.description && (
                       <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Team Lead:</span>
-                        <span className="text-sm font-medium">{team.teamLead}</span>
+                        <span className="text-sm text-muted-foreground">Description:</span>
+                        <span className="text-sm font-medium">{team.description}</span>
                       </div>
                     )}
                   </div>

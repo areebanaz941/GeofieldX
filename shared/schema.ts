@@ -569,6 +569,7 @@ export const insertFeatureSchema = z.object({
   remarks: z.string().optional(),
   createdBy: z.string().optional(),
   boundaryId: z.string().optional(),
+  assignedTo: z.string().optional(),
 });
 
 export const insertTaskSchema = z.object({
