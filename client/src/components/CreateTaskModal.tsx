@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient } from "@/lib/queryClient";
-import { createTask, getAllTeams, getUsersByTeam } from "@/lib/api";
+import { createTask, getAllTeams, getUsersByTeam, getFieldUsers } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -72,6 +72,12 @@ export default function CreateTaskModal({
     queryKey: ['/api/teams'],
     queryFn: getAllTeams,
     enabled: user?.role === "Supervisor"
+  });
+
+  // Fetch all field users for assignment
+  const { data: fieldUsers = [] } = useQuery({
+    queryKey: ['/api/users/field'],
+    queryFn: getFieldUsers,
   });
 
   // Fetch team members when a team is selected
@@ -228,7 +234,7 @@ export default function CreateTaskModal({
               name="assignedTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assign To Team Member</FormLabel>
+                  <FormLabel>Assign to</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
@@ -237,20 +243,32 @@ export default function CreateTaskModal({
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={
-                          user?.role === "Supervisor" && selectedTeamId && teamMembers.length === 0
+                          user?.role === "Supervisor" && selectedTeamId && selectedTeamId !== "none" && teamMembers.length === 0
                             ? "No team members available"
-                            : "Select team member"
+                            : selectedTeamId && selectedTeamId !== "none"
+                            ? "Select team member"
+                            : "Select user to assign"
                         } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="unassigned">Leave unassigned</SelectItem>
-                      {user?.role === "Supervisor" && selectedTeamId ? (
-                        teamMembers.map((member: any) => (
-                          <SelectItem key={member._id} value={member._id}>
-                            {member.name} ({member.username})
-                          </SelectItem>
-                        ))
+                      {user?.role === "Supervisor" ? (
+                        selectedTeamId && selectedTeamId !== "none" ? (
+                          // Show team members when a specific team is selected
+                          teamMembers.map((member: any) => (
+                            <SelectItem key={member._id} value={member._id}>
+                              {member.name} ({member.username})
+                            </SelectItem>
+                          ))
+                        ) : (
+                          // Show all field users when no specific team is selected
+                          fieldUsers.map((user: any) => (
+                            <SelectItem key={user._id} value={user._id}>
+                              {user.name} ({user.username})
+                            </SelectItem>
+                          ))
+                        )
                       ) : user?.role === "Field" ? (
                         <SelectItem value={user._id}>
                           Assign to myself
