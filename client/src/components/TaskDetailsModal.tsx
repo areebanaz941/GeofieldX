@@ -25,9 +25,11 @@ import {
   createTaskUpdate, 
   updateTaskStatus, 
   getTaskEvidence, 
-  addTaskEvidence
+  addTaskEvidence,
+  getAllTeams,
+  getFieldUsers
 } from "@/lib/api";
-import { Task, TaskUpdate } from "@shared/schema";
+import { Task, TaskUpdate, ITeam, IUser } from "@shared/schema";
 
 interface TaskDetailsModalProps {
   open: boolean;
@@ -52,17 +54,58 @@ export default function TaskDetailsModal({
   
   // Fetch task updates
   const { data: updates = [] } = useQuery({
-    queryKey: ["/api/tasks", task.id, "updates"],
-    queryFn: () => getTaskUpdates(task.id),
+    queryKey: ["/api/tasks", task._id, "updates"],
+    queryFn: () => getTaskUpdates(task._id.toString()),
     enabled: open,
   });
 
   // Fetch task evidence
   const { data: evidence = [] } = useQuery({
-    queryKey: ["/api/tasks", task.id, "evidence"],
-    queryFn: () => getTaskEvidence(task.id),
+    queryKey: ["/api/tasks", task._id, "evidence"],
+    queryFn: () => getTaskEvidence(task._id.toString()),
     enabled: open,
   });
+
+  // Fetch teams to resolve team names
+  const { data: teams = [] } = useQuery({
+    queryKey: ["/api/teams"],
+    queryFn: getAllTeams,
+    enabled: open,
+  });
+
+  // Fetch users to resolve user names
+  const { data: users = [] } = useQuery({
+    queryKey: ["/api/users/field"],
+    queryFn: getFieldUsers,
+    enabled: open,
+  });
+
+  // Helper function to get assignee display name
+  const getAssigneeDisplay = () => {
+    if (!task.assignedTo) return "Unassigned";
+    
+    // First check if it's a team
+    const team = (teams as ITeam[]).find((t: ITeam) => t._id?.toString() === task.assignedTo);
+    if (team) {
+      return `Team: ${team.name}`;
+    }
+    
+    // Then check if it's a user
+    const user = (users as IUser[]).find((u: IUser) => u._id?.toString() === task.assignedTo);
+    if (user) {
+      return `User: ${user.username}`;
+    }
+    
+    return `Unknown Assignment`;
+  };
+
+  // Helper function to get creator display name
+  const getCreatorDisplay = () => {
+    if (!task.createdBy) return "Unknown";
+    
+    const creator = (users as IUser[]).find((u: IUser) => u._id?.toString() === task.createdBy);
+    return creator ? creator.username : `User #${task.createdBy}`;
+  };
 
   // Update task status mutation
   const updateStatusMutation = useMutation({
@@ -304,7 +347,7 @@ export default function TaskDetailsModal({
                   <div>
                     <p className="text-xs text-neutral-500">Assigned To</p>
                     <p className="text-sm">
-                      {task.assignedTo ? `User #${task.assignedTo}` : "Unassigned"}
+                      {getAssigneeDisplay()}
                     </p>
                   </div>
                   {task.dueDate && (
@@ -315,7 +358,7 @@ export default function TaskDetailsModal({
                   )}
                   <div>
                     <p className="text-xs text-neutral-500">Created By</p>
-                    <p className="text-sm">User #{task.createdBy}</p>
+                    <p className="text-sm">{getCreatorDisplay()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-neutral-500">Created On</p>
