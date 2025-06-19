@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { getAllTasks, getFieldUsers, getAllFeatures, deleteTask } from "@/lib/api";
+import { getAllTasks, getFieldUsers, getAllFeatures, deleteTask, deleteFeature } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import CreateTaskModal from "@/components/CreateTaskModal";
 import TaskDetailsModal from "@/components/TaskDetailsModal";
+import ParcelDetailsModal from "@/components/ParcelDetailsModal";
 import useAuth from "@/hooks/useAuth";
 import { ITask, IFeature, ITeam } from "@shared/schema";
 import { MapPin, Users } from "lucide-react";
@@ -24,8 +25,10 @@ export default function TaskList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTask, setSelectedTask] = useState<ITask | null>(null);
+  const [selectedParcel, setSelectedParcel] = useState<IFeature | null>(null);
   const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
   const [taskDetailsModalOpen, setTaskDetailsModalOpen] = useState(false);
+  const [parcelDetailsModalOpen, setParcelDetailsModalOpen] = useState(false);
 
   // Delete task mutation
   const deleteTaskMutation = useMutation({
@@ -269,7 +272,13 @@ export default function TaskList() {
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-wrap justify-between gap-4">
-                      <div className="space-y-1 flex-1">
+                      <div 
+                        className="space-y-1 flex-1 cursor-pointer"
+                        onClick={() => {
+                          setSelectedParcel(parcel);
+                          setParcelDetailsModalOpen(true);
+                        }}
+                      >
                         <div className="flex items-center gap-2">
                           <Badge className="bg-blue-100 text-blue-800">
                             {parcel.assignedTo ? 'Assigned' : 'Unassigned'}
@@ -286,14 +295,38 @@ export default function TaskList() {
                           Area #{parcel.feaNo} • Status: {parcel.feaStatus}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500 mb-1">
-                          <Users className="h-4 w-4 inline mr-1" />
-                          Team: <span className="font-medium">{getTeamName(parcel.assignedTo?.toString())}</span>
+                      <div className="text-right flex flex-col justify-between">
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">
+                            <Users className="h-4 w-4 inline mr-1" />
+                            Team: <span className="font-medium">{getTeamName(parcel.assignedTo?.toString())}</span>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-2">
+                            Created: {new Date(parcel.createdAt).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-400 mt-2">
-                          Created: {new Date(parcel.createdAt).toLocaleDateString()}
-                        </div>
+                        {user?.role === "Supervisor" && (
+                          <div className="mt-3 flex justify-end">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Are you sure you want to delete this parcel? This action cannot be undone.")) {
+                                  // TODO: Add delete parcel mutation
+                                  toast({
+                                    title: "Feature not implemented",
+                                    description: "Parcel deletion will be implemented",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              className="text-xs px-3 py-1"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -324,6 +357,16 @@ export default function TaskList() {
           onClose={() => setTaskDetailsModalOpen(false)}
           onOpenChange={setTaskDetailsModalOpen}
           task={selectedTask}
+        />
+      )}
+
+      {parcelDetailsModalOpen && selectedParcel && (
+        <ParcelDetailsModal
+          open={parcelDetailsModalOpen}
+          onClose={() => setParcelDetailsModalOpen(false)}
+          onOpenChange={setParcelDetailsModalOpen}
+          parcel={selectedParcel}
+          teamName={getTeamName(selectedParcel.assignedTo?.toString())}
         />
       )}
     </div>

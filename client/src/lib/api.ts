@@ -125,12 +125,12 @@ export async function getAllFeatures() {
   return await res.json();
 }
 
-export async function updateFeature(featureId: number, featureData: Partial<Feature>) {
+export async function updateFeature(featureId: string, featureData: any) {
   const res = await apiRequest('PUT', `/api/features/${featureId}`, featureData);
   return await res.json();
 }
 
-export async function deleteFeature(featureId: number) {
+export async function deleteFeature(featureId: string) {
   const res = await apiRequest('DELETE', `/api/features/${featureId}`);
   return await res.json();
 }

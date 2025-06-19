@@ -24,7 +24,7 @@ export default function ParcelDetailsModal({
   parcel,
   teamName
 }: ParcelDetailsModalProps) {
-  const [selectedStatus, setSelectedStatus] = useState(parcel.feaStatus);
+  const [selectedStatus, setSelectedStatus] = useState<FeatureStatus>(parcel.feaStatus);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
