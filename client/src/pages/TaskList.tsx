@@ -67,16 +67,16 @@ export default function TaskList() {
   });
 
   // Get assignee name for each task
-  const getAssigneeName = (assigneeId?: number) => {
-    if (!assigneeId) return t('taskStatus.unassigned');
-    const assignee = fieldUsers.find((user: any) => user.id === assigneeId);
-    return assignee ? assignee.name : t('common.unknown');
+  const getAssigneeName = (assigneeId?: string) => {
+    if (!assigneeId) return 'Unassigned';
+    const assignee = fieldUsers.find((user: any) => user._id.toString() === assigneeId);
+    return assignee ? assignee.name : 'Unknown User';
   };
 
   // Get team name for parcels
   const getTeamName = (teamId?: string) => {
     if (!teamId) return 'Unassigned';
-    const team = teams.find((team: ITeam) => team._id.toString() === teamId);
+    const team = (teams as ITeam[]).find((team: ITeam) => team._id.toString() === teamId);
     return team ? team.name : 'Unknown Team';
   };
 
@@ -128,17 +128,32 @@ export default function TaskList() {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((task) => (
-              <Card
-                key={task.id}
-                className="hover:shadow-md cursor-pointer transition-shadow"
-                onClick={() => {
-                  setSelectedTask(task);
-                  setTaskDetailsModalOpen(true);
-                }}
-              >
+        <Tabs defaultValue="tasks" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="tasks" className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 12l2 2 4-4"></path>
+                <path d="M21 12c.552 0 1-.448 1-1V5c0-.552-.448-1-1-1H3c-.552 0-1 .448-1 1v6c0 .552.448 1 1 1h18z"></path>
+              </svg>
+              Tasks ({filteredTasks.length})
+            </TabsTrigger>
+            <TabsTrigger value="assignments" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Parcel Assignments ({filteredParcels.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="tasks" className="space-y-4 mt-6">
+            {filteredTasks.length > 0 ? (
+              filteredTasks.map((task: ITask) => (
+                <Card
+                  key={task._id.toString()}
+                  className="hover:shadow-md cursor-pointer transition-shadow"
+                  onClick={() => {
+                    setSelectedTask(task);
+                    setTaskDetailsModalOpen(true);
+                  }}
+                >
                 <CardContent className="p-4">
                   <div className="flex flex-wrap justify-between gap-4">
                     <div className="space-y-1 flex-1">
@@ -165,7 +180,7 @@ export default function TaskList() {
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-gray-500 mb-1">
-                        Assigned to: <span className="font-medium">{getAssigneeName(task.assignedTo)}</span>
+                        Assigned to: <span className="font-medium">{getAssigneeName(task.assignedTo?.toString())}</span>
                       </div>
                       {task.dueDate && (
                         <div className="text-sm text-gray-500">
@@ -179,15 +194,64 @@ export default function TaskList() {
                   </div>
                 </CardContent>
               </Card>
-            ))
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              {searchTerm || statusFilter !== "All"
-                ? "No tasks match your search criteria"
-                : "No tasks found. Create your first task!"}
-            </div>
-          )}
-        </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {searchTerm || statusFilter !== "All"
+                  ? "No tasks match your search criteria"
+                  : "No tasks found. Create your first task!"}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="assignments" className="space-y-4 mt-6">
+            {filteredParcels.length > 0 ? (
+              filteredParcels.map((parcel: IFeature) => (
+                <Card
+                  key={parcel._id.toString()}
+                  className="hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap justify-between gap-4">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-blue-100 text-blue-800">
+                            {parcel.assignedTo ? 'Assigned' : 'Unassigned'}
+                          </Badge>
+                          <Badge variant="outline">
+                            {parcel.feaType}
+                          </Badge>
+                        </div>
+                        <h3 className="font-medium text-lg flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          {parcel.name}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Area #{parcel.feaNo} • Status: {parcel.feaStatus}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-500 mb-1">
+                          <Users className="h-4 w-4 inline mr-1" />
+                          Team: <span className="font-medium">{getTeamName(parcel.assignedTo?.toString())}</span>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-2">
+                          Created: {new Date(parcel.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {searchTerm
+                  ? "No parcel assignments match your search"
+                  : "No parcel assignments found"}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {createTaskModalOpen && (
