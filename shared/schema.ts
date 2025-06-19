@@ -269,6 +269,7 @@ export interface IFeature extends Document {
   remarks?: string;
   createdBy?: Types.ObjectId;
   boundaryId?: Types.ObjectId;
+  assignedTo?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -343,6 +344,10 @@ const featureSchema = new Schema<IFeature>(
     boundaryId: {
       type: Schema.Types.ObjectId,
       ref: "Boundary",
+    },
+    assignedTo: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
     },
   },
   {

@@ -16,6 +16,7 @@ import TaskDetailsModal from "@/components/TaskDetailsModal";
 import AdvancedSearchModal from "@/components/AdvancedSearchModal";
 import FeatureAssignmentModal from "@/components/FeatureAssignmentModal";
 import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
+import FeatureDetailsModal from "@/components/FeatureDetailsModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
