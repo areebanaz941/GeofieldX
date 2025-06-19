@@ -632,6 +632,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Feature status update
+  app.patch(
+    "/api/features/:id/status",
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const featureId = req.params.id;
+        const { status } = req.body;
+
+        if (!status) {
+          return res.status(400).json({ message: "Status is required" });
+        }
+
+        const feature = await storage.getFeature(featureId);
+        if (!feature) {
+          return res.status(404).json({ message: "Feature not found" });
+        }
+
+        // Update feature status
+        const updatedFeature = await storage.updateFeature(featureId, {
+          feaStatus: status
+        });
+
+        res.json(updatedFeature);
+      } catch (error) {
+        console.error("Update feature status error:", error);
+        res.status(500).json({ message: "Failed to update feature status" });
+      }
+    },
+  );
+
   // Boundary routes
   app.post("/api/boundaries", isSupervisor, async (req, res) => {
     try {
