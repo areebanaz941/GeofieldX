@@ -12,7 +12,6 @@ interface TaskPanelProps {
   onTaskSelect: (task: Task) => void;
   expanded: boolean;
   onExpandToggle: () => void;
-  onCreateTask: () => void;
 }
 
 export default function TaskPanel({
@@ -111,14 +110,7 @@ export default function TaskPanel({
           >
             <i className="ri-refresh-line"></i>
           </Button>
-          <Button
-            size="sm"
-            className="bg-primary-500 hover:bg-primary-600 text-white"
-            onClick={onCreateTask}
-          >
-            <i className="ri-add-line mr-1"></i>
-            <span>New Task</span>
-          </Button>
+
         </div>
       </div>
 

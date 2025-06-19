@@ -5,13 +5,13 @@ import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
-import CreateTaskModal from "@/components/CreateTaskModal";
+
 import useAuth from "@/hooks/useAuth";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const isSupervisor = user?.role === "Supervisor";
-  const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
+
   const { t } = useTranslation();
 
   const { data: tasks = [] } = useQuery({
@@ -70,18 +70,6 @@ export default function Dashboard() {
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{t('dashboard.title')}</h1>
-          {isSupervisor && (
-            <Button 
-              onClick={() => setCreateTaskModalOpen(true)}
-              className="bg-primary-500 hover:bg-primary-600 text-white"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
-              </svg>
-              {t('tasks.createTask')}
-            </Button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 responsive-grid">
@@ -336,13 +324,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {createTaskModalOpen && (
-        <CreateTaskModal
-          open={createTaskModalOpen}
-          onClose={() => setCreateTaskModalOpen(false)}
-          onOpenChange={setCreateTaskModalOpen}
-        />
-      )}
+
     </div>
   );
 }
