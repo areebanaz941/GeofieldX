@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient } from "@/lib/queryClient";
-import { createTask, getAllTeams, getUsersByTeam, getFieldUsers } from "@/lib/api";
+import { createTask, getAllTeams } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -33,17 +33,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
-
 // Define form schema
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  status: z.string().default("Unassigned"),
   priority: z.enum(["Low", "Medium", "High", "Urgent"]).default("Medium"),
   dueDate: z.string().optional(),
   teamId: z.string().optional(),
-  assignedTo: z.string().optional(),
-  location: z.any(),
 });
 
 type TaskFormValues = z.infer<typeof formSchema>;
@@ -65,26 +61,11 @@ export default function CreateTaskModal({
 }: CreateTaskModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
-
   // Fetch teams if user is supervisor
   const { data: teams = [] } = useQuery({
     queryKey: ['/api/teams'],
     queryFn: getAllTeams,
     enabled: user?.role === "Supervisor"
-  });
-
-  // Fetch all field users for assignment
-  const { data: fieldUsers = [] } = useQuery({
-    queryKey: ['/api/users/field'],
-    queryFn: getFieldUsers,
-  });
-
-  // Fetch team members when a team is selected
-  const { data: teamMembers = [] } = useQuery({
-    queryKey: ['/api/teams', selectedTeamId, 'users'],
-    queryFn: () => getUsersByTeam(selectedTeamId),
-    enabled: !!selectedTeamId
   });
 
   // Initialize form
@@ -96,7 +77,7 @@ export default function CreateTaskModal({
       status: "Unassigned",
       priority: "Medium",
       dueDate: "",
-      assignedTo: undefined,
+      teamId: undefined,
       location: null,
     },
   });
@@ -138,11 +119,10 @@ export default function CreateTaskModal({
     const taskData = {
       title: values.title,
       description: values.description,
-      status: (values.assignedTo && values.assignedTo !== "unassigned") ? "Assigned" as const : "Unassigned" as const,
+      status: "Unassigned" as const,
       priority: values.priority,
       dueDate: values.dueDate ? new Date(values.dueDate) : undefined,
       teamId: (values.teamId && values.teamId !== "none") ? values.teamId : undefined,
-      assignedTo: (values.assignedTo && values.assignedTo !== "unassigned") ? values.assignedTo : undefined,
       location: selectedLocation ? {
         type: "Point" as const,
         coordinates: [selectedLocation.lng, selectedLocation.lat]
@@ -202,11 +182,7 @@ export default function CreateTaskModal({
                   <FormItem>
                     <FormLabel>Select Team</FormLabel>
                     <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedTeamId(value === "none" ? "" : value);
-                        form.setValue("assignedTo", "unassigned"); // Clear assignee when team changes
-                      }}
+                      onValueChange={field.onChange}
                       value={field.value}
                     >
                       <FormControl>
@@ -229,58 +205,7 @@ export default function CreateTaskModal({
               />
             )}
             
-            <FormField
-              control={form.control}
-              name="assignedTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign to</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={user?.role === "Supervisor" && !!selectedTeamId && teamMembers.length === 0}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={
-                          user?.role === "Supervisor" && selectedTeamId && selectedTeamId !== "none" && teamMembers.length === 0
-                            ? "No team members available"
-                            : selectedTeamId && selectedTeamId !== "none"
-                            ? "Select team member"
-                            : "Select user to assign"
-                        } />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Leave unassigned</SelectItem>
-                      {user?.role === "Supervisor" ? (
-                        selectedTeamId && selectedTeamId !== "none" ? (
-                          // Show team members when a specific team is selected
-                          teamMembers.map((member: any) => (
-                            <SelectItem key={member._id} value={member._id}>
-                              {member.name} ({member.username})
-                            </SelectItem>
-                          ))
-                        ) : (
-                          // Show all field users when no specific team is selected
-                          fieldUsers.map((user: any) => (
-                            <SelectItem key={user._id} value={user._id}>
-                              {user.name} ({user.username})
-                            </SelectItem>
-                          ))
-                        )
-                      ) : user?.role === "Field" ? (
-                        <SelectItem value={user._id}>
-                          Assign to myself
-                        </SelectItem>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
+
             <FormField
               control={form.control}
               name="dueDate"
