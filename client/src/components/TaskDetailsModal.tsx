@@ -164,7 +164,7 @@ export default function TaskDetailsModal({
       });
       setImageFile(null);
       setImagePreview(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", task.id, "evidence"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", task._id, "evidence"] });
     },
     onError: () => {
       toast({
