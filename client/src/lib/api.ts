@@ -73,6 +73,11 @@ export async function assignTask(taskId: number, assignedTo: number) {
   return await res.json();
 }
 
+export async function deleteTask(taskId: string) {
+  const res = await apiRequest('DELETE', `/api/tasks/${taskId}`);
+  return await res.json();
+}
+
 // Task Updates API
 export async function createTaskUpdate(taskId: number, comment: string, oldStatus?: string, newStatus?: string) {
   const res = await apiRequest('POST', `/api/tasks/${taskId}/updates`, {

@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { getAllTasks, getFieldUsers, getAllFeatures } from "@/lib/api";
+import { getAllTasks, getFieldUsers, getAllFeatures, deleteTask } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,11 +20,31 @@ import { MapPin, Users } from "lucide-react";
 export default function TaskList() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTask, setSelectedTask] = useState<ITask | null>(null);
   const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
   const [taskDetailsModalOpen, setTaskDetailsModalOpen] = useState(false);
+
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: (taskId: string) => deleteTask(taskId),
+    onSuccess: () => {
+      toast({
+        title: "Task deleted",
+        description: "Task has been permanently deleted",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
@@ -155,15 +177,17 @@ export default function TaskList() {
               filteredTasks.map((task: ITask) => (
                 <Card
                   key={task._id.toString()}
-                  className="hover:shadow-md cursor-pointer transition-shadow"
-                  onClick={() => {
-                    setSelectedTask(task);
-                    setTaskDetailsModalOpen(true);
-                  }}
+                  className="hover:shadow-md transition-shadow"
                 >
                 <CardContent className="p-4">
                   <div className="flex flex-wrap justify-between gap-4">
-                    <div className="space-y-1 flex-1">
+                    <div 
+                      className="space-y-1 flex-1 cursor-pointer"
+                      onClick={() => {
+                        setSelectedTask(task);
+                        setTaskDetailsModalOpen(true);
+                      }}
+                    >
                       <div className="flex items-center gap-2">
                         <StatusBadge status={task.status} />
                         {task.priority && (
@@ -185,18 +209,38 @@ export default function TaskList() {
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500 mb-1">
-                        Assigned to: <span className="font-medium">{getAssigneeName(task.assignedTo?.toString())}</span>
+                    <div className="text-right flex flex-col justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Assigned to: <span className="font-medium">{getAssigneeName(task.assignedTo?.toString())}</span>
+                        </div>
+                        {task.dueDate && (
+                          <div className="text-sm text-gray-500">
+                            Due: <span className="font-medium">{new Date(task.dueDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-400 mt-2">
+                          Updated: {new Date(task.updatedAt).toLocaleString()}
+                        </div>
                       </div>
-                      {task.dueDate && (
-                        <div className="text-sm text-gray-500">
-                          Due: <span className="font-medium">{new Date(task.dueDate).toLocaleDateString()}</span>
+                      {user?.role === "Supervisor" && (
+                        <div className="mt-3 flex justify-end">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
+                                deleteTaskMutation.mutate(task._id.toString());
+                              }
+                            }}
+                            disabled={deleteTaskMutation.isPending}
+                            className="text-xs px-3 py-1"
+                          >
+                            {deleteTaskMutation.isPending ? "Deleting..." : "Delete"}
+                          </Button>
                         </div>
                       )}
-                      <div className="text-xs text-gray-400 mt-2">
-                        Updated: {new Date(task.updatedAt).toLocaleString()}
-                      </div>
                     </div>
                   </div>
                 </CardContent>
