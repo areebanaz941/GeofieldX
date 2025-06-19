@@ -53,6 +53,7 @@ export const TASK_STATUSES = [
   "Review_Reject",
   "Review_inprogress",
   "Active",
+  "Unassigned",
 ] as const;
 export const TASK_PRIORITIES = ["Low", "Medium", "High", "Urgent"] as const;
 export const TEAM_STATUSES = ["Pending", "Approved", "Rejected"] as const;

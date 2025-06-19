@@ -28,6 +28,7 @@ export interface IStorage {
   getTask(id: string): Promise<ITask | undefined>;
   updateTaskStatus(id: string, status: string, userId: string): Promise<ITask>;
   assignTask(id: string, assignedTo: string): Promise<ITask>;
+  deleteTask(id: string): Promise<boolean>;
   getTasksByAssignee(userId: string): Promise<ITask[]>;
   getTasksByCreator(userId: string): Promise<ITask[]>;
   getAllTasks(): Promise<ITask[]>;

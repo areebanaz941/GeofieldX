@@ -375,6 +375,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  app.delete(
+    "/api/tasks/:id",
+    isAuthenticated,
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const taskId = req.params.id;
+        const deleted = await storage.deleteTask(taskId);
+        
+        if (deleted) {
+          res.json({ message: "Task deleted successfully" });
+        } else {
+          res.status(404).json({ message: "Task not found" });
+        }
+      } catch (error) {
+        console.error("Delete task error:", error);
+        res.status(500).json({ message: "Failed to delete task" });
+      }
+    },
+  );
+
   // Task updates routes
   app.post(
     "/api/tasks/:id/updates",

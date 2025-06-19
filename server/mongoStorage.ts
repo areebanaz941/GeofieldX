@@ -281,6 +281,23 @@ export class MongoStorage implements IStorage {
     }
   }
 
+  async deleteTask(id: string): Promise<boolean> {
+    try {
+      // Delete task updates first
+      await TaskUpdate.deleteMany({ taskId: id });
+      
+      // Delete task evidence
+      await TaskEvidence.deleteMany({ taskId: id });
+      
+      // Delete the task itself
+      const result = await Task.findByIdAndDelete(id);
+      return result !== null;
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      throw error;
+    }
+  }
+
   // Feature operations
   async createFeature(featureData: InsertFeature): Promise<IFeature> {
     try {
