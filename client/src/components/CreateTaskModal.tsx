@@ -112,10 +112,6 @@ export default function CreateTaskModal({
       priority: values.priority,
       dueDate: values.dueDate ? new Date(values.dueDate) : undefined,
       teamId: (values.teamId && values.teamId !== "none") ? values.teamId : undefined,
-      location: selectedLocation ? {
-        type: "Point" as const,
-        coordinates: [selectedLocation.lng, selectedLocation.lat]
-      } : undefined,
       createdBy: user?._id
     };
 
@@ -149,10 +145,10 @@ export default function CreateTaskModal({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Inspection Details</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Enter task description"
+                      placeholder="Enter inspection requirements and details"
                       className="resize-none"
                       {...field}
                       value={field.value || ""}
@@ -213,7 +209,7 @@ export default function CreateTaskModal({
               name="priority"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Priority</FormLabel>
+                  <FormLabel>Inspection Priority</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
