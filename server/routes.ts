@@ -825,6 +825,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Task routes
+  app.post("/api/tasks", isAuthenticated, async (req, res) => {
+    try {
+      const taskData = insertTaskSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any)._id.toString(),
+      });
+
+      const newTask = await storage.createTask(taskData);
+      res.status(201).json(newTask);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      console.error("Create task error:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
   // Additional MongoDB-specific routes for enhanced functionality
 
   // Geospatial routes
