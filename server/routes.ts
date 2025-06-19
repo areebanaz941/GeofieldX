@@ -830,19 +830,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Task creation request body:", req.body);
       
-      const taskData = insertTaskSchema.parse({
+      // Transform data before validation
+      const transformedData = {
         ...req.body,
         createdBy: (req.user as any)._id.toString(),
+        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : undefined,
+      };
+      
+      // Remove undefined fields for clean validation
+      Object.keys(transformedData).forEach(key => {
+        if (transformedData[key] === undefined) {
+          delete transformedData[key];
+        }
       });
 
-      console.log("Parsed task data:", taskData);
-      const newTask = await storage.createTask(taskData);
+      console.log("Transformed task data:", transformedData);
+      const newTask = await storage.createTask(transformedData);
       res.status(201).json(newTask);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.error("Task validation error:", error.errors);
-        return res.status(400).json({ message: error.errors });
-      }
       console.error("Create task error:", error);
       res.status(500).json({ message: "Failed to create task" });
     }

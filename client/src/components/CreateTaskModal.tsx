@@ -109,7 +109,7 @@ export default function CreateTaskModal({
       description: values.description,
       status: "New" as const,
       priority: values.priority,
-      dueDate: values.dueDate ? new Date(values.dueDate) : undefined,
+      dueDate: values.dueDate || undefined,
       assignedTo: (values.teamId && values.teamId !== "none") ? values.teamId : undefined,
       createdBy: user?._id
     };

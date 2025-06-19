@@ -578,7 +578,7 @@ export const insertTaskSchema = z.object({
   description: z.string().optional(),
   status: z.enum(TASK_STATUSES).default("New"),
   priority: z.enum(TASK_PRIORITIES).default("Medium"),
-  dueDate: z.date().optional(),
+  dueDate: z.string().optional(),
   location: z
     .object({
       type: z.literal("Point"),
