@@ -61,6 +61,7 @@ export default function CreateTaskModal({
 }: CreateTaskModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+
   // Fetch teams if user is supervisor
   const { data: teams = [] } = useQuery({
     queryKey: ['/api/teams'],
@@ -74,24 +75,11 @@ export default function CreateTaskModal({
     defaultValues: {
       title: "",
       description: "",
-      status: "Unassigned",
       priority: "Medium",
       dueDate: "",
       teamId: undefined,
-      location: null,
     },
   });
-
-  // Update location when selectedLocation changes
-  useEffect(() => {
-    if (selectedLocation) {
-      const location = {
-        type: "Point",
-        coordinates: [selectedLocation.lng, selectedLocation.lat],
-      };
-      form.setValue("location", location);
-    }
-  }, [selectedLocation]);
 
   // Create task mutation
   const createTaskMutation = useMutation({
@@ -104,6 +92,7 @@ export default function CreateTaskModal({
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       onClose();
       form.reset();
+      if (setSelectionMode) setSelectionMode(false);
     },
     onError: (error) => {
       toast({
@@ -205,7 +194,6 @@ export default function CreateTaskModal({
               />
             )}
             
-
             <FormField
               control={form.control}
               name="dueDate"
