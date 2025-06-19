@@ -71,17 +71,22 @@ export default function TaskList() {
     feature.feaType === 'Parcel' && feature.assignedTo
   );
 
-  // Filter tasks based on search and status
-  const filteredTasks = tasks.filter((task: ITask) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus =
-      statusFilter === "All" || task.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Filter and sort tasks based on search and status
+  const filteredTasks = tasks
+    .filter((task: ITask) => {
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStatus =
+        statusFilter === "All" || task.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a: ITask, b: ITask) => {
+      // Sort by creation date, newest first
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   // Filter parcels based on search
   const filteredParcels = assignedParcels.filter((parcel: IFeature) => {
