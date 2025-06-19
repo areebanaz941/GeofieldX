@@ -126,7 +126,7 @@ export default function CreateTaskModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle>Create Inspection Task</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -135,9 +135,9 @@ export default function CreateTaskModal({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Task Title</FormLabel>
+                  <FormLabel>Inspection Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter task title" {...field} />
+                    <Input placeholder="Enter inspection title" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -235,49 +235,19 @@ export default function CreateTaskModal({
               )}
             />
             
-            <div>
-              <FormLabel>Location</FormLabel>
-              <div className="flex items-center mt-1">
-                <Input
-                  type="text"
-                  readOnly
-                  placeholder="Select location on map"
-                  value={selectedLocation ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}` : ""}
-                  className="flex-1"
-                />
-                {setSelectionMode && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="ml-2"
-                    onClick={() => {
-                      setSelectionMode(true);
-                      toast({
-                        title: "Select location",
-                        description: "Click on the map to select a location",
-                      });
-                    }}
-                  >
-                    <i className="ri-map-pin-line"></i>
-                  </Button>
-                )}
-              </div>
-              {setSelectionMode && (
-                <p className="text-xs text-neutral-500 mt-1">Click on the map to select location</p>
-              )}
-            </div>
+
           </form>
         </Form>
-        <DialogFooter>
+        <DialogFooter className="gap-2 pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button 
             onClick={form.handleSubmit(onSubmit)} 
-            className="bg-primary-500 hover:bg-primary-600"
+            className="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 font-medium"
             disabled={createTaskMutation.isPending}
           >
-            {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+            {createTaskMutation.isPending ? "Creating..." : "Create Inspection Task"}
           </Button>
         </DialogFooter>
       </DialogContent>

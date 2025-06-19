@@ -86,13 +86,6 @@ export default function TaskList() {
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">Tasks & Assignments</h1>
-          <Button onClick={() => setCreateTaskModalOpen(true)} className="bg-primary-500 hover:bg-primary-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
-              <path d="M5 12h14"></path>
-              <path d="M12 5v14"></path>
-            </svg>
-            Create Task
-          </Button>
         </div>
 
         <Card className="mb-6">
@@ -145,6 +138,19 @@ export default function TaskList() {
           </TabsList>
 
           <TabsContent value="tasks" className="space-y-4 mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm text-gray-600">Manage inspection tasks and reviews</p>
+              <Button 
+                onClick={() => setCreateTaskModalOpen(true)} 
+                className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 font-medium shadow-md"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5v14"></path>
+                </svg>
+                Create Inspection Task
+              </Button>
+            </div>
             {filteredTasks.length > 0 ? (
               filteredTasks.map((task: ITask) => (
                 <Card
