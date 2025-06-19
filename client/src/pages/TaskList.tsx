@@ -41,6 +41,7 @@ export default function TaskList() {
 
   const { data: teams = [] } = useQuery({
     queryKey: ["/api/teams"],
+    queryFn: () => fetch('/api/teams').then(res => res.json()),
   });
 
   // Get assigned parcels (features with assignedTo)
@@ -69,14 +70,14 @@ export default function TaskList() {
   // Get assignee name for each task
   const getAssigneeName = (assigneeId?: string) => {
     if (!assigneeId) return 'Unassigned';
-    const assignee = fieldUsers.find((user: any) => user._id.toString() === assigneeId);
+    const assignee = fieldUsers.find((user: any) => user._id && user._id.toString() === assigneeId);
     return assignee ? assignee.name : 'Unknown User';
   };
 
   // Get team name for parcels
   const getTeamName = (teamId?: string) => {
     if (!teamId) return 'Unassigned';
-    const team = (teams as ITeam[]).find((team: ITeam) => team._id.toString() === teamId);
+    const team = (teams as ITeam[]).find((team: ITeam) => team._id && team._id.toString() === teamId);
     return team ? team.name : 'Unknown Team';
   };
 
