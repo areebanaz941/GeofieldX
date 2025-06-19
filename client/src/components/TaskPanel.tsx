@@ -20,7 +20,6 @@ export default function TaskPanel({
   onTaskSelect,
   expanded,
   onExpandToggle,
-  onCreateTask,
 }: TaskPanelProps) {
   const { data: users = [] } = useQuery({
     queryKey: ["/api/users/field"],

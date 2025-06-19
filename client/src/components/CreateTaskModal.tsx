@@ -62,11 +62,10 @@ export default function CreateTaskModal({
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch teams if user is supervisor
+  // Fetch all teams for assignment
   const { data: teams = [] } = useQuery({
     queryKey: ['/api/teams'],
     queryFn: getAllTeams,
-    enabled: user?.role === "Supervisor"
   });
 
   // Initialize form
@@ -159,36 +158,34 @@ export default function CreateTaskModal({
               )}
             />
             
-            {user?.role === "Supervisor" && (
-              <FormField
-                control={form.control}
-                name="teamId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Select Team</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a team" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No specific team</SelectItem>
-                        {teams.filter((team: any) => team.status === "Approved").map((team: any) => (
-                          <SelectItem key={team._id} value={team._id}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="teamId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assign to Team</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a team for inspection" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">No specific team</SelectItem>
+                      {teams.filter((team: any) => team.status === "Approved").map((team: any) => (
+                        <SelectItem key={team._id} value={team._id}>
+                          {team.name} - {team.description || 'Field Team'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <FormField
               control={form.control}

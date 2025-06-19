@@ -350,7 +350,6 @@ export default function MapView() {
         }}
         expanded={taskPanelExpanded}
         onExpandToggle={() => setTaskPanelExpanded(!taskPanelExpanded)}
-        onCreateTask={() => setCreateTaskModalOpen(true)}
       />
       
       {/* Show appropriate modal based on user role and feature type */}
@@ -413,7 +412,6 @@ export default function MapView() {
             setCreateTaskModalOpen(open);
             if (!open) setSelectionMode(false);
           }}
-          teams={fieldUsers}
           selectedLocation={selectedLocation}
           setSelectionMode={setSelectionMode}
         />
