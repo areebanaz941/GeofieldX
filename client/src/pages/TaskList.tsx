@@ -252,7 +252,7 @@ export default function TaskList() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
+    </div>
 
       {createTaskModalOpen && (
         <CreateTaskModal
