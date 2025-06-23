@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   feaNo: z.string().min(1, "Feature number is required"),
-  feaType: z.enum(["Tower", "Manhole"]),
+  feaType: z.enum(["Tower", "Manhole", "Pole", "Cabinet", "Equipment", "Utility"]),
   specificType: z.string().min(1, "Specific type is required"),
   feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
   feaStatus: z.enum(["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"]),
@@ -62,19 +62,41 @@ export default function PointFeatureModal({
   const feaType = form.watch("feaType");
 
   // Update specific type options when feature type changes
-  const updateSpecificTypeOptions = (type: "Tower" | "Manhole") => {
-    const options = type === "Tower" ? ["Mobillink", "Ptcl"] : ["2-way", "4-way"];
+  const updateSpecificTypeOptions = (type: "Tower" | "Manhole" | "Pole" | "Cabinet" | "Equipment" | "Utility") => {
+    let options: string[];
+    switch (type) {
+      case "Tower":
+        options = ["Mobillink", "Ptcl", "Communication Tower", "Observation Tower"];
+        break;
+      case "Manhole":
+        options = ["2-way", "4-way", "6-way", "8-way"];
+        break;
+      case "Pole":
+        options = ["Utility Pole", "Street Light", "Traffic Light", "Flag Pole"];
+        break;
+      case "Cabinet":
+        options = ["Distribution Box", "Control Cabinet", "Junction Box", "Switch Cabinet"];
+        break;
+      case "Equipment":
+        options = ["Generator", "Transformer", "Antenna", "Repeater"];
+        break;
+      case "Utility":
+        options = ["Water Valve", "Gas Meter", "Electrical Box", "Fire Hydrant"];
+        break;
+      default:
+        options = ["Standard"];
+    }
     setSpecificTypeOptions(options);
     form.setValue("specificType", options[0] || "");
   };
 
   // Initialize options on component mount
   useState(() => {
-    updateSpecificTypeOptions(feaType);
+    updateSpecificTypeOptions(feaType as any);
   });
 
   // Update options when feature type changes
-  const handleFeatureTypeChange = (value: "Tower" | "Manhole") => {
+  const handleFeatureTypeChange = (value: "Tower" | "Manhole" | "Pole" | "Cabinet" | "Equipment" | "Utility") => {
     updateSpecificTypeOptions(value);
   };
 
