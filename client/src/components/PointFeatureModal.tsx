@@ -176,7 +176,7 @@ export default function PointFeatureModal({
                 <FormItem>
                   <FormLabel>Feature Type</FormLabel>
                   <Select
-                    onValueChange={(value: "Tower" | "Manhole") => {
+                    onValueChange={(value: any) => {
                       field.onChange(value);
                       handleFeatureTypeChange(value);
                     }}
@@ -190,6 +190,10 @@ export default function PointFeatureModal({
                     <SelectContent>
                       <SelectItem value="Tower">Tower</SelectItem>
                       <SelectItem value="Manhole">Manhole</SelectItem>
+                      <SelectItem value="Pole">Pole</SelectItem>
+                      <SelectItem value="Cabinet">Cabinet</SelectItem>
+                      <SelectItem value="Equipment">Equipment</SelectItem>
+                      <SelectItem value="Utility">Utility</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
