@@ -310,7 +310,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Field users can only see tasks assigned to them or their team
         const userTasks = await storage.getTasksByAssignee(user._id.toString());
-        const teamTasks = user.teamId ? await storage.getTasksByTeam(user.teamId.toString()) : [];
+        let teamTasks: any[] = [];
+        
+        if (user.teamId) {
+          // Also get tasks assigned to the team directly (using team ID as assignedTo)
+          const allTasks = await storage.getAllTasks();
+          teamTasks = allTasks.filter(task => 
+            task.assignedTo?.toString() === user.teamId.toString()
+          );
+        }
         
         // Combine and deduplicate tasks
         const taskMap = new Map();
@@ -547,12 +555,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can see all features
         features = await storage.getAllFeatures();
       } else {
-        // Field users can only see features in their team's assigned areas
-        if (user.teamId) {
-          features = await storage.getFeaturesByTeam(user.teamId.toString());
-        } else {
-          features = [];
-        }
+        // Field users can see all features for now, or we can implement boundary-based filtering later
+        // For now, let field users see features to test the system
+        features = await storage.getAllFeatures();
       }
       
       res.json(features);
@@ -730,11 +735,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can see all boundaries
         boundaries = await storage.getAllBoundaries();
       } else {
-        // Field users can only see boundaries assigned to their team
-        const allBoundaries = await storage.getAllBoundaries();
-        boundaries = allBoundaries.filter(
-          boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
-        );
+        // Field users can see all boundaries for now, or implement team-specific filtering later
+        // For now, let field users see boundaries to test the system
+        boundaries = await storage.getAllBoundaries();
       }
       
       res.json(boundaries);
