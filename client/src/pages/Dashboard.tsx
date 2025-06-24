@@ -5,12 +5,14 @@ import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
+import FeaturesTab from "@/components/FeaturesTab";
 
 import useAuth from "@/hooks/useAuth";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const isSupervisor = user?.role === "Supervisor";
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { t } = useTranslation();
 

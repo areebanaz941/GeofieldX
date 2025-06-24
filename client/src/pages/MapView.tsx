@@ -73,6 +73,15 @@ export default function MapView() {
     queryFn: getAllBoundaries,
   });
 
+  const { data: teams = [] } = useQuery({
+    queryKey: ["/api/teams"],
+    queryFn: async () => {
+      const response = await fetch("/api/teams");
+      if (!response.ok) throw new Error("Failed to fetch teams");
+      return response.json();
+    },
+  });
+
   // Update user location
   const updateLocationMutation = useMutation({
     mutationFn: ({ lat, lng }: { lat: number; lng: number }) => 

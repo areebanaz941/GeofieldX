@@ -305,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let tasks;
       
       if (user.role === "Supervisor") {
-        // Supervisors can see all tasks
+        // Supervisors can see all tasks - ensure this always returns all data
         tasks = await storage.getAllTasks();
       } else {
         // Field users can only see tasks assigned to them or their team
@@ -565,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let features;
       
       if (user.role === "Supervisor") {
-        // Supervisors can see all features
+        // Supervisors can see all features - ensure this always returns all data
         features = await storage.getAllFeatures();
       } else {
         // Field users can only see features within their assigned boundaries
@@ -764,7 +764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let boundaries;
       
       if (user.role === "Supervisor") {
-        // Supervisors can see all boundaries
+        // Supervisors can see all boundaries - ensure this always returns all data
         boundaries = await storage.getAllBoundaries();
       } else {
         // Field users can only see boundaries assigned to their team
