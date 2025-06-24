@@ -512,9 +512,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Feature routes
   app.post("/api/features", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      
+      // Field users can only create features within their assigned boundaries
+      if (user.role === "Field" && req.body.boundaryId) {
+        const boundary = await storage.getBoundary(req.body.boundaryId);
+        if (!boundary || boundary.assignedTo?.toString() !== user.teamId?.toString()) {
+          return res.status(403).json({ message: "Cannot create features outside assigned area" });
+        }
+      }
+      
       const featureData = insertFeatureSchema.parse({
         ...req.body,
-        createdBy: (req.user as any)._id.toString(),
+        createdBy: user._id.toString(),
       });
 
       const newFeature = await storage.createFeature(featureData);
@@ -713,7 +723,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/boundaries", isAuthenticated, async (req, res) => {
     try {
-      const boundaries = await storage.getAllBoundaries();
+      const user = req.user as any;
+      let boundaries;
+      
+      if (user.role === "Supervisor") {
+        // Supervisors can see all boundaries
+        boundaries = await storage.getAllBoundaries();
+      } else {
+        // Field users can only see boundaries assigned to their team
+        const allBoundaries = await storage.getAllBoundaries();
+        boundaries = allBoundaries.filter(
+          boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
+        );
+      }
+      
       res.json(boundaries);
     } catch (error) {
       console.error("Get boundaries error:", error);

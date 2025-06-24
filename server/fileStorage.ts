@@ -523,6 +523,21 @@ export class FileStorage implements IStorage {
     );
   }
 
+  async getTasksByTeam(teamId: string): Promise<ITask[]> {
+    if (!isValidObjectId(teamId)) return [];
+    
+    // Find all users in the team
+    const teamUsers = Array.from(this.users.values()).filter(
+      user => user.teamId?.toString() === teamId
+    );
+    const userIds = teamUsers.map(user => user._id.toString());
+    
+    // Return tasks assigned to team members
+    return Array.from(this.tasks.values()).filter(
+      task => task.assignedTo && userIds.includes(task.assignedTo.toString())
+    );
+  }
+
   async getAllTasks(): Promise<ITask[]> {
     return Array.from(this.tasks.values()).sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
@@ -601,6 +616,21 @@ export class FileStorage implements IStorage {
   async getFeaturesByStatus(status: string): Promise<IFeature[]> {
     return Array.from(this.features.values()).filter(
       (feature) => feature.feaStatus === status,
+    );
+  }
+
+  async getFeaturesByTeam(teamId: string): Promise<IFeature[]> {
+    if (!isValidObjectId(teamId)) return [];
+    
+    // Find boundaries assigned to the team
+    const teamBoundaries = Array.from(this.boundaries.values()).filter(
+      boundary => boundary.assignedTo?.toString() === teamId
+    );
+    const boundaryIds = teamBoundaries.map(boundary => boundary._id.toString());
+    
+    // Return features within team's assigned boundaries
+    return Array.from(this.features.values()).filter(
+      feature => feature.boundaryId && boundaryIds.includes(feature.boundaryId.toString())
     );
   }
 
