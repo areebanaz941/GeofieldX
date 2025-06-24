@@ -231,6 +231,7 @@ export default function MapView() {
           teams={fieldUsers}
           boundaries={boundaries}
           tasks={tasks}
+          allTeams={teams}
           activeFilters={activeFilters}
           onFeatureClick={handleFeatureClick}
           onBoundaryClick={handleBoundaryClick}

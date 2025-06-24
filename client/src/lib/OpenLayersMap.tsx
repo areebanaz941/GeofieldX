@@ -71,6 +71,7 @@ const OpenLayersMap = ({
   teams = [],
   boundaries = [],
   tasks = [],
+  allTeams = [],
   activeFilters = ['All'],
   onFeatureClick,
   onBoundaryClick,
@@ -256,15 +257,34 @@ const OpenLayersMap = ({
 
     boundariesLayerRef.current = new VectorLayer({
       source: boundariesSource,
-      style: new Style({
-        fill: new Fill({
-          color: 'rgba(0, 150, 136, 0.2)'
-        }),
-        stroke: new Stroke({
-          color: '#009688',
-          width: 2
-        })
-      })
+      style: (feature) => {
+        const featureType = feature.get('type');
+        
+        if (featureType === 'boundary-label') {
+          return new Style({
+            text: new Text({
+              text: feature.get('labelText'),
+              font: 'bold 14px Arial',
+              fill: new Fill({ color: '#000000' }),
+              stroke: new Stroke({ color: '#ffffff', width: 3 }),
+              textAlign: 'center',
+              textBaseline: 'middle',
+              backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
+              padding: [5, 10, 5, 10]
+            })
+          });
+        }
+        
+        return new Style({
+          fill: new Fill({
+            color: 'rgba(0, 150, 136, 0.2)'
+          }),
+          stroke: new Stroke({
+            color: '#009688',
+            width: 2
+          })
+        });
+      }
     });
 
     tasksLayerRef.current = new VectorLayer({
@@ -657,17 +677,34 @@ const OpenLayersMap = ({
           const coords = geometry.coordinates.map((ring: number[][]) =>
             ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
           );
+          const polygon = new Polygon(coords);
           const boundaryFeature = new Feature({
-            geometry: new Polygon(coords),
+            geometry: polygon,
             boundaryData: boundary
           });
           source.addFeature(boundaryFeature);
+
+          // Add label with team assignment for supervisors
+          if (allTeams && allTeams.length > 0) {
+            const center = polygon.getInteriorPoint().getCoordinates();
+            const labelFeature = new Feature({
+              geometry: new Point(center),
+              type: 'boundary-label'
+            });
+            
+            // Find assigned team
+            const assignedTeam = allTeams.find(team => team._id === boundary.assignedTo);
+            const teamName = assignedTeam ? assignedTeam.name : "Unassigned";
+            
+            labelFeature.set('labelText', `${boundary.name}\nAssigned to: ${teamName}`);
+            source.addFeature(labelFeature);
+          }
         }
       } catch (error) {
         console.error('Error rendering boundary:', error);
       }
     });
-  }, [boundaries]);
+  }, [boundaries, allTeams]);
 
   // Update tasks on the map
   useEffect(() => {
