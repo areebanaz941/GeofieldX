@@ -301,7 +301,7 @@ export default function MapView() {
           </div>
         )}
         
-        {/* Field Team Drawing Tools - Only within assigned boundaries */}
+        {/* Field Team Drawing Tools - Only show if team has assigned boundaries */}
         {user?.role === "Field" && boundaries.length > 0 && (
           <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
             <div className="bg-white rounded-lg p-2 shadow-lg mb-2">

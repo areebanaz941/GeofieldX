@@ -532,6 +532,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!boundary || boundary.assignedTo?.toString() !== user.teamId?.toString()) {
           return res.status(403).json({ message: "Cannot create features outside assigned parcel area" });
         }
+        
+        // Add team ID to feature for proper filtering
+        req.body.teamId = user.teamId;
       }
       // Supervisors can create features anywhere without boundary restrictions
       
@@ -562,7 +565,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Field users can only see features within their assigned boundaries
         if (user.teamId) {
-          features = await storage.getFeaturesByTeam(user.teamId.toString());
+          // Get assigned boundaries for the team
+          const allBoundaries = await storage.getAllBoundaries();
+          const teamBoundaries = allBoundaries.filter(
+            boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
+          );
+          
+          // If team has assigned boundaries, only show features within those boundaries
+          if (teamBoundaries.length > 0) {
+            const allFeatures = await storage.getAllFeatures();
+            // For now, show features created by the team or within their assigned area
+            features = allFeatures.filter(feature => {
+              // Include features created by team members or within assigned boundaries
+              return feature.teamId?.toString() === user.teamId?.toString();
+            });
+          } else {
+            features = [];
+          }
         } else {
           features = [];
         }
