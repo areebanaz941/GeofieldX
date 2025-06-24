@@ -67,11 +67,39 @@ export default function Dashboard() {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5);
 
+  if (!isSupervisor) {
+    return (
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
+        <div className="container mx-auto max-w-6xl">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{t('dashboard.title')}</h1>
+          </div>
+          {/* Field user content - simplified dashboard */}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">{t('dashboard.title')}</h1>
+          {/* Supervisor Navigation Tabs */}
+          <div className="flex gap-4">
+            <Button 
+              variant={activeTab === "overview" ? "default" : "outline"}
+              onClick={() => setActiveTab("overview")}
+            >
+              Overview
+            </Button>
+            <Button 
+              variant={activeTab === "features" ? "default" : "outline"}
+              onClick={() => setActiveTab("features")}
+            >
+              Features
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 responsive-grid">
