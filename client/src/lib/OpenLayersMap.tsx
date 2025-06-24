@@ -47,6 +47,7 @@ interface MapProps {
   teams?: IUser[];
   boundaries?: IBoundary[];
   tasks?: ITask[];
+  allTeams?: any[];
   activeFilters?: string[];
   onFeatureClick?: (feature: IFeature) => void;
   onBoundaryClick?: (boundary: IBoundary) => void;
@@ -692,9 +693,18 @@ const OpenLayersMap = ({
               type: 'boundary-label'
             });
             
-            // Find assigned team
-            const assignedTeam = allTeams.find(team => team._id === boundary.assignedTo);
+            // Debug logging
+            console.log('Boundary:', boundary.name, 'assignedTo:', boundary.assignedTo);
+            console.log('Available teams:', allTeams.map(t => ({ id: t._id, name: t.name })));
+            
+            // Find assigned team - check both string and ObjectId comparison
+            const assignedTeam = allTeams.find(team => 
+              team._id === boundary.assignedTo || 
+              team._id.toString() === boundary.assignedTo?.toString()
+            );
             const teamName = assignedTeam ? assignedTeam.name : "Unassigned";
+            
+            console.log('Found team:', assignedTeam, 'Team name:', teamName);
             
             labelFeature.set('labelText', `${boundary.name}\nAssigned to: ${teamName}`);
             source.addFeature(labelFeature);
