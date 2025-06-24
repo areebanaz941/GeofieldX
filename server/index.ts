@@ -529,11 +529,18 @@ async function addInitialData(storage: IStorage) {
         name: "Demo Field User",
         email: "field.demo@geowhats.com",
         role: "Field",
-        teamId: allTeams[0]._id.toString(), // Assign to first team
+        teamId: allTeams.find(t => t.name === "Alpha")?._id.toString(), // Assign to Alpha team
       };
 
       const fieldUser = await storage.createUser(fieldUserData);
       log(`Demo field user created with ID: ${fieldUser._id}`);
+    } else if (existingFieldUser && !existingFieldUser.teamId && allTeams.length > 0) {
+      // Update existing field user to have team assignment
+      const alphaTeam = allTeams.find(t => t.name === "Alpha");
+      if (alphaTeam) {
+        await storage.assignUserToTeam(existingFieldUser._id.toString(), alphaTeam._id.toString());
+        log(`Updated field user ${existingFieldUser.username} to Alpha team`);
+      }
     }
 
     // Create sample boundaries for team assignments

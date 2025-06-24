@@ -313,11 +313,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let teamTasks: any[] = [];
         
         if (user.teamId) {
-          // Also get tasks assigned to the team directly (using team ID as assignedTo)
+          // Get tasks assigned to the team directly (using team ID as assignedTo)
           const allTasks = await storage.getAllTasks();
           teamTasks = allTasks.filter(task => 
             task.assignedTo?.toString() === user.teamId.toString()
           );
+          
+          console.log(`Field user ${user.username} (team: ${user.teamId})`);
+          console.log(`Found ${userTasks.length} user tasks, ${teamTasks.length} team tasks`);
         }
         
         // Combine and deduplicate tasks
@@ -326,6 +329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           taskMap.set(task._id.toString(), task);
         });
         tasks = Array.from(taskMap.values());
+        
+        console.log(`Returning ${tasks.length} tasks for field user ${user.username}`);
       }
       
       res.json(tasks);
