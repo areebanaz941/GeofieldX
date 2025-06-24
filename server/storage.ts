@@ -31,6 +31,7 @@ export interface IStorage {
   deleteTask(id: string): Promise<boolean>;
   getTasksByAssignee(userId: string): Promise<ITask[]>;
   getTasksByCreator(userId: string): Promise<ITask[]>;
+  getTasksByTeam(teamId: string): Promise<ITask[]>;
   getAllTasks(): Promise<ITask[]>;
   
   // Feature operations
@@ -40,6 +41,7 @@ export interface IStorage {
   deleteFeature(id: string): Promise<boolean>;
   getFeaturesByType(type: string): Promise<IFeature[]>;
   getFeaturesByStatus(status: string): Promise<IFeature[]>;
+  getFeaturesByTeam(teamId: string): Promise<IFeature[]>;
   getAllFeatures(): Promise<IFeature[]>;
   
   // Boundary operations

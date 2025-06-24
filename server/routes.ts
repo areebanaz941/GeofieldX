@@ -301,7 +301,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tasks", isAuthenticated, async (req, res) => {
     try {
-      const tasks = await storage.getAllTasks();
+      const user = req.user as any;
+      let tasks;
+      
+      if (user.role === "Supervisor") {
+        // Supervisors can see all tasks
+        tasks = await storage.getAllTasks();
+      } else {
+        // Field users can only see tasks assigned to them or their team
+        const userTasks = await storage.getTasksByAssignee(user._id.toString());
+        const teamTasks = user.teamId ? await storage.getTasksByTeam(user.teamId.toString()) : [];
+        
+        // Combine and deduplicate tasks
+        const taskMap = new Map();
+        [...userTasks, ...teamTasks].forEach(task => {
+          taskMap.set(task._id.toString(), task);
+        });
+        tasks = Array.from(taskMap.values());
+      }
+      
       res.json(tasks);
     } catch (error) {
       console.error("Get all tasks error:", error);
@@ -512,7 +530,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/features", isAuthenticated, async (req, res) => {
     try {
-      const features = await storage.getAllFeatures();
+      const user = req.user as any;
+      let features;
+      
+      if (user.role === "Supervisor") {
+        // Supervisors can see all features
+        features = await storage.getAllFeatures();
+      } else {
+        // Field users can only see features in their team's assigned areas
+        if (user.teamId) {
+          features = await storage.getFeaturesByTeam(user.teamId.toString());
+        } else {
+          features = [];
+        }
+      }
+      
       res.json(features);
     } catch (error) {
       console.error("Get features error:", error);

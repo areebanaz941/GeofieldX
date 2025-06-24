@@ -272,6 +272,18 @@ export class MongoStorage implements IStorage {
     }
   }
 
+  async getTasksByTeam(teamId: string): Promise<ITask[]> {
+    try {
+      // Find tasks assigned to team members
+      const teamUsers = await User.find({ teamId: new Types.ObjectId(teamId) });
+      const userIds = teamUsers.map(user => user._id);
+      return await Task.find({ assignedTo: { $in: userIds } });
+    } catch (error) {
+      console.error("Error getting tasks by team:", error);
+      return [];
+    }
+  }
+
   async getAllTasks(): Promise<ITask[]> {
     try {
       return await Task.find();
@@ -366,6 +378,20 @@ export class MongoStorage implements IStorage {
       return await Feature.find({ feaStatus: status });
     } catch (error) {
       console.error("Error getting features by status:", error);
+      return [];
+    }
+  }
+
+  async getFeaturesByTeam(teamId: string): Promise<IFeature[]> {
+    try {
+      // Find boundaries assigned to the team
+      const teamBoundaries = await Boundary.find({ assignedTo: new Types.ObjectId(teamId) });
+      const boundaryIds = teamBoundaries.map(boundary => boundary._id);
+      
+      // Return features within team's assigned boundaries
+      return await Feature.find({ boundaryId: { $in: boundaryIds } });
+    } catch (error) {
+      console.error("Error getting features by team:", error);
       return [];
     }
   }
