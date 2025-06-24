@@ -536,6 +536,78 @@ async function addInitialData(storage: IStorage) {
       log(`Demo field user created with ID: ${fieldUser._id}`);
     }
 
+    // Create sample boundaries for team assignments
+    const existingBoundaries = await storage.getAllBoundaries();
+    if (existingBoundaries.length === 0 && allTeams.length > 0) {
+      log("Creating sample boundaries for team assignments");
+      
+      const sampleBoundaries = [
+        {
+          name: "Alpha Zone - Industrial Area",
+          description: "Primary industrial development zone assigned to Alpha team",
+          status: "Active",
+          assignedTo: allTeams.find(t => t.name === "Alpha")?._id.toString(),
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [67.0000, 24.8600],
+              [67.0050, 24.8600],
+              [67.0050, 24.8650],
+              [67.0000, 24.8650],
+              [67.0000, 24.8600]
+            ]]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Beta Zone - Commercial District",
+          description: "Commercial development area assigned to Beta team",
+          status: "Active", 
+          assignedTo: allTeams.find(t => t.name === "Beta")?._id.toString(),
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [67.0060, 24.8600],
+              [67.0110, 24.8600],
+              [67.0110, 24.8650],
+              [67.0060, 24.8650],
+              [67.0060, 24.8600]
+            ]]
+          },
+          createdBy: supervisorId,
+        },
+        {
+          name: "Charlie Zone - Maintenance Sector",
+          description: "Infrastructure maintenance zone assigned to Charlie team",
+          status: "Active",
+          assignedTo: allTeams.find(t => t.name === "Charlie")?._id.toString(),
+          geometry: {
+            type: "Polygon", 
+            coordinates: [[
+              [67.0000, 24.8520],
+              [67.0050, 24.8520],
+              [67.0050, 24.8580],
+              [67.0000, 24.8580],
+              [67.0000, 24.8520]
+            ]]
+          },
+          createdBy: supervisorId,
+        }
+      ];
+
+      for (const boundaryData of sampleBoundaries) {
+        if (boundaryData.assignedTo) {
+          const boundary = await storage.createBoundary(boundaryData as any);
+          const assignedTeam = allTeams.find(t => t._id.toString() === boundaryData.assignedTo);
+          log(`Created boundary: ${boundary.name} - Assigned to: ${assignedTeam?.name}`);
+        }
+      }
+
+      log("Sample boundaries with team assignments created successfully");
+    } else {
+      log(`Found ${existingBoundaries.length} existing boundaries`);
+    }
+
     log("Initial data setup completed successfully");
   } catch (error) {
     console.error("Error adding initial data:", error);

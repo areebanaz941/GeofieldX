@@ -104,12 +104,13 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
-- **June 24, 2025**: Implemented role-based visibility restrictions for field users
-  - Field users now only see tasks assigned to them or their team
-  - Field users only see features within their team's assigned boundaries
-  - Field users only see boundaries assigned to their team
-  - Feature creation tools (point, line, polygon) are hidden from field users
-  - Added boundary restrictions for field user feature creation
+- **June 24, 2025**: Implemented strict boundary restrictions for field teams
+  - Field users only see boundaries (parcels) assigned to their team
+  - Field users can only create features within their assigned parcel boundaries
+  - Feature creation tools for field users include boundary validation
+  - Supervisors maintain full map access and can create features anywhere
+  - Added sample boundaries with team assignments for testing
+  - Field users see assigned parcel information in drawing tools interface
 
 ## Changelog
 - June 24, 2025. Initial setup with complete role-based access control

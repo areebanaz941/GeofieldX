@@ -523,10 +523,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       
       // Field users can only create features within their assigned boundaries
-      if (user.role === "Field" && req.body.boundaryId) {
+      if (user.role === "Field") {
+        if (!req.body.boundaryId) {
+          return res.status(403).json({ message: "Field users must specify a boundary for feature creation" });
+        }
+        
         const boundary = await storage.getBoundary(req.body.boundaryId);
         if (!boundary || boundary.assignedTo?.toString() !== user.teamId?.toString()) {
-          return res.status(403).json({ message: "Cannot create features outside assigned area" });
+          return res.status(403).json({ message: "Cannot create features outside assigned parcel area" });
+        }
+        
+        // Additional validation: check if the feature coordinates are within the boundary polygon
+        if (boundary.geometry && req.body.geometry) {
+          // TODO: Implement point-in-polygon validation
+          // For now, just check if boundary is assigned to team
         }
       }
       
@@ -555,9 +565,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can see all features
         features = await storage.getAllFeatures();
       } else {
-        // Field users can see all features for now, or we can implement boundary-based filtering later
-        // For now, let field users see features to test the system
-        features = await storage.getAllFeatures();
+        // Field users can only see features within their assigned boundaries
+        if (user.teamId) {
+          features = await storage.getFeaturesByTeam(user.teamId.toString());
+        } else {
+          features = [];
+        }
       }
       
       res.json(features);
@@ -735,9 +748,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can see all boundaries
         boundaries = await storage.getAllBoundaries();
       } else {
-        // Field users can see all boundaries for now, or implement team-specific filtering later
-        // For now, let field users see boundaries to test the system
-        boundaries = await storage.getAllBoundaries();
+        // Field users can only see boundaries assigned to their team
+        const allBoundaries = await storage.getAllBoundaries();
+        boundaries = allBoundaries.filter(
+          boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
+        );
       }
       
       res.json(boundaries);

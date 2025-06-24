@@ -31,6 +31,7 @@ interface PointFeatureModalProps {
   onOpenChange: (open: boolean) => void;
   selectedLocation: { lat: number; lng: number } | null;
   setSelectionMode: (mode: boolean) => void;
+  assignedBoundaryId?: string;
 }
 
 export default function PointFeatureModal({
