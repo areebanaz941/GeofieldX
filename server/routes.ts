@@ -532,13 +532,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!boundary || boundary.assignedTo?.toString() !== user.teamId?.toString()) {
           return res.status(403).json({ message: "Cannot create features outside assigned parcel area" });
         }
-        
-        // Additional validation: check if the feature coordinates are within the boundary polygon
-        if (boundary.geometry && req.body.geometry) {
-          // TODO: Implement point-in-polygon validation
-          // For now, just check if boundary is assigned to team
-        }
       }
+      // Supervisors can create features anywhere without boundary restrictions
       
       const featureData = insertFeatureSchema.parse({
         ...req.body,
