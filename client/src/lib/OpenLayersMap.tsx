@@ -444,6 +444,7 @@ const OpenLayersMap = ({
         );
 
         if (onPolygonCreated) {
+          console.log('Polygon created with coordinates:', lonLatCoordinates);
           onPolygonCreated({
             name: '',
             coordinates: lonLatCoordinates

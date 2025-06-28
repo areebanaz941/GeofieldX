@@ -344,10 +344,14 @@ export default function MapView() {
   };
 
   const handlePolygonCreated = (polygonData: { name: string; coordinates: number[][][] }) => {
+    console.log('handlePolygonCreated called with:', polygonData);
+    
     // For field users, validate polygon is within assigned boundaries
     if (user?.role === "Field" && boundaries.length > 0) {
       const assignedBoundary = boundaries[0];
       const isWithinBoundary = isPolygonInAssignedBoundary(polygonData.coordinates);
+      
+      console.log('Boundary validation:', { isWithinBoundary, boundaries: boundaries.length });
       
       if (!isWithinBoundary) {
         toast({
@@ -390,12 +394,14 @@ export default function MapView() {
           onBoundaryClick={handleBoundaryClick}
           onTeamClick={handleTeamClick}
           onMapClick={handleMapClick}
-          onMapDoubleClick={handleMapDoubleClick}
           onPolygonCreated={handlePolygonCreated}
           onLineCreated={handleLineCreated}
           selectionMode={selectionMode}
           drawingMode={drawingMode}
           pointSelectionMode={pointSelectionMode}
+          lineDrawingMode={lineDrawingMode}
+          clearDrawnPolygon={clearPolygon}
+          className="w-full h-full"
           lineDrawingMode={lineDrawingMode}
           linePoints={linePoints}
           clearDrawnPolygon={clearPolygon}
