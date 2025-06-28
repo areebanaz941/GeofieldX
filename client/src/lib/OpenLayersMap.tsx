@@ -278,11 +278,12 @@ const OpenLayersMap = ({
         
         return new Style({
           fill: new Fill({
-            color: 'rgba(0, 150, 136, 0.2)'
+            color: 'rgba(0, 0, 0, 0)' // Completely transparent fill (hollow)
           }),
           stroke: new Stroke({
             color: '#009688',
-            width: 2
+            width: 3,
+            lineDash: [5, 5] // Dashed line to make it more visible as boundary
           })
         });
       }
