@@ -14,6 +14,7 @@ export default function Dashboard() {
   const { data: features = [] } = useQuery({ queryKey: ['/api/features'] });
   const { data: teams = [] } = useQuery({ queryKey: ['/api/teams'] });
   const { data: fieldUsers = [] } = useQuery({ queryKey: ['/api/users/field'] });
+  const { data: allUsers = [] } = useQuery({ queryKey: ['/api/users'] });
   const { data: boundaries = [] } = useQuery({ queryKey: ['/api/boundaries'] });
 
   // Task statistics calculation
@@ -47,15 +48,14 @@ export default function Dashboard() {
     // Find user's team
     const userTeam = teams.find((team: any) => team._id?.toString() === user.teamId?.toString());
     
-    // Get team members count - all users with the same team name
-    const teamMembers = fieldUsers.filter((u: any) => {
+    // Get team members count - all users (including inactive) with the same team name
+    const currentUserTeam = teams.find((team: any) => team._id?.toString() === user.teamId?.toString());
+    const teamMembers = allUsers.filter((u: any) => {
       // Find the team for this user
       const userTeamData = teams.find((team: any) => team._id?.toString() === u.teamId?.toString());
-      // Find the current user's team
-      const currentUserTeamData = teams.find((team: any) => team._id?.toString() === user.teamId?.toString());
       
-      // Match by team name, not team ID
-      return userTeamData?.name === currentUserTeamData?.name;
+      // Match by team name, not team ID - includes all registered users with this team name
+      return userTeamData?.name === currentUserTeam?.name;
     });
     const teamMembersCount = teamMembers.length;
     
@@ -92,7 +92,7 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
                   {teamMembersCount}
                 </p>
-                <p className="text-xs text-gray-500">Total active members</p>
+                <p className="text-xs text-gray-500">Total registered members</p>
               </div>
             </CardContent>
           </Card>
