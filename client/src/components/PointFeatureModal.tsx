@@ -21,6 +21,7 @@ const formSchema = z.object({
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
   remarks: z.string().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 type PointFeatureFormValues = z.infer<typeof formSchema>;
@@ -44,6 +45,8 @@ export default function PointFeatureModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [specificTypeOptions, setSpecificTypeOptions] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
 
   const form = useForm<PointFeatureFormValues>({
     resolver: zodResolver(formSchema),
@@ -101,6 +104,60 @@ export default function PointFeatureModal({
     updateSpecificTypeOptions(value);
   };
 
+  // Handle image selection
+  const handleImageSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    
+    if (selectedImages.length + files.length > 10) {
+      toast({
+        title: "Too many images",
+        description: "Maximum 10 images allowed per feature",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedImages(prev => [...prev, ...files]);
+    
+    // Create preview URLs
+    files.forEach(file => {
+      const url = URL.createObjectURL(file);
+      setImagePreviewUrls(prev => [...prev, url]);
+    });
+  };
+
+  // Remove image
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviewUrls(prev => {
+      const newUrls = prev.filter((_, i) => i !== index);
+      URL.revokeObjectURL(prev[index]); // Clean up memory
+      return newUrls;
+    });
+  };
+
+  // Upload images to server
+  const uploadImages = async (): Promise<string[]> => {
+    if (selectedImages.length === 0) return [];
+
+    const formData = new FormData();
+    selectedImages.forEach(image => {
+      formData.append('images', image);
+    });
+
+    const response = await fetch('/api/features/upload-images', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload images');
+    }
+
+    const result = await response.json();
+    return result.images;
+  };
+
   const createFeatureMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await fetch("/api/features", {
@@ -133,7 +190,7 @@ export default function PointFeatureModal({
     },
   });
 
-  const onSubmit = (values: PointFeatureFormValues) => {
+  const onSubmit = async (values: PointFeatureFormValues) => {
     if (!selectedLocation) {
       toast({
         title: "Location required",
@@ -143,23 +200,35 @@ export default function PointFeatureModal({
       return;
     }
 
-    const submitData = {
-      name: values.name.trim(),
-      feaNo: values.feaNo.trim(),
-      feaType: values.feaType,
-      specificType: values.specificType,
-      feaState: values.feaState,
-      feaStatus: values.feaStatus,
-      maintenance: values.maintenance,
-      maintenanceDate: values.maintenanceDate || undefined,
-      remarks: values.remarks || undefined,
-      geometry: {
-        type: "Point" as const,
-        coordinates: [selectedLocation.lng, selectedLocation.lat],
-      },
-    };
+    try {
+      // Upload images first if any are selected
+      const uploadedImagePaths = await uploadImages();
 
-    createFeatureMutation.mutate(submitData);
+      const submitData = {
+        name: values.name.trim(),
+        feaNo: values.feaNo.trim(),
+        feaType: values.feaType,
+        specificType: values.specificType,
+        feaState: values.feaState,
+        feaStatus: values.feaStatus,
+        maintenance: values.maintenance,
+        maintenanceDate: values.maintenanceDate || undefined,
+        remarks: values.remarks || undefined,
+        images: uploadedImagePaths,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [selectedLocation.lng, selectedLocation.lat],
+        },
+      };
+
+      createFeatureMutation.mutate(submitData);
+    } catch (error: any) {
+      toast({
+        title: "Error uploading images",
+        description: error.message || "Failed to upload images",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
