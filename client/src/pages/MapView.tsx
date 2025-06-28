@@ -144,9 +144,43 @@ export default function MapView() {
     }
   }, [user]);
 
+  // Check if a point is within assigned boundaries for field users
+  const isPointInAssignedBoundary = (latlng: { lat: number; lng: number }) => {
+    if (user?.role === "Supervisor") return true; // Supervisors can create anywhere
+    
+    // For field users, check if point is within assigned boundary
+    for (const boundary of boundaries) {
+      if (boundary.geometry?.type === "Polygon") {
+        const coords = boundary.geometry.coordinates[0];
+        // Point-in-polygon check using ray casting algorithm
+        let inside = false;
+        for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+          const xi = coords[i][0], yi = coords[i][1];
+          const xj = coords[j][0], yj = coords[j][1];
+          
+          if (((yi > latlng.lat) !== (yj > latlng.lat)) &&
+              (latlng.lng < (xj - xi) * (latlng.lat - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        if (inside) return true;
+      }
+    }
+    return false;
+  };
+
   const handleMapClick = (latlng: { lat: number; lng: number }) => {
     // Handle point feature selection - called from Draw interaction
     if (pointSelectionMode) {
+      // Check boundary restrictions for field users
+      if (!isPointInAssignedBoundary(latlng)) {
+        toast({
+          title: "Location Restricted",
+          description: "You can only create features within your assigned parcel boundaries.",
+          variant: "destructive",
+        });
+        return;
+      }
       setSelectedLocation(latlng);
       setPointSelectionMode(false);
       setPointFeatureModalOpen(true);
@@ -167,7 +201,24 @@ export default function MapView() {
     }
   };
 
+  // Check if a line is within assigned boundaries for field users
+  const isLineInAssignedBoundary = (coordinates: { lat: number; lng: number }[]) => {
+    if (user?.role === "Supervisor") return true; // Supervisors can create anywhere
+    
+    // For field users, check if all points of the line are within assigned boundary
+    return coordinates.every(point => isPointInAssignedBoundary(point));
+  };
+
   const handleLineCreated = (line: { coordinates: { lat: number; lng: number }[] }) => {
+    // Check boundary restrictions for field users
+    if (!isLineInAssignedBoundary(line.coordinates)) {
+      toast({
+        title: "Location Restricted",
+        description: "You can only create features within your assigned parcel boundaries.",
+        variant: "destructive",
+      });
+      return;
+    }
     // Store the line coordinates and open the modal
     setLinePoints(line.coordinates);
     setLineDrawingMode(false);
@@ -207,6 +258,31 @@ export default function MapView() {
       title: "Team Selected",
       description: `${team.name}`,
     });
+  };
+
+  // Handle feature selection from dialog
+  const handleFeatureSelect = (featureType: string, drawingType: 'point' | 'line' | 'polygon') => {
+    setSelectedFeatureType(featureType);
+    
+    // Reset all drawing modes
+    setPointSelectionMode(false);
+    setLineDrawingMode(false);
+    setDrawingMode(false);
+    setSelectionMode(false);
+    
+    // Set appropriate drawing mode based on feature type
+    switch (drawingType) {
+      case 'point':
+        setPointSelectionMode(true);
+        break;
+      case 'line':
+        setLineDrawingMode(true);
+        setLinePoints([]);
+        break;
+      case 'polygon':
+        setDrawingMode(true);
+        break;
+    }
   };
 
   const handlePolygonCreated = (polygonData: { name: string; coordinates: number[][][] }) => {
@@ -618,6 +694,14 @@ export default function MapView() {
           task={selectedTask}
         />
       )}
+
+      {/* Feature Selection Dialog */}
+      <FeatureSelectionDialog
+        open={featureSelectionOpen}
+        onOpenChange={setFeatureSelectionOpen}
+        onFeatureSelect={handleFeatureSelect}
+        userRole={user?.role || ''}
+      />
       
       {advancedSearchModalOpen && (
         <AdvancedSearchModal
