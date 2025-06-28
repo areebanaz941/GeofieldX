@@ -559,10 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.user as any;
       
-      // Debug logging
-      console.log("Feature creation request body:", JSON.stringify(req.body, null, 2));
-      console.log("User role:", user.role);
-      console.log("BoundaryId in request:", req.body.boundaryId);
+
       
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
@@ -613,16 +610,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
           );
           
-          // If team has assigned boundaries, only show features within those boundaries
+          // If team has assigned boundaries, show features created by the team
           if (teamBoundaries.length > 0) {
             const allFeatures = await storage.getAllFeatures();
-            // For now, show features created by the team or within their assigned area
+            // Show features created by the team (based on teamId)
             features = allFeatures.filter(feature => {
-              // Include features created by team members or within assigned boundaries
               return feature.teamId?.toString() === user.teamId?.toString();
             });
           } else {
-            features = [];
+            // Even without boundaries, show features created by the team
+            const allFeatures = await storage.getAllFeatures();
+            features = allFeatures.filter(feature => {
+              return feature.teamId?.toString() === user.teamId?.toString();
+            });
           }
         } else {
           features = [];
