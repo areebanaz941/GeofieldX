@@ -168,15 +168,15 @@ const OpenLayersMap = ({
           const strokeWidth = Math.max(1, Math.min(3, zoom / 5));
           const isParcel = featureType === 'Parcel';
           
-          // Use blue for assigned parcels, green for unassigned parcels, original color for other polygons
+          // Use blue for assigned boundaries, green for unassigned boundaries, original color for other polygons
           let fillColor, strokeColor;
           if (isParcel) {
             if (featureData?.assignedTo) {
-              // Assigned parcel - blue
+              // Assigned boundary - blue
               fillColor = 'rgba(33, 150, 243, 0.3)';
               strokeColor = '#2196F3';
             } else {
-              // Unassigned parcel - green
+              // Unassigned boundary - green
               fillColor = 'rgba(76, 175, 80, 0.3)';
               strokeColor = '#4CAF50';
             }

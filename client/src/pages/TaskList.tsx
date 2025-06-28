@@ -182,7 +182,7 @@ export default function TaskList() {
             </TabsTrigger>
             <TabsTrigger value="assignments" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Parcel Assignments ({filteredParcels.length})
+              Boundary Assignments ({filteredBoundaries.length})
             </TabsTrigger>
           </TabsList>
 
@@ -285,10 +285,10 @@ export default function TaskList() {
           </TabsContent>
 
           <TabsContent value="assignments" className="space-y-4 mt-6">
-            {filteredParcels.length > 0 ? (
-              filteredParcels.map((parcel: IFeature) => (
+            {filteredBoundaries.length > 0 ? (
+              filteredBoundaries.map((boundary: IFeature) => (
                 <Card
-                  key={parcel._id.toString()}
+                  key={boundary._id.toString()}
                   className="hover:shadow-md transition-shadow"
                 >
                   <CardContent className="p-4">
@@ -296,34 +296,34 @@ export default function TaskList() {
                       <div 
                         className="space-y-1 flex-1 cursor-pointer"
                         onClick={() => {
-                          setSelectedParcel(parcel);
+                          setSelectedParcel(boundary);
                           setParcelDetailsModalOpen(true);
                         }}
                       >
                         <div className="flex items-center gap-2">
                           <Badge className="bg-blue-100 text-blue-800">
-                            {parcel.assignedTo ? 'Assigned' : 'Unassigned'}
+                            {boundary.assignedTo ? 'Assigned' : 'Unassigned'}
                           </Badge>
                           <Badge variant="outline">
-                            {parcel.feaType}
+                            Boundary
                           </Badge>
                         </div>
                         <h3 className="font-medium text-lg flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
-                          {parcel.name}
+                          {boundary.name}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          Area #{parcel.feaNo} • Status: {parcel.feaStatus}
+                          Area #{boundary.feaNo} • Status: {boundary.feaStatus}
                         </p>
                       </div>
                       <div className="text-right flex flex-col justify-between">
                         <div>
                           <div className="text-sm text-gray-500 mb-1">
                             <Users className="h-4 w-4 inline mr-1" />
-                            Team: <span className="font-medium">{getTeamName(parcel.assignedTo?.toString())}</span>
+                            Team: <span className="font-medium">{getTeamName(boundary.assignedTo?.toString())}</span>
                           </div>
                           <div className="text-xs text-gray-400 mt-2">
-                            Created: {new Date(parcel.createdAt).toLocaleDateString()}
+                            Created: {new Date(boundary.createdAt).toLocaleDateString()}
                           </div>
                         </div>
                         {user?.role === "Supervisor" && (
@@ -333,8 +333,8 @@ export default function TaskList() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm("Are you sure you want to delete this parcel? This action cannot be undone.")) {
-                                  deleteFeatureMutation.mutate(parcel._id.toString());
+                                if (confirm("Are you sure you want to delete this boundary? This action cannot be undone.")) {
+                                  deleteFeatureMutation.mutate(boundary._id.toString());
                                 }
                               }}
                               disabled={deleteFeatureMutation.isPending}
@@ -352,8 +352,8 @@ export default function TaskList() {
             ) : (
               <div className="text-center py-8 text-gray-500">
                 {searchTerm
-                  ? "No parcel assignments match your search"
-                  : "No parcel assignments found"}
+                  ? "No boundary assignments match your search"
+                  : "No boundary assignments found"}
               </div>
             )}
           </TabsContent>

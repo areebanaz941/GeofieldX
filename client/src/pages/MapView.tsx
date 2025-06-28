@@ -234,7 +234,7 @@ export default function MapView() {
       if (!isPointInAssignedBoundary(latlng)) {
         toast({
           title: "Location Restricted",
-          description: "You can only create features within your assigned parcel boundaries.",
+          description: "You can only create features within your assigned boundary areas.",
           variant: "destructive",
         });
         return;
@@ -272,7 +272,7 @@ export default function MapView() {
     if (!isLineInAssignedBoundary(line.coordinates)) {
       toast({
         title: "Location Restricted",
-        description: "You can only create features within your assigned parcel boundaries.",
+        description: "You can only create features within your assigned boundary areas.",
         variant: "destructive",
       });
       return;

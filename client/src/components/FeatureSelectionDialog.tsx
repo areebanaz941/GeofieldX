@@ -124,7 +124,7 @@ const FeatureSelectionDialog = ({
         
         <div className="text-xs text-center text-muted-foreground mt-2">
           {userRole === "Field" ? (
-            "⚠️ Features can only be created within your assigned parcel boundaries"
+            "⚠️ Features can only be created within your assigned boundary areas"
           ) : (
             "You can create features anywhere on the map"
           )}
