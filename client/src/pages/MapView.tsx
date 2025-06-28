@@ -188,7 +188,10 @@ export default function MapView() {
     if (user?.role === "Supervisor") return true; // Supervisors can create anywhere
     
     // For field users, check if all polygon points are within assigned boundary
-    if (boundaries.length === 0) return false;
+    if (boundaries.length === 0) {
+      // If no boundaries assigned, allow creation for now (will be handled by backend)
+      return true;
+    }
     
     const boundary = boundaries[0];
     if (!boundary.geometry) return false;
@@ -415,16 +418,21 @@ export default function MapView() {
         </div>
         
         {/* Show boundary info for field users */}
-        {user?.role === "Field" && boundaries.length > 0 && (
+        {user?.role === "Field" && (
           <div className="absolute bottom-20 left-4 z-[1000]">
             <div className="bg-white rounded-lg p-3 shadow-lg border border-orange-200">
               <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
-              <p className="text-sm font-medium text-gray-800">{boundaries[0]?.name || 'No Assignment'}</p>
+              <p className="text-sm font-medium text-gray-800">
+                {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
+              </p>
               <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                 </svg>
-                Features can only be created within this boundary area
+                {boundaries.length > 0 
+                  ? "Features can only be created within this boundary area"
+                  : "No boundary assigned to your team"
+                }
               </p>
             </div>
           </div>
