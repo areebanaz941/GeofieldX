@@ -12,25 +12,84 @@ import { fromLonLat, toLonLat } from 'ol/proj';
 import { Draw, Modify, Select } from 'ol/interaction';
 import { click } from 'ol/events/condition';
 import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
+import { getFeatureIcon } from '../components/FeatureIcons';
 import 'ol/ol.css';
 
-// Import custom icons
+// Import custom icons (keeping as fallback)
 import towerIcon from '@assets/tower-removebg-preview_1750282584510.png';
 import manholeIcon from '@assets/manhole-removebg-preview_1750282584509.png';
 import fibercableIcon from '@assets/fibercable-removebg-preview_1750282584507.png';
 import parcelIcon from '@assets/land-removebg-preview_1750282584509.png';
 
-// Define status colors
+// Define status colors matching our SVG system
 const statusColors = {
-  'Unassigned': '#9E9E9E',
-  'Assigned': '#2196F3',
-  'In Progress': '#9C27B0',
-  'Completed': '#4CAF50',
-  'In-Complete': '#FFC107',
-  'Submit-Review': '#FF9800',
-  'Review_Accepted': '#8BC34A',
-  'Review_Reject': '#F44336',
-  'Review_inprogress': '#03A9F4'
+  'Unassigned': '#000000', // black
+  'Assigned': '#3B82F6',   // blue
+  'In Progress': '#3B82F6', // blue (treated as assigned)
+  'Completed': '#10B981',   // green
+  'Complete': '#10B981',    // green (alternative naming)
+  'In-Complete': '#EF4444', // red (treated as delayed)
+  'Submit-Review': '#3B82F6', // blue (treated as assigned)
+  'Review_Accepted': '#10B981', // green
+  'Review_Reject': '#EF4444',   // red
+  'Review_inprogress': '#3B82F6', // blue
+  'delayed': '#EF4444'      // red
+};
+
+// Helper function to convert SVG to data URI
+const createSVGIcon = (featureType: string, status: string, size: number = 24): string => {
+  const getStatusColor = (status: string): string => {
+    if (status === 'Complete' || status === 'Completed' || status === 'Review_Accepted') {
+      return '#10B981'; // green
+    } else if (status === 'Assigned' || status === 'In Progress' || status === 'Submit-Review' || status === 'Review_inprogress') {
+      return '#3B82F6'; // blue
+    } else if (status === 'In-Complete' || status === 'Review_Reject' || status === 'delayed') {
+      return '#EF4444'; // red
+    } else {
+      return '#000000'; // black (unassigned)
+    }
+  };
+
+  const color = getStatusColor(status);
+  let svgContent = '';
+
+  switch (featureType) {
+    case 'Tower':
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L8 6V10L10 12V22H14V12L16 10V6L12 2Z" fill="${color}" stroke="${color}" stroke-width="1"/>
+        <circle cx="12" cy="4" r="1" fill="${color}"/>
+        <path d="M6 18H18M8 20H16" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>`;
+      break;
+    case 'Manhole':
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="8" fill="${color}" stroke="${color}" stroke-width="2"/>
+        <circle cx="12" cy="12" r="6" fill="none" stroke="white" stroke-width="1"/>
+        <circle cx="12" cy="12" r="3" fill="none" stroke="white" stroke-width="1"/>
+        <path d="M8 8L16 16M16 8L8 16" stroke="white" stroke-width="1" stroke-linecap="round"/>
+      </svg>`;
+      break;
+    case 'FiberCable':
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 12C2 12 6 8 12 8C18 8 22 12 22 12C22 12 18 16 12 16C6 16 2 12 2 12Z" stroke="${color}" stroke-width="2" fill="none"/>
+        <path d="M4 12H8M16 12H20" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="2" fill="${color}"/>
+      </svg>`;
+      break;
+    case 'Parcel':
+    default:
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="${color}" stroke-width="2"/>
+        <path d="M3 9H21M9 3V21" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="6" cy="6" r="1" fill="${color}"/>
+        <circle cx="15" cy="6" r="1" fill="${color}"/>
+        <circle cx="6" cy="15" r="1" fill="${color}"/>
+        <circle cx="15" cy="15" r="1" fill="${color}"/>
+      </svg>`;
+      break;
+  }
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}`;
 };
 
 const featureColors = {
@@ -123,36 +182,26 @@ const OpenLayersMap = ({
         // Calculate zoom-responsive scale (extremely small when zoomed out)
         const zoom = mapRef.current?.getView().getZoom() || 13;
         const baseScale = Math.max(0.05, Math.min(0.4, (zoom - 8) / 20));
+        const iconSize = Math.max(16, Math.min(32, zoom * 2));
         
-        // Select appropriate icon based on feature type
-        let iconSrc = towerIcon;
-        switch (featureType) {
-          case 'Tower':
-            iconSrc = towerIcon;
-            break;
-          case 'Manhole':
-            iconSrc = manholeIcon;
-            break;
-          case 'FiberCable':
-            iconSrc = fibercableIcon;
-            break;
-          case 'Parcel':
-            iconSrc = parcelIcon;
-            break;
-          default:
-            iconSrc = towerIcon;
-        }
+        // Determine feature status for color coding
+        const featureStatus = featureData?.feaState || featureData?.status || 'Unassigned';
+        
+        // Create SVG icon with status-based color
+        const svgIconSrc = createSVGIcon(featureType, featureStatus, iconSize);
         
         // Handle different geometry types
         const geometry = feature.getGeometry();
         const geometryType = geometry?.getType();
         
         if (geometryType === 'LineString' || featureType === 'FiberCable') {
-          // For line features (fiber cables), use stroke styling
+          // For line features (fiber cables), use stroke styling with status-based colors
           const lineWidth = Math.max(2, Math.min(6, zoom / 3));
+          const statusColor = statusColors[featureStatus as keyof typeof statusColors] || '#000000';
+          
           return new Style({
             stroke: new Stroke({
-              color: featureColors[featureType as keyof typeof featureColors] || '#3F51B5',
+              color: statusColor,
               width: lineWidth
             }),
             text: new Text({
@@ -212,21 +261,22 @@ const OpenLayersMap = ({
             })
           });
         } else {
-          // For point features (towers, manholes), use custom icons
+          // For point features (towers, manholes), use SVG icons with status-based colors
           return new Style({
             image: new Icon({
-              src: iconSrc,
-              scale: baseScale,
-              anchor: [0.5, 1],
+              src: svgIconSrc,
+              scale: 1,
+              anchor: [0.5, 0.5],
               anchorXUnits: 'fraction',
               anchorYUnits: 'fraction'
             }),
             text: new Text({
               text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
-              offsetY: -30 * baseScale,
+              offsetY: iconSize + 10,
               fill: new Fill({ color: '#000' }),
               stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: `${Math.max(10, Math.min(14, zoom))}px Arial`
+              font: `${Math.max(10, Math.min(14, zoom))}px Arial`,
+              textAlign: 'center'
             })
           });
         }
