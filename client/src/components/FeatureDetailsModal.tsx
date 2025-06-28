@@ -149,7 +149,7 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
               <CardContent>
                 <div className="text-center py-2">
                   <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                    Team {feature.createdBy}
+                    Team {feature.createdBy.toString()}
                   </Badge>
                   <p className="text-xs text-muted-foreground mt-1">
                     Created by this team
