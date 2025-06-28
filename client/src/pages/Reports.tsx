@@ -341,8 +341,174 @@ export default function Reports() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Submissions</CardTitle>
+                <CardDescription>
+                  Review task submissions from field teams
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a team to view submissions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team: Team) => (
+                        <SelectItem key={team._id} value={team._id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {selectedTeam && (
+                    <div className="space-y-3">
+                      {submissions.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">No submissions found for this team</p>
+                      ) : (
+                        submissions.map((submission: TaskSubmission) => {
+                          const task = tasks.find(t => t._id === submission.taskId);
+                          return (
+                            <div key={submission._id} className="border rounded-lg p-4 space-y-3">
+                              <div className="flex justify-between items-start">
+                                <div className="space-y-1">
+                                  <h4 className="font-medium">{task?.title || 'Unknown Task'}</h4>
+                                  <p className="text-sm text-gray-600">{submission.description}</p>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>Submitted: {new Date(submission.createdAt).toLocaleDateString()}</span>
+                                    <span>•</span>
+                                    <span>{submission.fileName}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={
+                                    submission.submissionStatus === 'Approved' ? 'default' :
+                                    submission.submissionStatus === 'Rejected' ? 'destructive' :
+                                    submission.submissionStatus === 'Reviewed' ? 'secondary' : 'outline'
+                                  }>
+                                    {submission.submissionStatus === 'Pending' && <Clock className="w-3 h-3 mr-1" />}
+                                    {submission.submissionStatus === 'Approved' && <CheckCircle className="w-3 h-3 mr-1" />}
+                                    {submission.submissionStatus === 'Rejected' && <XCircle className="w-3 h-3 mr-1" />}
+                                    {submission.submissionStatus === 'Reviewed' && <AlertCircle className="w-3 h-3 mr-1" />}
+                                    {submission.submissionStatus}
+                                  </Badge>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedSubmission(submission);
+                                      setReviewComments(submission.reviewComments || "");
+                                      setReviewStatus(submission.submissionStatus);
+                                      setReviewModalOpen(true);
+                                    }}
+                                  >
+                                    Review
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Review Modal */}
+        <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Review Submission</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedSubmission && (
+                <>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">File: {selectedSubmission.fileName}</p>
+                    <p className="text-sm text-gray-600">{selectedSubmission.description}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Review Status</label>
+                    <Select value={reviewStatus} onValueChange={setReviewStatus}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Reviewed">Reviewed</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Review Comments</label>
+                    <Textarea
+                      placeholder="Add review comments..."
+                      value={reviewComments}
+                      onChange={(e) => setReviewComments(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => setReviewModalOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/submissions/${selectedSubmission._id}/status`, {
+                            method: 'PATCH',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              status: reviewStatus,
+                              reviewComments: reviewComments
+                            }),
+                          });
+
+                          if (!response.ok) {
+                            throw new Error('Failed to update submission');
+                          }
+
+                          toast({
+                            title: "Success",
+                            description: "Submission reviewed successfully",
+                          });
+
+                          setReviewModalOpen(false);
+                          refetchSubmissions();
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to review submission",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Submit Review
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
