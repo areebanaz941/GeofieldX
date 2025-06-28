@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Download } from "lucide-react";
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Download, Eye } from "lucide-react";
 
 interface TaskSubmission {
   _id: string;
@@ -319,28 +319,7 @@ export default function Reports() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Task Distribution</CardTitle>
-                <CardDescription>
-                  Task assignment and completion by team member
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ChartContainer>
-                    <BarChart
-                      data={teamPerformanceData}
-                      index="name"
-                      categories={["assigned", "completed", "inProgress"]}
-                      colors={["#9E9E9E", "#4CAF50", "#2196F3"]}
-                      valueFormatter={(value) => `${value} tasks`}
-                      stack
-                    />
-                  </ChartContainer>
-                </div>
-              </CardContent>
-            </Card>
+
 
             <Card>
               <CardHeader>
@@ -395,6 +374,33 @@ export default function Reports() {
                                     {submission.submissionStatus === 'Reviewed' && <AlertCircle className="w-3 h-3 mr-1" />}
                                     {submission.submissionStatus}
                                   </Badge>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Open file in new tab for preview
+                                      window.open(submission.fileUrl, '_blank');
+                                    }}
+                                  >
+                                    <Eye className="w-3 h-3 mr-1" />
+                                    Preview
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Download file
+                                      const link = document.createElement('a');
+                                      link.href = submission.fileUrl;
+                                      link.download = submission.fileName;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                    }}
+                                  >
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Download
+                                  </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"
