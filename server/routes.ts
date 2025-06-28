@@ -17,6 +17,7 @@ import {
   insertBoundarySchema,
   insertTaskUpdateSchema,
   insertTaskEvidenceSchema,
+  insertTaskSubmissionSchema,
   insertTeamSchema,
   isValidObjectId,
 } from "@shared/schema";
@@ -44,14 +45,21 @@ const storage_multer = multer.diskStorage({
 const upload = multer({
   storage: storage_multer,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit for submissions
   },
   fileFilter: (req, file, cb) => {
-    // Accept only images
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
+    // Accept images, PDFs, and documents
+    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt/;
+    const allowedMimes = /image\/|application\/pdf|application\/msword|application\/vnd.openxmlformats-officedocument.wordprocessingml.document|text\/plain/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimetype = allowedMimes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
     } else {
-      cb(new Error("Only image files are allowed"));
+      cb(new Error("Only images, PDFs, and documents are allowed"));
     }
   },
 });
@@ -1153,6 +1161,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to search tasks" });
     }
   });
+
+  // Task submission routes
+  app.post(
+    "/api/tasks/:taskId/submissions",
+    isAuthenticated,
+    upload.single("file"),
+    validateObjectId("taskId"),
+    async (req, res) => {
+      try {
+        const taskId = req.params.taskId;
+        const user = req.user as any;
+        const { description } = req.body;
+
+        if (!req.file) {
+          return res.status(400).json({ message: "File is required" });
+        }
+
+        // Verify task exists and user has access
+        const task = await storage.getTask(taskId);
+        if (!task) {
+          return res.status(404).json({ message: "Task not found" });
+        }
+
+        // Check if user is assigned to this task or is on the team
+        if (user.role !== "Supervisor" && task.assignedTo?.toString() !== user.teamId?.toString()) {
+          return res.status(403).json({ message: "Not authorized to submit for this task" });
+        }
+
+        const submissionData = {
+          taskId: taskId,
+          userId: user._id.toString(),
+          teamId: user.teamId?.toString() || "",
+          fileName: req.file.originalname,
+          fileUrl: `/uploads/${req.file.filename}`,
+          fileType: req.file.mimetype,
+          fileSize: req.file.size,
+          description: description || "",
+          submissionStatus: "Pending" as const,
+        };
+
+        const submission = await storage.createTaskSubmission(submissionData);
+        res.status(201).json(submission);
+      } catch (error) {
+        console.error("Create task submission error:", error);
+        res.status(500).json({ message: "Failed to create task submission" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/tasks/:taskId/submissions",
+    isAuthenticated,
+    validateObjectId("taskId"),
+    async (req, res) => {
+      try {
+        const taskId = req.params.taskId;
+        const submissions = await storage.getTaskSubmissions(taskId);
+        res.json(submissions);
+      } catch (error) {
+        console.error("Get task submissions error:", error);
+        res.status(500).json({ message: "Failed to get task submissions" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/teams/:teamId/submissions",
+    isAuthenticated,
+    isSupervisor,
+    validateObjectId("teamId"),
+    async (req, res) => {
+      try {
+        const teamId = req.params.teamId;
+        const submissions = await storage.getTaskSubmissionsByTeam(teamId);
+        res.json(submissions);
+      } catch (error) {
+        console.error("Get team submissions error:", error);
+        res.status(500).json({ message: "Failed to get team submissions" });
+      }
+    }
+  );
+
+  app.patch(
+    "/api/submissions/:submissionId/status",
+    isAuthenticated,
+    isSupervisor,
+    validateObjectId("submissionId"),
+    async (req, res) => {
+      try {
+        const submissionId = req.params.submissionId;
+        const { status, reviewComments } = req.body;
+        const user = req.user as any;
+
+        if (!status) {
+          return res.status(400).json({ message: "Status is required" });
+        }
+
+        const submission = await storage.updateSubmissionStatus(
+          submissionId,
+          status,
+          user._id.toString(),
+          reviewComments
+        );
+        res.json(submission);
+      } catch (error) {
+        console.error("Update submission status error:", error);
+        res.status(500).json({ message: "Failed to update submission status" });
+      }
+    }
+  );
 
   // Bulk operations routes
   app.patch("/api/tasks/bulk-status", isAuthenticated, async (req, res) => {

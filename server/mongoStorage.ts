@@ -513,4 +513,62 @@ export class MongoStorage implements IStorage {
       return [];
     }
   }
+
+  // Task submission operations
+  async createTaskSubmission(submissionData: InsertTaskSubmission): Promise<ITaskSubmission> {
+    try {
+      const submission = new TaskSubmission(submissionData);
+      await submission.save();
+      return submission;
+    } catch (error) {
+      console.error("Error creating task submission:", error);
+      throw error;
+    }
+  }
+
+  async getTaskSubmissions(taskId: string): Promise<ITaskSubmission[]> {
+    try {
+      return await TaskSubmission.find({ 
+        taskId: new Types.ObjectId(taskId) 
+      }).populate('userId', 'name username')
+        .populate('teamId', 'name')
+        .sort({ createdAt: -1 });
+    } catch (error) {
+      console.error("Error getting task submissions:", error);
+      return [];
+    }
+  }
+
+  async getTaskSubmissionsByTeam(teamId: string): Promise<ITaskSubmission[]> {
+    try {
+      return await TaskSubmission.find({ 
+        teamId: new Types.ObjectId(teamId) 
+      }).populate('userId', 'name username')
+        .populate('taskId', 'title description status')
+        .sort({ createdAt: -1 });
+    } catch (error) {
+      console.error("Error getting task submissions by team:", error);
+      return [];
+    }
+  }
+
+  async updateSubmissionStatus(submissionId: string, status: string, reviewedBy: string, reviewComments?: string): Promise<ITaskSubmission> {
+    try {
+      const submission = await TaskSubmission.findById(submissionId);
+      if (!submission) {
+        throw new Error(`Task submission with ID ${submissionId} not found`);
+      }
+
+      submission.submissionStatus = status as any;
+      submission.reviewedBy = new Types.ObjectId(reviewedBy);
+      if (reviewComments) {
+        submission.reviewComments = reviewComments;
+      }
+      await submission.save();
+      return submission;
+    } catch (error) {
+      console.error("Error updating submission status:", error);
+      throw error;
+    }
+  }
 }
