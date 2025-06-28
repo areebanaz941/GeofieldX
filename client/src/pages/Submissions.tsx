@@ -47,22 +47,14 @@ export default function Submissions() {
   const [submissionDescription, setSubmissionDescription] = useState("");
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
 
-  // Fetch in-progress tasks for the user's team
+  // Fetch tasks - the API already filters based on user role and team assignment
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['/api/tasks'],
-    select: (data: Task[]) => {
-      // Filter tasks that are in progress or assigned AND belong to the user's team
-      return data.filter(task => {
-        const isActiveTask = task.status === 'InProgress' || task.status === 'Assigned';
-        
-        // For field users, only show tasks assigned to their team
-        if (user?.role === 'Field') {
-          const isTeamTask = task.assignedTo?.toString() === user.teamId?.toString();
-          return isActiveTask && isTeamTask;
-        }
-        
-        // For supervisors, show all active tasks
-        return isActiveTask;
+    select: (data: any[]) => {
+      // Only filter by task status - let the API handle team assignment filtering
+      return data.filter((task: any) => {
+        // Show tasks that are in progress, assigned, or new status
+        return ['InProgress', 'Assigned', 'New'].includes(task.status);
       });
     },
   });
