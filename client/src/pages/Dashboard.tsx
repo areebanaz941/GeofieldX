@@ -103,6 +103,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {activeTab === "overview" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 responsive-grid">
           <Card className="bg-white border-0 shadow-lg">
             <CardContent className="p-4 sm:p-6">
@@ -352,8 +353,27 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
+          </div>
+        )}
+
+        {activeTab === "features" && (
+          <div className="grid grid-cols-1 gap-6">
+            <Card className="bg-white border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] text-white">
+                <CardTitle className="text-white">Features Overview</CardTitle>
+                <CardDescription className="text-gray-100">
+                  Geographic features in the system
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="text-center py-10 text-gray-500">
+                  <p>Feature details view</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </>
     </div>
   );
 }
