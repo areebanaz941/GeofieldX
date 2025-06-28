@@ -559,10 +559,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.user as any;
       
+      // Debug logging
+      console.log("Feature creation request body:", JSON.stringify(req.body, null, 2));
+      console.log("User role:", user.role);
+      console.log("BoundaryId in request:", req.body.boundaryId);
+      
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
         if (!req.body.boundaryId) {
-          return res.status(403).json({ message: "Field users must specify a boundary for feature creation" });
+          return res.status(403).json({ message: "Field users must specify a boundaryId when creating features outside assigned areas" });
         }
         
         const boundary = await storage.getBoundary(req.body.boundaryId);
