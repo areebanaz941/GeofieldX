@@ -48,6 +48,80 @@ export default function PointFeatureModal({
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
 
+  // Handle image selection
+  const handleImageSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const fileArray = Array.from(files);
+    
+    // Validate file count (max 10)
+    if (selectedImages.length + fileArray.length > 10) {
+      toast({
+        title: "Too many images",
+        description: "Maximum 10 images allowed per feature",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file sizes (max 5MB each)
+    const invalidFiles = fileArray.filter(file => file.size > 5 * 1024 * 1024);
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "File size too large",
+        description: `${invalidFiles.length} file(s) exceed 5MB limit`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add new files to selection
+    const newSelectedImages = [...selectedImages, ...fileArray];
+    setSelectedImages(newSelectedImages);
+
+    // Generate preview URLs
+    const newPreviewUrls = fileArray.map(file => URL.createObjectURL(file));
+    setImagePreviewUrls(prev => [...prev, ...newPreviewUrls]);
+  };
+
+  // Remove image from selection
+  const removeImage = (index: number) => {
+    // Revoke the object URL to free memory
+    URL.revokeObjectURL(imagePreviewUrls[index]);
+    
+    // Remove from arrays
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Upload images to server
+  const uploadImages = async (): Promise<string[]> => {
+    if (selectedImages.length === 0) return [];
+
+    const formData = new FormData();
+    selectedImages.forEach((file, index) => {
+      formData.append('images', file);
+    });
+
+    try {
+      const response = await fetch('/api/features/upload-images', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload images');
+      }
+
+      const result = await response.json();
+      return result.imagePaths || [];
+    } catch (error) {
+      console.error('Image upload error:', error);
+      throw new Error('Failed to upload images');
+    }
+  };
+
   const form = useForm<PointFeatureFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,8 +134,19 @@ export default function PointFeatureModal({
       maintenance: "None",
       maintenanceDate: "",
       remarks: "",
+      images: [],
     },
   });
+
+  // Clean up image preview URLs when modal closes
+  const handleModalClose = () => {
+    // Revoke all object URLs to free memory
+    imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    setSelectedImages([]);
+    setImagePreviewUrls([]);
+    form.reset();
+    onClose();
+  };
 
   const feaType = form.watch("feaType");
 
@@ -94,68 +179,9 @@ export default function PointFeatureModal({
     form.setValue("specificType", options[0] || "");
   };
 
-  // Initialize options on component mount
-  useState(() => {
-    updateSpecificTypeOptions(feaType as any);
-  });
-
   // Update options when feature type changes
   const handleFeatureTypeChange = (value: "Tower" | "Manhole" | "Pole" | "Cabinet" | "Equipment" | "Utility") => {
     updateSpecificTypeOptions(value);
-  };
-
-  // Handle image selection
-  const handleImageSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    
-    if (selectedImages.length + files.length > 10) {
-      toast({
-        title: "Too many images",
-        description: "Maximum 10 images allowed per feature",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedImages(prev => [...prev, ...files]);
-    
-    // Create preview URLs
-    files.forEach(file => {
-      const url = URL.createObjectURL(file);
-      setImagePreviewUrls(prev => [...prev, url]);
-    });
-  };
-
-  // Remove image
-  const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviewUrls(prev => {
-      const newUrls = prev.filter((_, i) => i !== index);
-      URL.revokeObjectURL(prev[index]); // Clean up memory
-      return newUrls;
-    });
-  };
-
-  // Upload images to server
-  const uploadImages = async (): Promise<string[]> => {
-    if (selectedImages.length === 0) return [];
-
-    const formData = new FormData();
-    selectedImages.forEach(image => {
-      formData.append('images', image);
-    });
-
-    const response = await fetch('/api/features/upload-images', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to upload images');
-    }
-
-    const result = await response.json();
-    return result.images;
   };
 
   const createFeatureMutation = useMutation({
@@ -430,6 +456,50 @@ export default function PointFeatureModal({
                 </FormItem>
               )}
             />
+
+            {/* Image Upload Section */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Feature Images (Optional - Max 10)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageSelection}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Supported formats: JPEG, PNG, GIF, WebP, BMP (Max 5MB per image)
+                </p>
+              </div>
+
+              {/* Image Previews */}
+              {imagePreviewUrls.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                  {imagePreviewUrls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-20 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b">
+                        {selectedImages[index]?.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <FormField
               control={form.control}

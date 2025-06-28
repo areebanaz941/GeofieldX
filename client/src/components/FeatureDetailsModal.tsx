@@ -136,6 +136,59 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
               )}
             </CardContent>
           </Card>
+
+          {/* Creator Team Information */}
+          {feature.createdBy && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Creator Team
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                    Team {feature.createdBy}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Created by this team
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Feature Images */}
+          {feature.images && feature.images.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">
+                  Feature Images ({feature.images.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                  {feature.images.map((imagePath, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={`/uploads/${imagePath}`}
+                        alt={`${feature.name} - Image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => {
+                          // Open image in new window for full view
+                          window.open(`/uploads/${imagePath}`, '_blank');
+                        }}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to enlarge
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DialogContent>
     </Dialog>
