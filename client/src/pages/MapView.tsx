@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
 import OpenLayersMap from "@/lib/OpenLayersMap";
-import MapControls from "@/components/MapControls";
 import MapFilterControls from "@/components/MapFilterControls";
 
 import TaskPanel from "@/components/TaskPanel";
@@ -328,8 +327,6 @@ export default function MapView() {
           linePoints={linePoints}
           clearDrawnPolygon={clearPolygon}
         />
-        
-        <MapControls />
         
 
         
