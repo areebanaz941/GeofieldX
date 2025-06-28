@@ -64,6 +64,30 @@ const upload = multer({
   },
 });
 
+// Configure multer for feature images (up to 10 images)
+const featureImageUpload = multer({
+  storage: storage_multer,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per image
+    files: 10, // Maximum 10 files
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only images for features
+    const allowedTypes = /jpeg|jpg|png|gif|webp|bmp/;
+    const allowedMimes = /image\/(jpeg|jpg|png|gif|webp|bmp)/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimetype = allowedMimes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed (JPEG, PNG, GIF, WebP, BMP)"));
+    }
+  },
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
@@ -717,6 +741,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Failed to assign feature to team" });
       }
     },
+  );
+
+  // Feature image upload endpoint
+  app.post(
+    "/api/features/upload-images",
+    isAuthenticated,
+    featureImageUpload.array('images', 10),
+    async (req, res) => {
+      try {
+        if (!req.files || req.files.length === 0) {
+          return res.status(400).json({ message: "No images uploaded" });
+        }
+
+        const files = req.files as Express.Multer.File[];
+        const imagePaths = files.map(file => `/uploads/${file.filename}`);
+
+        res.json({ 
+          message: "Images uploaded successfully",
+          images: imagePaths 
+        });
+      } catch (error) {
+        console.error("Feature image upload error:", error);
+        res.status(500).json({ message: "Failed to upload images" });
+      }
+    }
   );
 
   // Feature status update

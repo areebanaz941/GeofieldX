@@ -296,6 +296,7 @@ export interface IFeature extends Document {
   createdBy?: Types.ObjectId;
   boundaryId?: Types.ObjectId;
   assignedTo?: Types.ObjectId;
+  images?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -374,6 +375,16 @@ const featureSchema = new Schema<IFeature>(
     assignedTo: {
       type: Schema.Types.ObjectId,
       ref: "Team",
+    },
+    images: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function(images: string[]) {
+          return images.length <= 10;
+        },
+        message: 'Maximum 10 images allowed per feature'
+      }
     },
   },
   {
