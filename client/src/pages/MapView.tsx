@@ -16,6 +16,7 @@ import TaskDetailsModal from "@/components/TaskDetailsModal";
 import AdvancedSearchModal from "@/components/AdvancedSearchModal";
 import FeatureAssignmentModal from "@/components/FeatureAssignmentModal";
 import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
+import FeatureSelectionDialog from "@/components/FeatureSelectionDialog";
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -51,6 +52,10 @@ export default function MapView() {
   const [selectedBoundary, setSelectedBoundary] = useState<any | null>(null);
   const [featureDetailsModalOpen, setFeatureDetailsModalOpen] = useState(false);
   const [clickedFeature, setClickedFeature] = useState<IFeature | null>(null);
+  
+  // Feature selection dialog state
+  const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
+  const [selectedFeatureType, setSelectedFeatureType] = useState<string>('');
   
   // Fetch data
   const { data: features = [] } = useQuery({
