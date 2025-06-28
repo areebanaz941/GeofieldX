@@ -450,10 +450,6 @@ const OpenLayersMap = ({
           });
         }
 
-        // Keep the polygon visible on map - don't clear it
-        // Store reference to the draw layer so it can be cleared later if needed
-        drawLayerRef.current = drawLayer;
-        
         // Remove the draw interaction to prevent further drawing
         if (drawInteractionRef.current) {
           mapRef.current?.removeInteraction(drawInteractionRef.current);

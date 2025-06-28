@@ -154,22 +154,73 @@ export default function MapView() {
     
     // For field users, check if point is within assigned boundary
     for (const boundary of boundaries) {
-      if (boundary.geometry?.type === "Polygon") {
-        const coords = boundary.geometry.coordinates[0];
-        // Point-in-polygon check using ray casting algorithm
-        let inside = false;
-        for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-          const xi = coords[i][0], yi = coords[i][1];
-          const xj = coords[j][0], yj = coords[j][1];
-          
-          if (((yi > latlng.lat) !== (yj > latlng.lat)) &&
-              (latlng.lng < (xj - xi) * (latlng.lat - yi) / (yj - yi) + xi)) {
-            inside = !inside;
+      if (boundary.geometry) {
+        try {
+          const geometry = typeof boundary.geometry === 'string' 
+            ? JSON.parse(boundary.geometry) 
+            : boundary.geometry;
+            
+          if (geometry.type === "Polygon") {
+            const coords = geometry.coordinates[0];
+            // Point-in-polygon check using ray casting algorithm
+            let inside = false;
+            for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+              const xi = coords[i][0], yi = coords[i][1];
+              const xj = coords[j][0], yj = coords[j][1];
+              
+              if (((yi > latlng.lat) !== (yj > latlng.lat)) &&
+                  (latlng.lng < (xj - xi) * (latlng.lat - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+              }
+            }
+            if (inside) return true;
           }
+        } catch (error) {
+          console.error('Error parsing boundary geometry:', error);
         }
-        if (inside) return true;
       }
     }
+    return false;
+  };
+
+  // Check if a polygon is within assigned boundaries for field users
+  const isPolygonInAssignedBoundary = (polygonCoords: number[][][]) => {
+    if (user?.role === "Supervisor") return true; // Supervisors can create anywhere
+    
+    // For field users, check if all polygon points are within assigned boundary
+    if (boundaries.length === 0) return false;
+    
+    const boundary = boundaries[0];
+    if (!boundary.geometry) return false;
+    
+    try {
+      const geometry = typeof boundary.geometry === 'string' 
+        ? JSON.parse(boundary.geometry) 
+        : boundary.geometry;
+        
+      if (geometry.type === "Polygon") {
+        const boundaryCoords = geometry.coordinates[0];
+        const drawnCoords = polygonCoords[0]; // First ring of drawn polygon
+        
+        // Check if all points of the drawn polygon are within the boundary
+        return drawnCoords.every(([lng, lat]) => {
+          let inside = false;
+          for (let i = 0, j = boundaryCoords.length - 1; i < boundaryCoords.length; j = i++) {
+            const xi = boundaryCoords[i][0], yi = boundaryCoords[i][1];
+            const xj = boundaryCoords[j][0], yj = boundaryCoords[j][1];
+            
+            if (((yi > lat) !== (yj > lat)) &&
+                (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+              inside = !inside;
+            }
+          }
+          return inside;
+        });
+      }
+    } catch (error) {
+      console.error('Error validating polygon:', error);
+    }
+    
     return false;
   };
 
@@ -250,8 +301,8 @@ export default function MapView() {
       setBoundaryAssignmentModalOpen(true);
     } else {
       toast({
-        title: "Area Selected",
-        description: `Area boundary selected`,
+        title: "Boundary Information",
+        description: `${boundary.name} - You can create features within this area`,
       });
     }
   };
@@ -290,6 +341,25 @@ export default function MapView() {
   };
 
   const handlePolygonCreated = (polygonData: { name: string; coordinates: number[][][] }) => {
+    // For field users, validate polygon is within assigned boundaries
+    if (user?.role === "Field" && boundaries.length > 0) {
+      const assignedBoundary = boundaries[0];
+      const isWithinBoundary = isPolygonInAssignedBoundary(polygonData.coordinates);
+      
+      if (!isWithinBoundary) {
+        toast({
+          title: "Outside Boundary",
+          description: "Parcels can only be created within your assigned boundary area.",
+          variant: "destructive"
+        });
+        // Clear the drawn polygon
+        setClearPolygon(true);
+        setTimeout(() => setClearPolygon(false), 100);
+        setDrawingMode(false);
+        return;
+      }
+    }
+    
     // Store the drawn polygon for feature creation
     setDrawnPolygon({ coordinates: polygonData.coordinates });
     setDrawingMode(false);
