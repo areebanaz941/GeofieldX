@@ -296,6 +296,7 @@ export interface IFeature extends Document {
   createdBy?: Types.ObjectId;
   boundaryId?: Types.ObjectId;
   assignedTo?: Types.ObjectId;
+  teamId?: Types.ObjectId;
   images?: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -373,6 +374,10 @@ const featureSchema = new Schema<IFeature>(
       ref: "Boundary",
     },
     assignedTo: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
+    },
+    teamId: {
       type: Schema.Types.ObjectId,
       ref: "Team",
     },
@@ -689,6 +694,8 @@ export const insertFeatureSchema = z.object({
   createdBy: z.string().optional(),
   boundaryId: z.string().optional(),
   assignedTo: z.string().optional(),
+  teamId: z.string().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 export const insertTaskSchema = z.object({

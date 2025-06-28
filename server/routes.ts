@@ -576,7 +576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Add team ID to feature for proper filtering
-        req.body.teamId = user.teamId;
+        req.body.teamId = user.teamId?.toString();
       }
       // Supervisors can create features anywhere without boundary restrictions
       
