@@ -312,16 +312,19 @@ const OpenLayersMap = ({
         const featureType = feature.get('type');
         
         if (featureType === 'boundary-label') {
+          const labelText = feature.get('labelText');
           return new Style({
             text: new Text({
-              text: feature.get('labelText'),
-              font: 'bold 14px Arial',
+              text: labelText,
+              font: 'bold 16px Arial',
               fill: new Fill({ color: '#000000' }),
-              stroke: new Stroke({ color: '#ffffff', width: 3 }),
+              stroke: new Stroke({ color: '#ffffff', width: 4 }),
               textAlign: 'center',
               textBaseline: 'middle',
-              backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
-              padding: [5, 10, 5, 10]
+              backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.9)' }),
+              backgroundStroke: new Stroke({ color: '#009688', width: 2 }),
+              padding: [8, 12, 8, 12],
+              offsetY: 0
             })
           });
         }
@@ -332,8 +335,8 @@ const OpenLayersMap = ({
           }),
           stroke: new Stroke({
             color: '#009688',
-            width: 3,
-            lineDash: [5, 5] // Dashed line to make it more visible as boundary
+            width: 4,
+            lineDash: [8, 8] // More prominent dashed line for better visibility
           })
         });
       }
