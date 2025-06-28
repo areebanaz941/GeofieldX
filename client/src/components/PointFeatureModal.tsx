@@ -41,6 +41,7 @@ export default function PointFeatureModal({
   onOpenChange,
   selectedLocation,
   setSelectionMode,
+  assignedBoundaryId,
 }: PointFeatureModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -241,6 +242,7 @@ export default function PointFeatureModal({
         maintenanceDate: values.maintenanceDate || undefined,
         remarks: values.remarks || undefined,
         images: uploadedImagePaths,
+        boundaryId: assignedBoundaryId, // Include boundary ID for field users
         geometry: {
           type: "Point" as const,
           coordinates: [selectedLocation.lng, selectedLocation.lat],
