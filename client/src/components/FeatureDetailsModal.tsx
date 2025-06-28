@@ -13,8 +13,14 @@ interface FeatureDetailsModalProps {
 }
 
 export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsModalProps) {
+  // Fetch team details if feature has a teamId
+  const { data: creatorTeam } = useQuery<ITeam>({
+    queryKey: ['/api/teams', feature?.teamId],
+    enabled: !!feature?.teamId && open,
+  });
+
   // Fetch team details if feature is assigned to a team
-  const { data: team } = useQuery<ITeam>({
+  const { data: assignedTeam } = useQuery<ITeam>({
     queryKey: ['/api/teams', feature?.assignedTo],
     enabled: !!feature?.assignedTo && open,
   });
@@ -72,24 +78,24 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {isAssigned && team ? (
+                {isAssigned && assignedTeam ? (
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Assigned to:</span>
                       <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">
-                        {team.name}
+                        {assignedTeam.name}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Team Status:</span>
-                      <Badge variant={team.status === 'Approved' ? 'default' : 'outline'}>
-                        {team.status}
+                      <Badge variant={assignedTeam.status === 'Approved' ? 'default' : 'outline'}>
+                        {assignedTeam.status}
                       </Badge>
                     </div>
-                    {team.description && (
+                    {assignedTeam.description && (
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Description:</span>
-                        <span className="text-sm font-medium">{team.description}</span>
+                        <span className="text-sm font-medium">{assignedTeam.description}</span>
                       </div>
                     )}
                   </div>
@@ -138,7 +144,7 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
           </Card>
 
           {/* Creator Team Information */}
-          {feature.createdBy && (
+          {feature.teamId && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -148,9 +154,15 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
               </CardHeader>
               <CardContent>
                 <div className="text-center py-2">
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                    Team {feature.createdBy.toString()}
-                  </Badge>
+                  {creatorTeam ? (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                      {creatorTeam.name}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-50 text-gray-700">
+                      Loading team...
+                    </Badge>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
                     Created by this team
                   </p>
@@ -172,12 +184,17 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
                   {feature.images.map((imagePath, index) => (
                     <div key={index} className="relative group">
                       <img
-                        src={`/uploads/${imagePath}`}
+                        src={imagePath.startsWith('http') ? imagePath : `/uploads/${imagePath}`}
                         alt={`${feature.name} - Image ${index + 1}`}
                         className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => {
                           // Open image in new window for full view
-                          window.open(`/uploads/${imagePath}`, '_blank');
+                          const imageUrl = imagePath.startsWith('http') ? imagePath : `/uploads/${imagePath}`;
+                          window.open(imageUrl, '_blank');
+                        }}
+                        onError={(e) => {
+                          console.log('Image failed to load:', imagePath);
+                          (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">
