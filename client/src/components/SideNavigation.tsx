@@ -38,9 +38,9 @@ export default function SideNavigation() {
       icon: "ri-team-line",
     },
     {
-      name: t('navigation.reports'),
-      path: "/reports",
-      icon: "ri-file-chart-line",
+      name: user.role === "Field" ? t('navigation.submissions') : t('navigation.reports'),
+      path: user.role === "Field" ? "/submissions" : "/reports",
+      icon: user.role === "Field" ? "ri-upload-line" : "ri-file-chart-line",
     },
   ];
 

@@ -68,7 +68,8 @@
     "tasks": "Tasks",
     "teams": "Field Teams",
     "map": "Map View",
-    "reports": "Reports"
+    "reports": "Reports",
+    "submissions": "Submissions"
   },
   "dashboard": {
     "title": "Dashboard",

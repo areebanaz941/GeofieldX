@@ -11,6 +11,7 @@ import MapView from "./pages/MapView";
 import TaskList from "./pages/TaskList";
 import FieldTeams from "./pages/FieldTeams";
 import Reports from "./pages/Reports";
+import Submissions from "./pages/Submissions";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AuthenticatedRoutes } from "./components/AuthenticatedRoutes";
 
@@ -56,6 +57,11 @@ function App() {
             <Route path="/reports">
               <AuthenticatedRoutes>
                 <Reports />
+              </AuthenticatedRoutes>
+            </Route>
+            <Route path="/submissions">
+              <AuthenticatedRoutes>
+                <Submissions />
               </AuthenticatedRoutes>
             </Route>
             <Route component={NotFound} />

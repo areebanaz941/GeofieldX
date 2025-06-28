@@ -1,19 +1,54 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { ChartContainer, BarChart, LineChart, PieChart } from "@/components/ui/chart";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Download } from "lucide-react";
+
+interface TaskSubmission {
+  _id: string;
+  taskId: string;
+  userId: string;
+  teamId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  description?: string;
+  submissionStatus: 'Pending' | 'Reviewed' | 'Approved' | 'Rejected';
+  reviewComments?: string;
+  createdAt: string;
+}
+
+interface Team {
+  _id: string;
+  name: string;
+  teamLead: string;
+  teamLeadContact: string;
+  status: string;
+}
 
 export default function Reports() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [reportPeriod, setReportPeriod] = useState("week");
   const [selectedTab, setSelectedTab] = useState("project");
+  const [selectedTeam, setSelectedTeam] = useState<string>("");
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<TaskSubmission | null>(null);
+  const [reviewComments, setReviewComments] = useState("");
+  const [reviewStatus, setReviewStatus] = useState<string>("");
   
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
@@ -28,6 +63,24 @@ export default function Reports() {
   const { data: fieldUsers = [] } = useQuery({
     queryKey: ["/api/users/field"],
     queryFn: getFieldUsers,
+  });
+
+  // Fetch all teams for supervisor
+  const { data: teams = [] } = useQuery({
+    queryKey: ['/api/teams'],
+    enabled: user?.role === "Supervisor",
+  });
+
+  // Fetch submissions for selected team
+  const { data: submissions = [], refetch: refetchSubmissions } = useQuery({
+    queryKey: ['/api/teams', selectedTeam, 'submissions'],
+    queryFn: async () => {
+      if (!selectedTeam) return [];
+      const response = await fetch(`/api/teams/${selectedTeam}/submissions`);
+      if (!response.ok) throw new Error('Failed to fetch submissions');
+      return response.json();
+    },
+    enabled: user?.role === "Supervisor" && !!selectedTeam,
   });
 
   // Process data for Project Overview report

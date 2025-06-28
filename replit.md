@@ -104,6 +104,16 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 28, 2025**: Implemented task submission workflow for field teams and supervisor review system
+  - Created complete submission workflow: field teams upload files through "Submission" tab, supervisors review in "Reports" tab
+  - Added TaskSubmission schema with file upload support for PDF, images, and document formats
+  - Implemented submission API routes with multer file upload middleware and proper validation
+  - Field teams see "Submission" navigation tab instead of "Reports" tab for role-based UI
+  - Supervisors can review team submissions with approve/reject functionality and comments
+  - File upload supports 10MB limit with comprehensive file type validation
+  - Submission status tracking: Pending, Reviewed, Approved, Rejected with visual indicators
+  - Added team selection dropdown for supervisors to view submissions by specific teams
+  - Integrated submission history with task details and file download capabilities
 - **June 28, 2025**: Implemented universal single-button feature creation workflow and boundary restrictions
   - Single blue button for feature creation available to both supervisors and field teams
   - Feature selection dialog shows appropriate features based on user role
