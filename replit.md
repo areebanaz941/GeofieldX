@@ -114,6 +114,7 @@ The application uses MongoDB with the following main collections:
   - Added strict validation to prevent field teams from creating features outside assigned boundaries
   - Updated terminology from "assigned parcel" to "assigned boundaries"
   - Restricted "Create Inspection Task" button to supervisors only - field teams can only view and update assigned tasks
+  - Changed "parcel assignments" to "boundary assignments" throughout the interface for consistent terminology
 - **June 24, 2025**: Implemented strict boundary restrictions for field teams
   - Field users only see boundaries (parcels) assigned to their team
   - Field users can only create features within their assigned parcel boundaries

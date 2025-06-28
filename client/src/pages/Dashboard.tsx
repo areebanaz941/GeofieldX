@@ -45,7 +45,7 @@ export default function Dashboard() {
     towers: features.filter(feature => feature.feaType === "Tower").length,
     manholes: features.filter(feature => feature.feaType === "Manhole").length,
     fiberCables: features.filter(feature => feature.feaType === "FiberCable").length,
-    parcels: features.filter(feature => feature.feaType === "Parcel").length,
+    boundaries: features.filter(feature => feature.feaType === "Parcel").length,
   };
 
   // Prepare chart data
@@ -60,7 +60,7 @@ export default function Dashboard() {
     { name: "Towers", value: featureStats.towers, color: "#E91E63" },
     { name: "Manholes", value: featureStats.manholes, color: "#9C27B0" },
     { name: "Fiber Cables", value: featureStats.fiberCables, color: "#3F51B5" },
-    { name: "Parcels", value: featureStats.parcels, color: "#009688" },
+    { name: "Boundaries", value: featureStats.boundaries, color: "#009688" },
   ] : [{ name: "No Data", value: 1, color: "#9E9E9E" }];
 
   const recentTasks = [...tasks]
@@ -278,16 +278,16 @@ export default function Dashboard() {
                   <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="flex items-center">
                       <div className="w-4 h-4 rounded-full bg-teal-500 mr-3"></div>
-                      <span className="font-medium">Parcels</span>
+                      <span className="font-medium">Boundaries</span>
                     </div>
                     <div className="flex items-center">
                       <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden mr-3">
                         <div 
                           className="h-full bg-teal-500" 
-                          style={{width: `${Math.round((featureStats.parcels / featureStats.total) * 100)}%`}}
+                          style={{width: `${Math.round((featureStats.boundaries / featureStats.total) * 100)}%`}}
                         ></div>
                       </div>
-                      <span className="tabular-nums">{featureStats.parcels} ({Math.round((featureStats.parcels / featureStats.total) * 100)}%)</span>
+                      <span className="tabular-nums">{featureStats.boundaries} ({Math.round((featureStats.boundaries / featureStats.total) * 100)}%)</span>
                     </div>
                   </div>
                 </div>

@@ -54,15 +54,15 @@ export default function TaskList() {
     mutationFn: (featureId: string) => deleteFeature(featureId),
     onSuccess: () => {
       toast({
-        title: "Parcel deleted",
-        description: "Parcel has been permanently deleted",
+        title: "Boundary deleted",
+        description: "Boundary has been permanently deleted",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/features"] });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to delete parcel",
+        description: "Failed to delete boundary",
         variant: "destructive",
       });
     },
@@ -88,8 +88,8 @@ export default function TaskList() {
     queryFn: () => fetch('/api/teams').then(res => res.json()),
   });
 
-  // Get assigned parcels (features with assignedTo)
-  const assignedParcels = features.filter((feature: IFeature) => 
+  // Get assigned boundaries (features with assignedTo)
+  const assignedBoundaries = features.filter((feature: IFeature) => 
     feature.feaType === 'Parcel' && feature.assignedTo
   );
 
@@ -110,9 +110,9 @@ export default function TaskList() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-  // Filter parcels based on search
-  const filteredParcels = assignedParcels.filter((parcel: IFeature) => {
-    const matchesSearch = parcel.name.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter boundaries based on search
+  const filteredBoundaries = assignedBoundaries.filter((boundary: IFeature) => {
+    const matchesSearch = boundary.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -123,7 +123,7 @@ export default function TaskList() {
     return assignee ? assignee.name : 'Unknown User';
   };
 
-  // Get team name for parcels
+  // Get team name for boundaries
   const getTeamName = (teamId?: string) => {
     if (!teamId) return 'Unassigned';
     const team = (teams as ITeam[]).find((team: ITeam) => team._id && team._id.toString() === teamId);
@@ -189,16 +189,18 @@ export default function TaskList() {
           <TabsContent value="tasks" className="space-y-4 mt-6">
             <div className="flex justify-between items-center mb-4">
               <p className="text-sm text-gray-600">Manage inspection tasks and reviews</p>
-              <Button 
-                onClick={() => setCreateTaskModalOpen(true)} 
-                className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 font-medium shadow-md"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <path d="M5 12h14"></path>
-                  <path d="M12 5v14"></path>
-                </svg>
-                Create Inspection Task
-              </Button>
+              {user?.role === "Supervisor" && (
+                <Button 
+                  onClick={() => setCreateTaskModalOpen(true)} 
+                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 font-medium shadow-md"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                  </svg>
+                  Create Inspection Task
+                </Button>
+              )}
             </div>
             {filteredTasks.length > 0 ? (
               filteredTasks.map((task: ITask) => (
