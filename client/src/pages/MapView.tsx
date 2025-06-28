@@ -348,13 +348,13 @@ export default function MapView() {
         {user?.role === "Field" && boundaries.length > 0 && (
           <div className="absolute bottom-20 left-4 z-[1000]">
             <div className="bg-white rounded-lg p-3 shadow-lg border border-orange-200">
-              <p className="text-xs text-gray-600 mb-1">Assigned Parcel:</p>
+              <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
               <p className="text-sm font-medium text-gray-800">{boundaries[0]?.name || 'No Assignment'}</p>
               <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                 </svg>
-                Features restricted to this boundary
+                Features can only be created within this boundary area
               </p>
             </div>
           </div>
