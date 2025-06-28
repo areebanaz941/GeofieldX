@@ -20,7 +20,7 @@ interface FeatureSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onFeatureSelect: (featureType: string, drawingType: 'point' | 'line' | 'polygon') => void;
-  userRole: string;
+  userRole?: string;
 }
 
 const FeatureSelectionDialog = ({

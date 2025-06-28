@@ -104,6 +104,13 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 28, 2025**: Implemented universal single-button feature creation workflow
+  - Single blue button for feature creation available to both supervisors and field teams
+  - Feature selection dialog shows appropriate features based on user role
+  - Field teams can create Towers, Manholes, and Fiber Cables within assigned boundaries
+  - Supervisors can create all feature types including Land Parcels anywhere on map
+  - Removed multiple drawing tool buttons for simplified interface
+  - Maintained boundary restrictions for field teams with visual indicators
 - **June 24, 2025**: Implemented strict boundary restrictions for field teams
   - Field users only see boundaries (parcels) assigned to their team
   - Field users can only create features within their assigned parcel boundaries
