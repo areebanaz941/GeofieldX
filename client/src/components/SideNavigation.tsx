@@ -12,10 +12,6 @@ export default function SideNavigation() {
 
   if (!user) return null;
 
-  // Debug logging
-  console.log("Navigation - User role:", user.role);
-  console.log("Navigation - User object:", user);
-
   const isActive = (path: string) => {
     return location === path;
   };

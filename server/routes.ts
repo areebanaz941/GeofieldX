@@ -1192,7 +1192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const submissionData = {
           taskId: taskId,
           userId: user._id.toString(),
-          teamId: user.teamId?.toString() || "",
+          teamId: user.teamId?.toString() || undefined,
           fileName: req.file.originalname,
           fileUrl: `/uploads/${req.file.filename}`,
           fileType: req.file.mimetype,

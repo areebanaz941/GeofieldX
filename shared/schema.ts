@@ -517,7 +517,7 @@ export interface ITaskSubmission extends Document {
   _id: Types.ObjectId;
   taskId: Types.ObjectId;
   userId: Types.ObjectId;
-  teamId: Types.ObjectId;
+  teamId?: Types.ObjectId;
   fileName: string;
   fileUrl: string;
   fileType: string;
@@ -572,7 +572,7 @@ const taskSubmissionSchema = new Schema<ITaskSubmission>(
     teamId: {
       type: Schema.Types.ObjectId,
       ref: "Team",
-      required: true,
+      required: false,
     },
     fileName: {
       type: String,
@@ -716,7 +716,7 @@ export const insertTaskEvidenceSchema = z.object({
 export const insertTaskSubmissionSchema = z.object({
   taskId: z.string(),
   userId: z.string(),
-  teamId: z.string(),
+  teamId: z.string().optional(),
   fileName: z.string().min(1),
   fileUrl: z.string().min(1),
   fileType: z.string().min(1),
