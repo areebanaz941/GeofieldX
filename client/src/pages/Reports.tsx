@@ -352,67 +352,72 @@ export default function Reports() {
                           const task = tasks.find(t => t._id === submission.taskId);
                           return (
                             <div key={submission._id} className="border rounded-lg p-4 space-y-3">
-                              <div className="flex justify-between items-start">
-                                <div className="space-y-1">
+                              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+                                <div className="flex-1 space-y-1">
                                   <h4 className="font-medium">{task?.title || 'Unknown Task'}</h4>
                                   <p className="text-sm text-gray-600">{submission.description}</p>
-                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                                     <span>Submitted: {new Date(submission.createdAt).toLocaleDateString()}</span>
                                     <span>•</span>
-                                    <span>{submission.fileName}</span>
+                                    <span className="break-all">{submission.fileName}</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                   <Badge variant={
                                     submission.submissionStatus === 'Approved' ? 'default' :
                                     submission.submissionStatus === 'Rejected' ? 'destructive' :
                                     submission.submissionStatus === 'Reviewed' ? 'secondary' : 'outline'
-                                  }>
+                                  } className="w-fit">
                                     {submission.submissionStatus === 'Pending' && <Clock className="w-3 h-3 mr-1" />}
                                     {submission.submissionStatus === 'Approved' && <CheckCircle className="w-3 h-3 mr-1" />}
                                     {submission.submissionStatus === 'Rejected' && <XCircle className="w-3 h-3 mr-1" />}
                                     {submission.submissionStatus === 'Reviewed' && <AlertCircle className="w-3 h-3 mr-1" />}
                                     {submission.submissionStatus}
                                   </Badge>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      // Open file in new tab for preview
-                                      window.open(submission.fileUrl, '_blank');
-                                    }}
-                                  >
-                                    <Eye className="w-3 h-3 mr-1" />
-                                    Preview
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      // Download file
-                                      const link = document.createElement('a');
-                                      link.href = submission.fileUrl;
-                                      link.download = submission.fileName;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                    }}
-                                  >
-                                    <Download className="w-3 h-3 mr-1" />
-                                    Download
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedSubmission(submission);
-                                      setReviewComments(submission.reviewComments || "");
-                                      setReviewStatus(submission.submissionStatus);
-                                      setReviewModalOpen(true);
-                                    }}
-                                  >
-                                    Review
-                                  </Button>
+                                  <div className="flex flex-wrap gap-1 sm:gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        // Open file in new tab for preview
+                                        window.open(submission.fileUrl, '_blank');
+                                      }}
+                                      className="text-xs px-2 py-1"
+                                    >
+                                      <Eye className="w-3 h-3 mr-1" />
+                                      Preview
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        // Download file
+                                        const link = document.createElement('a');
+                                        link.href = submission.fileUrl;
+                                        link.download = submission.fileName;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                      }}
+                                      className="text-xs px-2 py-1"
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Download
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedSubmission(submission);
+                                        setReviewComments(submission.reviewComments || "");
+                                        setReviewStatus(submission.submissionStatus);
+                                        setReviewModalOpen(true);
+                                      }}
+                                      className="text-xs px-2 py-1"
+                                    >
+                                      Review
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             </div>

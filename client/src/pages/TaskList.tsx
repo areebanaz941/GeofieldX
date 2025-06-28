@@ -209,15 +209,15 @@ export default function TaskList() {
                   className="hover:shadow-md transition-shadow"
                 >
                 <CardContent className="p-4">
-                  <div className="flex flex-wrap justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:justify-between gap-4">
                     <div 
-                      className="space-y-1 flex-1 cursor-pointer"
+                      className="flex-1 space-y-1 cursor-pointer"
                       onClick={() => {
                         setSelectedTask(task);
                         setTaskDetailsModalOpen(true);
                       }}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={task.status} />
                         {task.priority && (
                           <span className={`text-xs px-2 py-0.5 rounded-full 
@@ -238,9 +238,9 @@ export default function TaskList() {
                         </p>
                       )}
                     </div>
-                    <div className="text-right flex flex-col justify-between">
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">
+                    <div className="flex flex-col lg:text-right lg:items-end gap-3">
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-500">
                           Assigned to: <span className="font-medium">{getAssigneeName(task.assignedTo?.toString())}</span>
                         </div>
                         {task.dueDate && (
@@ -248,12 +248,12 @@ export default function TaskList() {
                             Due: <span className="font-medium">{new Date(task.dueDate).toLocaleDateString()}</span>
                           </div>
                         )}
-                        <div className="text-xs text-gray-400 mt-2">
+                        <div className="text-xs text-gray-400">
                           Updated: {new Date(task.updatedAt).toLocaleString()}
                         </div>
                       </div>
                       {user?.role === "Supervisor" && (
-                        <div className="mt-3 flex justify-end">
+                        <div className="flex justify-start lg:justify-end">
                           <Button
                             variant="destructive"
                             size="sm"

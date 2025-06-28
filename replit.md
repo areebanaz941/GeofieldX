@@ -104,6 +104,15 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 28, 2025**: Enhanced submission workflow with preview/download capabilities and improved UI responsiveness
+  - Added file preview functionality: supervisors can view submitted files directly in browser
+  - Implemented file download feature: supervisors can save submission files with original filenames
+  - Removed task distribution chart from team performance tab for cleaner supervisor interface
+  - Enhanced UI responsiveness across all screen sizes with proper button visibility
+  - Updated main app layout with consistent padding and overflow handling
+  - Improved submission card layout with responsive flex design for mobile and desktop
+  - Fixed task filtering in Submissions page to properly show assigned tasks for field teams
+  - Added proper spacing and background colors for better visual hierarchy
 - **June 28, 2025**: Implemented task submission workflow for field teams and supervisor review system
   - Created complete submission workflow: field teams upload files through "Submission" tab, supervisors review in "Reports" tab
   - Added TaskSubmission schema with file upload support for PDF, images, and document formats
