@@ -744,43 +744,18 @@ const OpenLayersMap = ({
               type: 'boundary-label'
             });
             
-            // Debug log the actual data structure
-            console.log('Boundary data:', {
-              name: boundary.name,
-              assignedTo: boundary.assignedTo,
-              assignedToType: typeof boundary.assignedTo
+            // Find assigned team with robust ObjectId comparison
+            const assignedTeam = allTeams.find(team => {
+              if (!boundary.assignedTo || !team._id) return false;
+              
+              // Convert both IDs to strings for reliable comparison
+              const teamIdStr = String(team._id);
+              const assignedIdStr = String(boundary.assignedTo);
+              
+              return teamIdStr === assignedIdStr;
             });
-            console.log('Teams data sample:', allTeams.slice(0, 2).map(t => ({
-              id: t._id,
-              idType: typeof t._id,
-              name: t.name
-            })));
-            
-            // Find assigned team with comprehensive ObjectId comparison
-            let assignedTeam = null;
-            
-            if (boundary.assignedTo) {
-              // Try multiple comparison methods to handle different ObjectId formats
-              assignedTeam = allTeams.find(team => {
-                const teamId = team._id;
-                const assignedId = boundary.assignedTo;
-                
-                // Direct comparison
-                if (teamId === assignedId) return true;
-                
-                // String comparison
-                if (teamId?.toString() === assignedId?.toString()) return true;
-                
-                // Handle potential nested ObjectId structure
-                if (teamId?._id && teamId._id === assignedId) return true;
-                if (assignedId?._id && teamId === assignedId._id) return true;
-                
-                return false;
-              });
-            }
             
             const teamName = assignedTeam ? assignedTeam.name : "Unassigned";
-            console.log('Final team match:', { assignedTeam: assignedTeam?.name, teamName });
             
             labelFeature.set('labelText', `${boundary.name}\nAssigned to: ${teamName}`);
             source.addFeature(labelFeature);

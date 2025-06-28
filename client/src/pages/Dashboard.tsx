@@ -14,6 +14,7 @@ export default function Dashboard() {
   const { data: features = [] } = useQuery({ queryKey: ['/api/features'] });
   const { data: teams = [] } = useQuery({ queryKey: ['/api/teams'] });
   const { data: fieldUsers = [] } = useQuery({ queryKey: ['/api/users/field'] });
+  const { data: boundaries = [] } = useQuery({ queryKey: ['/api/boundaries'] });
 
   // Task statistics calculation
   const taskStats = {
@@ -41,18 +42,67 @@ export default function Dashboard() {
     );
   }
 
-  // Field user dashboard - simplified view
+  // Field user dashboard - comprehensive team view
   if (user.role === 'Field') {
+    // Find user's team
+    const userTeam = teams.find((team: any) => team._id?.toString() === user.teamId?.toString());
+    
+    // Get team members count
+    const teamMembers = fieldUsers.filter((u: any) => u.teamId?.toString() === user.teamId?.toString());
+    const teamMembersCount = teamMembers.length;
+    
+    // Get tasks assigned to the team
+    const teamTasks = tasks.filter((task: any) => task.assignedTo?.toString() === user.teamId?.toString());
+    const totalTeamTasks = teamTasks.length;
+    
+    // Get boundaries assigned to this team
+    const assignedBoundaries = boundaries.filter((boundary: any) => 
+      boundary.assignedTo?.toString() === user.teamId?.toString()
+    );
+    
     return (
       <div className="space-y-6 p-4 sm:p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent mb-4">
-            Field Dashboard
+            Field Team Dashboard
           </h1>
           <p className="text-gray-600">Welcome back, {user.username}</p>
+          <div className="mt-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#1E5CB3] text-white">
+              Team: {userTeam?.name || 'Unassigned'}
+            </span>
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Team Statistics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Team Members */}
+          <Card className="bg-white border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-[#1E5CB3] font-medium">Team Members</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
+                  {teamMembersCount}
+                </p>
+                <p className="text-xs text-gray-500">Total active members</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Total Tasks */}
+          <Card className="bg-white border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-[#1E5CB3] font-medium">Assigned Tasks</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
+                  {totalTeamTasks}
+                </p>
+                <p className="text-xs text-gray-500">Team tasks total</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* My Personal Tasks */}
           <Card className="bg-white border-0 shadow-lg">
             <CardContent className="p-6">
               <div className="space-y-2">
@@ -60,19 +110,68 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
                   {tasks.filter((task: any) => task.assignedTo === user._id).length}
                 </p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm text-[#1E5CB3] font-medium">Team</p>
-                <p className="text-lg font-semibold text-gray-700">{user.teamId || 'Not Assigned'}</p>
+                <p className="text-xs text-gray-500">Personal assignments</p>
               </div>
             </CardContent>
           </Card>
         </div>
+        
+        {/* Assigned Boundaries Section */}
+        {assignedBoundaries.length > 0 && (
+          <Card className="bg-white border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
+                Assigned Boundary Areas
+              </CardTitle>
+              <CardDescription>
+                Areas assigned to your team for field operations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {assignedBoundaries.map((boundary: any, index: number) => (
+                  <div key={boundary._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">
+                        {boundary.name || `Boundary Area ${index + 1}`}
+                      </h4>
+                      <div className="mt-1 space-y-1">
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Category:</span> {boundary.category || 'General Area'}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Status:</span> 
+                          <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
+                            boundary.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {boundary.status}
+                          </span>
+                        </p>
+                        {boundary.description && (
+                          <p className="text-sm text-gray-500 mt-2">{boundary.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* No Boundaries Message */}
+        {assignedBoundaries.length === 0 && (
+          <Card className="bg-white border-0 shadow-lg">
+            <CardContent className="p-6 text-center">
+              <div className="space-y-2">
+                <p className="text-gray-500">No boundary areas assigned to your team yet.</p>
+                <p className="text-sm text-gray-400">Contact your supervisor for area assignments.</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
