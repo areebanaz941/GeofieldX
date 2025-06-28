@@ -104,6 +104,13 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 28, 2025**: Enhanced field team dashboard with comprehensive team information display
+  - Added team name prominently displayed at the top of field user dashboard
+  - Implemented team member count showing all users registered with same team name
+  - Added total assigned tasks count for the entire team
+  - Created assigned boundary areas section showing category and status information
+  - Updated dashboard layout with clean card-based responsive design
+  - Team member calculation now matches users by team name rather than team ID for accurate counting
 - **June 28, 2025**: Implemented SVG feature icons with color-coded status system and map legend
   - Created comprehensive SVG icon system for all feature types (Tower, Manhole, FiberCable, Parcel)
   - Implemented dynamic status-based color coding: assigned (blue), unassigned (black), complete (green), delayed (red)

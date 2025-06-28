@@ -47,8 +47,16 @@ export default function Dashboard() {
     // Find user's team
     const userTeam = teams.find((team: any) => team._id?.toString() === user.teamId?.toString());
     
-    // Get team members count
-    const teamMembers = fieldUsers.filter((u: any) => u.teamId?.toString() === user.teamId?.toString());
+    // Get team members count - all users with the same team name
+    const teamMembers = fieldUsers.filter((u: any) => {
+      // Find the team for this user
+      const userTeamData = teams.find((team: any) => team._id?.toString() === u.teamId?.toString());
+      // Find the current user's team
+      const currentUserTeamData = teams.find((team: any) => team._id?.toString() === user.teamId?.toString());
+      
+      // Match by team name, not team ID
+      return userTeamData?.name === currentUserTeamData?.name;
+    });
     const teamMembersCount = teamMembers.length;
     
     // Get tasks assigned to the team
