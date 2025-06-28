@@ -512,6 +512,24 @@ export interface ITaskEvidence extends Document {
   createdAt: Date;
 }
 
+// Task Submission Schema
+export interface ITaskSubmission extends Document {
+  _id: Types.ObjectId;
+  taskId: Types.ObjectId;
+  userId: Types.ObjectId;
+  teamId: Types.ObjectId;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  description?: string;
+  submissionStatus: 'Pending' | 'Reviewed' | 'Approved' | 'Rejected';
+  reviewedBy?: Types.ObjectId;
+  reviewComments?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const taskEvidenceSchema = new Schema<ITaskEvidence>(
   {
     taskId: {
@@ -539,6 +557,66 @@ const taskEvidenceSchema = new Schema<ITaskEvidence>(
   },
 );
 
+const taskSubmissionSchema = new Schema<ITaskSubmission>(
+  {
+    taskId: {
+      type: Schema.Types.ObjectId,
+      ref: "Task",
+      required: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    teamId: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
+      required: true,
+    },
+    fileName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    fileUrl: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    fileType: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    fileSize: {
+      type: Number,
+      required: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    submissionStatus: {
+      type: String,
+      enum: ['Pending', 'Reviewed', 'Approved', 'Rejected'],
+      default: 'Pending',
+      required: true,
+    },
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    reviewComments: {
+      type: String,
+      trim: true,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
 // Create Models
 export const User = mongoose.model<IUser>("User", userSchema);
 export const Team = mongoose.model<ITeam>("Team", teamSchema);
@@ -552,6 +630,10 @@ export const TaskUpdate = mongoose.model<ITaskUpdate>(
 export const TaskEvidence = mongoose.model<ITaskEvidence>(
   "TaskEvidence",
   taskEvidenceSchema,
+);
+export const TaskSubmission = mongoose.model<ITaskSubmission>(
+  "TaskSubmission",
+  taskSubmissionSchema,
 );
 
 // Zod validation schemas for input validation
@@ -631,6 +713,18 @@ export const insertTaskEvidenceSchema = z.object({
   description: z.string().optional(),
 });
 
+export const insertTaskSubmissionSchema = z.object({
+  taskId: z.string(),
+  userId: z.string(),
+  teamId: z.string(),
+  fileName: z.string().min(1),
+  fileUrl: z.string().min(1),
+  fileType: z.string().min(1),
+  fileSize: z.number().positive(),
+  description: z.string().optional(),
+  submissionStatus: z.enum(['Pending', 'Reviewed', 'Approved', 'Rejected']).default('Pending'),
+});
+
 export const insertTeamSchema = z.object({
   name: z.string().min(1).trim(),
   description: z.string().optional(),
@@ -645,6 +739,7 @@ export type InsertFeature = z.infer<typeof insertFeatureSchema>;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type InsertTaskUpdate = z.infer<typeof insertTaskUpdateSchema>;
 export type InsertTaskEvidence = z.infer<typeof insertTaskEvidenceSchema>;
+export type InsertTaskSubmission = z.infer<typeof insertTaskSubmissionSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 
 // Extended types for frontend use

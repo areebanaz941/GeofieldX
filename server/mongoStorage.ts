@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
 import { IStorage } from "./storage";
 import {
-  User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence,
-  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence,
-  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence
+  User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence, TaskSubmission,
+  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, ITaskSubmission,
+  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence, InsertTaskSubmission
 } from "@shared/schema";
 
 /**

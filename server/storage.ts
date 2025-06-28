@@ -1,6 +1,6 @@
 import {
-  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, 
-  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence
+  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, ITaskSubmission,
+  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence, InsertTaskSubmission
 } from "@shared/schema";
 import { Types } from "mongoose";
 
@@ -58,6 +58,12 @@ export interface IStorage {
   // Task evidence operations
   addTaskEvidence(evidenceData: InsertTaskEvidence): Promise<ITaskEvidence>;
   getTaskEvidence(taskId: string): Promise<ITaskEvidence[]>;
+  
+  // Task submission operations
+  createTaskSubmission(submissionData: InsertTaskSubmission): Promise<ITaskSubmission>;
+  getTaskSubmissions(taskId: string): Promise<ITaskSubmission[]>;
+  getTaskSubmissionsByTeam(teamId: string): Promise<ITaskSubmission[]>;
+  updateSubmissionStatus(submissionId: string, status: string, reviewedBy: string, reviewComments?: string): Promise<ITaskSubmission>;
 }
 
 // In-memory storage implementation as a fallback
