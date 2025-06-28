@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
 import OpenLayersMap from "@/lib/OpenLayersMap";
 import MapFilterControls from "@/components/MapFilterControls";
+import MapLegend from "@/components/MapLegend";
 
 import TaskPanel from "@/components/TaskPanel";
 import CreateFeatureModal from "@/components/CreateFeatureModal";
@@ -382,8 +383,10 @@ export default function MapView() {
 
   return (
     <>
-      <div className="relative flex-1 z-0">
-        <OpenLayersMap
+      <div className="flex h-full">
+        {/* Map Container */}
+        <div className="relative flex-1 z-0">
+          <OpenLayersMap
           features={features}
           teams={fieldUsers}
           boundaries={boundaries}
@@ -400,11 +403,9 @@ export default function MapView() {
           drawingMode={drawingMode}
           pointSelectionMode={pointSelectionMode}
           lineDrawingMode={lineDrawingMode}
-          clearDrawnPolygon={clearPolygon}
-          className="w-full h-full"
-          lineDrawingMode={lineDrawingMode}
           linePoints={linePoints}
           clearDrawnPolygon={clearPolygon}
+          className="w-full h-full"
         />
         
 
@@ -444,7 +445,12 @@ export default function MapView() {
           </div>
         )}
         
-
+        </div>
+        
+        {/* Legend Panel */}
+        <div className="w-80 p-4 bg-gray-50">
+          <MapLegend />
+        </div>
       </div>
       
       <TaskPanel
