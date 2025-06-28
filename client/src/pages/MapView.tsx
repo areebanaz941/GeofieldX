@@ -317,7 +317,78 @@ export default function MapView() {
             <div className="bg-white rounded-lg p-2 shadow-lg mb-2">
               <p className="text-xs text-gray-600 mb-1">Assigned Parcel:</p>
               <p className="text-sm font-medium">{boundaries[0]?.name || 'No Assignment'}</p>
+              <p className="text-xs text-orange-600 mt-1">⚠️ Features can only be created within this boundary</p>
             </div>
+            
+            {/* Point tool for field teams */}
+            <Button
+              onClick={() => {
+                setPointSelectionMode(true);
+                setLineDrawingMode(false);
+                setDrawingMode(false);
+                setSelectionMode(false);
+                toast({
+                  title: "Point Selection Mode",
+                  description: "Click within your assigned parcel to place a point feature",
+                });
+              }}
+              className={`${pointSelectionMode ? 'bg-green-700 hover:bg-green-800' : 'bg-green-500 hover:bg-green-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
+              title="Create Point Feature"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </Button>
+            
+            {/* Line tool for field teams */}
+            <Button
+              onClick={() => {
+                setLineDrawingMode(!lineDrawingMode);
+                setPointSelectionMode(false);
+                setDrawingMode(false);
+                setSelectionMode(false);
+                if (!lineDrawingMode) {
+                  setLinePoints([]);
+                  toast({
+                    title: "Line Drawing Mode",
+                    description: "Click within your assigned parcel to draw line features",
+                  });
+                } else {
+                  toast({
+                    title: "Line Drawing Stopped",
+                    description: "Line drawing mode disabled",
+                  });
+                }
+              }}
+              className={`${lineDrawingMode ? 'bg-yellow-700 hover:bg-yellow-800' : 'bg-yellow-500 hover:bg-yellow-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
+              title="Create Line Feature"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <path d="M3 12L21 12"></path>
+                <path d="M17 8L21 12L17 16"></path>
+              </svg>
+            </Button>
+            
+            {/* Polygon tool for field teams */}
+            <Button
+              onClick={() => {
+                setDrawingMode(!drawingMode);
+                setPointSelectionMode(false);
+                setLineDrawingMode(false);
+                setSelectionMode(false);
+                toast({
+                  title: drawingMode ? "Stop Drawing Parcel" : "Draw Parcel",
+                  description: drawingMode ? "Parcel drawing mode disabled" : "Draw within your assigned parcel boundaries",
+                });
+              }}
+              className={`${drawingMode ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'} text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg`}
+              title={drawingMode ? "Stop Drawing Parcel" : "Draw Parcel"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <polygon points="3,6 9,6 12,1 15,6 21,6 18,10 21,14 15,14 12,19 9,14 3,14 6,10"></polygon>
+              </svg>
+            </Button>
             
             {/* Point tool for field teams - restricted to assigned boundary */}
             <Button
