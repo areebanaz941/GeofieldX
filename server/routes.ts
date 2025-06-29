@@ -559,7 +559,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.user as any;
       
-
+      // Debug logging to check if images are being received
+      console.log("🎯 Feature creation request body:", req.body);
+      console.log("📸 Images array received:", req.body.images);
       
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
@@ -582,13 +584,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: user._id.toString(),
       });
 
+      console.log("✅ Parsed feature data:", featureData);
+      console.log("📸 Feature data images:", featureData.images);
+
       const newFeature = await storage.createFeature(featureData);
+      
+      console.log("🚀 Created feature:", newFeature);
+      console.log("📸 Created feature images:", newFeature.images);
+      
       res.status(201).json(newFeature);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("❌ Validation error:", error.errors);
         return res.status(400).json({ message: error.errors });
       }
-      console.error("Create feature error:", error);
+      console.error("❌ Create feature error:", error);
       res.status(500).json({ message: "Failed to create feature" });
     }
   });
