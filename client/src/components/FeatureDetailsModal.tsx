@@ -27,6 +27,11 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
 
   if (!feature) return null;
 
+  // Debug feature data
+  console.log('Feature data in popup:', feature);
+  console.log('Feature images:', feature.images);
+  console.log('Feature teamId:', feature.teamId);
+
   const isParcel = feature.feaType === 'Parcel';
   const isAssigned = !!feature.assignedTo;
 
@@ -172,7 +177,7 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
           )}
 
           {/* Feature Images */}
-          {feature.images && feature.images.length > 0 && (
+          {feature.images && feature.images.length > 0 ? (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">
@@ -181,27 +186,47 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                  {feature.images.map((imagePath, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={imagePath.startsWith('http') ? imagePath : `/uploads/${imagePath}`}
-                        alt={`${feature.name} - Image ${index + 1}`}
-                        className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => {
-                          // Open image in new window for full view
-                          const imageUrl = imagePath.startsWith('http') ? imagePath : `/uploads/${imagePath}`;
-                          window.open(imageUrl, '_blank');
-                        }}
-                        onError={(e) => {
-                          console.log('Image failed to load:', imagePath);
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">
-                        Click to enlarge
+                  {feature.images.map((imagePath, index) => {
+                    console.log('Rendering image:', imagePath);
+                    const imageUrl = imagePath.startsWith('/uploads/') ? imagePath : `/uploads/${imagePath}`;
+                    console.log('Final image URL:', imageUrl);
+                    return (
+                      <div key={index} className="relative group">
+                        <img
+                          src={imageUrl}
+                          alt={`${feature.name} - Image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => {
+                            window.open(imageUrl, '_blank');
+                          }}
+                          onLoad={() => {
+                            console.log('Image loaded successfully:', imageUrl);
+                          }}
+                          onError={(e) => {
+                            console.error('Image failed to load:', imageUrl);
+                            console.error('Original path:', imagePath);
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">
+                          Click to enlarge
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">
+                  Feature Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-4 text-muted-foreground">
+                  No images uploaded for this feature
                 </div>
               </CardContent>
             </Card>
