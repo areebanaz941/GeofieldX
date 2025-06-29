@@ -27,6 +27,11 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
 
   if (!feature) return null;
 
+  // Debug logging for images
+  console.log('Feature data in popup:', feature);
+  console.log('Feature images:', feature.images);
+  console.log('Images length:', feature.images?.length);
+
   const isParcel = feature.feaType === 'Parcel';
   const isAssigned = !!feature.assignedTo;
 
