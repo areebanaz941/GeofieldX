@@ -27,48 +27,43 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
 
   if (!feature) return null;
 
-  // Debug feature data
-  console.log('Feature data in popup:', feature);
-  console.log('Feature images:', feature.images);
-  console.log('Feature teamId:', feature.teamId);
-
   const isParcel = feature.feaType === 'Parcel';
   const isAssigned = !!feature.assignedTo;
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
             {feature.name || `${feature.feaType} #${feature.feaNo}`}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Basic Information */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 sm:pb-3">
               <CardTitle className="text-sm font-medium">Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Type:</span>
-                <Badge variant="secondary">{feature.feaType}</Badge>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                <span className="text-xs sm:text-sm text-muted-foreground">Type:</span>
+                <Badge variant="secondary" className="w-fit">{feature.feaType}</Badge>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Number:</span>
-                <span className="text-sm font-medium">{feature.feaNo}</span>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                <span className="text-xs sm:text-sm text-muted-foreground">Number:</span>
+                <span className="text-xs sm:text-sm font-medium">{feature.feaNo}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                <Badge variant={feature.feaStatus === 'Active' ? 'default' : 'outline'}>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                <span className="text-xs sm:text-sm text-muted-foreground">Status:</span>
+                <Badge variant={feature.feaStatus === 'Active' ? 'default' : 'outline'} className="w-fit">
                   {feature.feaStatus}
                 </Badge>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">State:</span>
-                <Badge variant="outline">{feature.feaState}</Badge>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                <span className="text-xs sm:text-sm text-muted-foreground">State:</span>
+                <Badge variant="outline" className="w-fit">{feature.feaState}</Badge>
               </div>
             </CardContent>
           </Card>
@@ -120,27 +115,27 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
 
           {/* Additional Details */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 sm:pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Settings className="h-4 w-4" />
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
                 Additional Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {feature.specificType && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Specific Type:</span>
-                  <span className="text-sm font-medium">{feature.specificType}</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Specific Type:</span>
+                  <span className="text-xs sm:text-sm font-medium">{feature.specificType}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Maintenance:</span>
-                <Badge variant="outline">{feature.maintenance}</Badge>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                <span className="text-xs sm:text-sm text-muted-foreground">Maintenance:</span>
+                <Badge variant="outline" className="w-fit">{feature.maintenance}</Badge>
               </div>
               {feature.createdAt && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Created:</span>
-                  <span className="text-sm">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Created:</span>
+                  <span className="text-xs sm:text-sm">
                     {new Date(feature.createdAt).toLocaleDateString()}
                   </span>
                 </div>
@@ -151,20 +146,20 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
           {/* Creator Team Information */}
           {feature.teamId && (
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                   Creator Team
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-2">
                   {creatorTeam ? (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs sm:text-sm">
                       {creatorTeam.name}
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="bg-gray-50 text-gray-700">
+                    <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs sm:text-sm">
                       Loading team...
                     </Badge>
                   )}
@@ -185,26 +180,19 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 sm:max-h-60 overflow-y-auto">
                   {feature.images.map((imagePath, index) => {
-                    console.log('Rendering image:', imagePath);
                     const imageUrl = imagePath.startsWith('/uploads/') ? imagePath : `/uploads/${imagePath}`;
-                    console.log('Final image URL:', imageUrl);
                     return (
                       <div key={index} className="relative group">
                         <img
                           src={imageUrl}
                           alt={`${feature.name} - Image ${index + 1}`}
-                          className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
+                          className="w-full h-20 sm:h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => {
                             window.open(imageUrl, '_blank');
                           }}
-                          onLoad={() => {
-                            console.log('Image loaded successfully:', imageUrl);
-                          }}
                           onError={(e) => {
-                            console.error('Image failed to load:', imageUrl);
-                            console.error('Original path:', imagePath);
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}
                         />
@@ -219,13 +207,13 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
             </Card>
           ) : (
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-sm font-medium">
                   Feature Images
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-4 text-muted-foreground">
+                <div className="text-center py-3 sm:py-4 text-xs sm:text-sm text-muted-foreground">
                   No images uploaded for this feature
                 </div>
               </CardContent>
