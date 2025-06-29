@@ -536,44 +536,44 @@ export default function CreateFeatureModal({
                       maxFileSize={5}
                       onFilesChange={async (files) => {
                         console.log("📸 Files selected for upload:", files.length);
-                        const uploadedPaths: string[] = [];
                         
-                        for (const file of files) {
-                          try {
-                            const formData = new FormData();
-                            formData.append('image', file);
-                            console.log("📸 Uploading file:", file.name);
+                        try {
+                          const formData = new FormData();
+                          files.forEach(file => {
+                            formData.append('images', file);
+                          });
+                          console.log("📸 Uploading", files.length, "files to /api/features/upload-images");
+                          
+                          const response = await fetch('/api/features/upload-images', {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'include'
+                          });
+                          
+                          if (response.ok) {
+                            const result = await response.json();
+                            console.log("📸 Upload response:", result);
                             
-                            const response = await fetch('/api/upload/image', {
-                              method: 'POST',
-                              body: formData,
-                              credentials: 'include'
-                            });
+                            const uploadedPaths = result.images || [];
+                            console.log("📸 All uploaded paths:", uploadedPaths);
+                            console.log("📸 Current form images before update:", field.value);
                             
-                            if (response.ok) {
-                              const result = await response.json();
-                              uploadedPaths.push(result.filename);
-                              console.log("📸 Successfully uploaded:", result.filename);
-                            } else {
-                              console.error("Failed to upload image:", file.name, response.status);
-                            }
-                          } catch (error) {
-                            console.error("Error uploading image:", error);
+                            // Update form field with uploaded file paths
+                            const currentImages = field.value || [];
+                            const newImages = [...currentImages, ...uploadedPaths];
+                            console.log("📸 Setting new images array:", newImages);
+                            field.onChange(newImages);
+                            
+                            // Verify the form state was updated
+                            setTimeout(() => {
+                              console.log("📸 Form images after update:", form.getValues("images"));
+                            }, 100);
+                          } else {
+                            console.error("Failed to upload images:", response.status);
                           }
+                        } catch (error) {
+                          console.error("Error uploading images:", error);
                         }
-                        
-                        console.log("📸 All uploaded paths:", uploadedPaths);
-                        console.log("📸 Current form images before update:", field.value);
-                        // Update form field with uploaded file paths
-                        const currentImages = field.value || [];
-                        const newImages = [...currentImages, ...uploadedPaths];
-                        console.log("📸 Setting new images array:", newImages);
-                        field.onChange(newImages);
-                        
-                        // Verify the form state was updated
-                        setTimeout(() => {
-                          console.log("📸 Form images after update:", form.getValues("images"));
-                        }, 100);
                       }}
                       disabled={createFeatureMutation.isPending}
                     />
