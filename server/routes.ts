@@ -156,6 +156,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static uploads
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
+
+
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: any) => {
     if (req.isAuthenticated()) {

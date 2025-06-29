@@ -116,6 +116,12 @@ export async function getTaskEvidence(taskId: number) {
 
 // Feature API
 export async function createFeature(featureData: InsertFeature) {
+  // Check if the feature data contains images that need to be uploaded
+  if (featureData.images && featureData.images.length > 0) {
+    // For now, send as JSON - the images should already be uploaded URLs from ImageUpload component
+    console.log("🎯 Creating feature with images:", featureData.images);
+  }
+  
   const res = await apiRequest('POST', '/api/features', featureData);
   return await res.json();
 }

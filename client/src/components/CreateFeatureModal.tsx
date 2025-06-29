@@ -523,17 +523,12 @@ export default function CreateFeatureModal({
               name="images"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Feature Images</FormLabel>
+                  <FormLabel>Feature Images (Optional)</FormLabel>
                   <FormControl>
-                    <ImageUpload
-                      value={field.value || []}
-                      onChange={field.onChange}
-                      onRemove={(url) => {
-                        const updatedImages = (field.value || []).filter((image: string) => image !== url);
-                        field.onChange(updatedImages);
-                      }}
-                      disabled={createFeatureMutation.isPending}
-                    />
+                    <div className="text-sm text-muted-foreground p-2 border rounded">
+                      Image upload functionality will be available in the next update. 
+                      Features can be created without images for now.
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
