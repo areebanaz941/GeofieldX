@@ -113,6 +113,7 @@ export default function CreateFeatureModal({
         maintenanceDate: "",
         remarks: "",
         geometry: undefined,
+        images: [], // Initialize images as empty array but don't reset if already has values
       });
       
       // Clear feature type to force user selection unless polygon exists
@@ -234,6 +235,11 @@ export default function CreateFeatureModal({
   });
 
   const onSubmit = (values: FeatureFormValues) => {
+    console.log("🔥 onSubmit called with values:", values);
+    console.log("🔥 Form state at submission:", form.getValues());
+    console.log("🔥 Images in values:", values.images);
+    console.log("🔥 Images from form.getValues():", form.getValues("images"));
+    
     // Validate geometry based on feature type
     if (!values.geometry) {
       let message = "Please provide location coordinates";
@@ -557,9 +563,17 @@ export default function CreateFeatureModal({
                         }
                         
                         console.log("📸 All uploaded paths:", uploadedPaths);
+                        console.log("📸 Current form images before update:", field.value);
                         // Update form field with uploaded file paths
                         const currentImages = field.value || [];
-                        field.onChange([...currentImages, ...uploadedPaths]);
+                        const newImages = [...currentImages, ...uploadedPaths];
+                        console.log("📸 Setting new images array:", newImages);
+                        field.onChange(newImages);
+                        
+                        // Verify the form state was updated
+                        setTimeout(() => {
+                          console.log("📸 Form images after update:", form.getValues("images"));
+                        }, 100);
                       }}
                       disabled={createFeatureMutation.isPending}
                     />
