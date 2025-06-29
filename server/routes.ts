@@ -603,6 +603,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single feature by ID
+  app.get("/api/features/:id", isAuthenticated, validateObjectId("id"), async (req, res) => {
+    try {
+      const featureId = req.params.id;
+      const feature = await storage.getFeature(featureId);
+      
+      if (!feature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      
+      console.log("📸 Fetched feature for popup:", feature);
+      console.log("📸 Feature images in response:", feature.images);
+      
+      res.json(feature);
+    } catch (error) {
+      console.error("Get feature error:", error);
+      res.status(500).json({ message: "Failed to fetch feature" });
+    }
+  });
+
   app.get("/api/features", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;

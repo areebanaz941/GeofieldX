@@ -25,12 +25,28 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
     enabled: !!feature?.assignedTo && open,
   });
 
-  if (!feature) return null;
+  // Fetch fresh feature data with images to ensure we have latest data
+  const { data: freshFeature } = useQuery<IFeature>({
+    queryKey: ['/api/features', feature?._id],
+    queryFn: async () => {
+      const response = await fetch(`/api/features/${feature?._id}`);
+      if (!response.ok) throw new Error('Failed to fetch feature details');
+      return response.json();
+    },
+    enabled: !!feature?._id && open,
+  });
+
+  // Use fresh feature data if available, otherwise use prop data
+  const displayFeature = freshFeature || feature;
+
+  if (!displayFeature) return null;
 
   // Debug logging for images
-  console.log('Feature data in popup:', feature);
-  console.log('Feature images:', feature.images);
-  console.log('Images length:', feature.images?.length);
+  console.log('Feature data in popup:', displayFeature);
+  console.log('Feature images:', displayFeature.images);
+  console.log('Images length:', displayFeature.images?.length);
+  console.log('Feature teamId:', displayFeature.teamId);
+  console.log('Creator team data:', creatorTeam);
 
   const isParcel = feature.feaType === 'Parcel';
   const isAssigned = !!feature.assignedTo;
@@ -149,7 +165,7 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
           </Card>
 
           {/* Creator Team Information */}
-          {feature.teamId && (
+          {displayFeature.teamId && (
             <Card>
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -184,13 +200,13 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {feature.images && Array.isArray(feature.images) && feature.images.length > 0 ? (
+              {displayFeature.images && Array.isArray(displayFeature.images) && displayFeature.images.length > 0 ? (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">
-                    {feature.images.length} image{feature.images.length !== 1 ? 's' : ''} uploaded
+                    {displayFeature.images.length} image{displayFeature.images.length !== 1 ? 's' : ''} uploaded
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 sm:max-h-60 overflow-y-auto">
-                    {feature.images.map((imagePath, index) => {
+                    {displayFeature.images.map((imagePath, index) => {
                       // Debug each image path
                       console.log(`Image ${index + 1}:`, imagePath);
                       
@@ -208,7 +224,7 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
                         <div key={index} className="relative group">
                           <img
                             src={imageUrl}
-                            alt={`${feature.name} - Image ${index + 1}`}
+                            alt={`${displayFeature.name} - Image ${index + 1}`}
                             className="w-full h-20 sm:h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
                             onClick={() => {
                               window.open(imageUrl, '_blank');
