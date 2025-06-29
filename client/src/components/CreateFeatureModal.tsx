@@ -82,7 +82,7 @@ export default function CreateFeatureModal({
     defaultValues: {
       name: "",
       feaNo: "",
-      feaType: drawnPolygon ? "Parcel" : "Tower", // Default to Parcel if polygon exists
+      feaType: drawnPolygon ? "Parcel" : "Tower", // Will be overridden by useEffect
       specificType: "",
       feaState: "Plan",
       feaStatus: "New",
@@ -95,6 +95,30 @@ export default function CreateFeatureModal({
 
   // Watch feaType to update specificType options
   const feaType = form.watch("feaType");
+
+  // Initialize form properly when modal opens
+  useEffect(() => {
+    if (open) {
+      // Reset form to proper defaults when modal opens
+      form.reset({
+        name: "",
+        feaNo: "",
+        feaType: drawnPolygon ? "Parcel" : "Tower", // Will be cleared below
+        specificType: "",
+        feaState: "Plan",
+        feaStatus: "New",
+        maintenance: "None",
+        maintenanceDate: "",
+        remarks: "",
+        geometry: undefined,
+      });
+      
+      // Clear feature type to force user selection unless polygon exists
+      if (!drawnPolygon) {
+        form.setValue("feaType", "" as any); // Force empty selection
+      }
+    }
+  }, [open, drawnPolygon, form]);
 
   useEffect(() => {
     let options: string[] = [];
@@ -290,7 +314,7 @@ export default function CreateFeatureModal({
                   <FormLabel>Feature Type</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
