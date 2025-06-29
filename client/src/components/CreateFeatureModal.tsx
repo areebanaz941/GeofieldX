@@ -525,10 +525,44 @@ export default function CreateFeatureModal({
                 <FormItem>
                   <FormLabel>Feature Images (Optional)</FormLabel>
                   <FormControl>
-                    <div className="text-sm text-muted-foreground p-2 border rounded">
-                      Image upload functionality will be available in the next update. 
-                      Features can be created without images for now.
-                    </div>
+                    <ImageUpload
+                      maxFiles={10}
+                      maxFileSize={5}
+                      onFilesChange={async (files) => {
+                        console.log("📸 Files selected for upload:", files.length);
+                        const uploadedPaths: string[] = [];
+                        
+                        for (const file of files) {
+                          try {
+                            const formData = new FormData();
+                            formData.append('image', file);
+                            console.log("📸 Uploading file:", file.name);
+                            
+                            const response = await fetch('/api/upload/image', {
+                              method: 'POST',
+                              body: formData,
+                              credentials: 'include'
+                            });
+                            
+                            if (response.ok) {
+                              const result = await response.json();
+                              uploadedPaths.push(result.filename);
+                              console.log("📸 Successfully uploaded:", result.filename);
+                            } else {
+                              console.error("Failed to upload image:", file.name, response.status);
+                            }
+                          } catch (error) {
+                            console.error("Error uploading image:", error);
+                          }
+                        }
+                        
+                        console.log("📸 All uploaded paths:", uploadedPaths);
+                        // Update form field with uploaded file paths
+                        const currentImages = field.value || [];
+                        field.onChange([...currentImages, ...uploadedPaths]);
+                      }}
+                      disabled={createFeatureMutation.isPending}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

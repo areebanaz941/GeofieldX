@@ -156,6 +156,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static uploads
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
+  // Image upload endpoint for feature creation
+  app.post("/api/upload/image", upload.single('image'), async (req: any, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      console.log("📸 Image uploaded successfully:", req.file.filename);
+      
+      res.json({
+        message: "Image uploaded successfully",
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size
+      });
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
 
 
   // Middleware to check if user is authenticated
