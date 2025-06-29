@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { featureStateEnum, featureStatusEnum, maintenanceEnum } from "@shared/schema";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 // Define form schema with dynamic specific type options
 const formSchema = z.object({
@@ -48,6 +49,7 @@ const formSchema = z.object({
     type: z.enum(["Point", "LineString", "Polygon"]),
     coordinates: z.array(z.any())
   }).optional(),
+  images: z.array(z.string()).optional(),
 });
 
 type FeatureFormValues = z.infer<typeof formSchema>;
@@ -290,10 +292,12 @@ export default function CreateFeatureModal({
       ...(values.remarks && values.remarks.trim() && { remarks: values.remarks.trim() }),
       ...(values.maintenanceDate && values.maintenanceDate.trim() && { 
         maintenanceDate: new Date(values.maintenanceDate) 
-      })
+      }),
+      ...(values.images && values.images.length > 0 && { images: values.images })
     };
 
-    console.log("Submitting feature data:", JSON.stringify(submitData, null, 2));
+    console.log("🎯 Submitting feature data:", JSON.stringify(submitData, null, 2));
+    console.log("📸 Images being submitted:", values.images);
     console.log("Geometry coordinates:", submitData.geometry.coordinates);
     createFeatureMutation.mutate(submitData);
   };
@@ -507,6 +511,28 @@ export default function CreateFeatureModal({
                       placeholder="Enter any additional remarks"
                       className="resize-none"
                       {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Feature Images</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      onRemove={(url) => {
+                        const updatedImages = (field.value || []).filter((image: string) => image !== url);
+                        field.onChange(updatedImages);
+                      }}
+                      disabled={createFeatureMutation.isPending}
                     />
                   </FormControl>
                   <FormMessage />
