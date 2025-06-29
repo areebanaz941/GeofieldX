@@ -115,7 +115,11 @@ export default function CreateFeatureModal({
         options = [];
     }
     setSpecificTypeOptions(options);
-    form.setValue("specificType", options[0] || "");
+    
+    // Set default specific type value
+    if (options.length > 0) {
+      form.setValue("specificType", options[0]);
+    }
     
     // Reset coordinate states when feature type changes
     if (feaType !== "FiberCable") {
@@ -128,7 +132,7 @@ export default function CreateFeatureModal({
     }
     // Clear geometry when switching feature types
     form.setValue("geometry", undefined);
-  }, [feaType]);
+  }, [feaType, form]);
 
   // Handle multi-point collection for fiber cables
   useEffect(() => {
@@ -342,6 +346,7 @@ export default function CreateFeatureModal({
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
+                    key={feaType} // Force re-render when feature type changes
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -349,11 +354,17 @@ export default function CreateFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {specificTypeOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
+                      {specificTypeOptions.length > 0 ? (
+                        specificTypeOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          No options available
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
