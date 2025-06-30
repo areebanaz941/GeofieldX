@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient } from "@/lib/queryClient";
-import { createFeature } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -31,13 +31,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-// Simplified form schema for supervisor polygon creation
+// Simplified form schema for supervisor boundary creation
 const supervisorPolygonSchema = z.object({
-  areaName: z.string().min(1, "Area name is required"),
-  areaNumber: z.string().min(1, "Area number is required"),
+  boundaryName: z.string().min(1, "Boundary name is required"),
+  workOrder: z.string().min(1, "Work order is required"),
   assignedTo: z.string().min(1, "Please select a team"),
-  color: z.string().min(1, "Please select a color"),
-  featureType: z.string().min(1, "Please select feature type"),
 });
 
 type SupervisorPolygonFormValues = z.infer<typeof supervisorPolygonSchema>;
@@ -58,7 +56,6 @@ export default function SupervisorPolygonModal({
   setDrawingMode,
 }: SupervisorPolygonModalProps) {
   const { toast } = useToast();
-  const [nextAreaNumber, setNextAreaNumber] = useState<string>("");
 
   // Fetch teams for assignment dropdown
   const { data: teams = [] } = useQuery({
@@ -66,57 +63,26 @@ export default function SupervisorPolygonModal({
     enabled: open,
   });
 
-  // Fetch existing features to determine next area number
-  const { data: features = [] } = useQuery({
-    queryKey: ["/api/features"],
-    enabled: open,
-  });
-
-  // Calculate next area number
-  useEffect(() => {
-    if (Array.isArray(features) && features.length > 0) {
-      const parcelFeatures = features.filter((f: any) => f.feaType === "Parcel");
-      const areaNumbers = parcelFeatures
-        .map((f: any) => f.feaNo)
-        .filter((feaNo: string) => feaNo && feaNo.startsWith("area_"))
-        .map((feaNo: string) => {
-          const num = feaNo.replace("area_", "");
-          return parseInt(num, 10);
-        })
-        .filter((num: number) => !isNaN(num));
-
-      const maxAreaNumber = areaNumbers.length > 0 ? Math.max(...areaNumbers) : 0;
-      setNextAreaNumber(`area_${maxAreaNumber + 1}`);
-    } else {
-      setNextAreaNumber("area_1");
-    }
-  }, [features]);
-
   const form = useForm<SupervisorPolygonFormValues>({
     resolver: zodResolver(supervisorPolygonSchema),
     defaultValues: {
-      areaName: "",
-      areaNumber: nextAreaNumber,
+      boundaryName: "",
+      workOrder: "",
       assignedTo: "",
-      color: "#4CAF50",
-      featureType: "Residential",
     },
   });
 
-  // Update form when area number changes
-  useEffect(() => {
-    if (nextAreaNumber) {
-      form.setValue("areaNumber", nextAreaNumber);
-    }
-  }, [nextAreaNumber, form]);
-
-  const createFeatureMutation = useMutation({
-    mutationFn: createFeature,
+  const createBoundaryMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/boundaries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/features"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boundaries"] });
       toast({
-        title: "Area Created",
-        description: "Parcel area has been successfully created and assigned.",
+        title: "Boundary Created",
+        description: "Boundary has been successfully created and assigned.",
       });
       form.reset();
       setDrawingMode(false);
@@ -125,7 +91,7 @@ export default function SupervisorPolygonModal({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create area",
+        description: error.message || "Failed to create boundary",
         variant: "destructive",
       });
     },
@@ -141,42 +107,37 @@ export default function SupervisorPolygonModal({
       return;
     }
 
-    const featureData = {
-      name: values.areaName,
-      feaNo: values.areaNumber,
-      feaType: "Parcel" as const,
-      specificType: values.featureType as "Residential" | "Commercial",
-      feaState: "Plan" as const,
-      feaStatus: "New" as const,
-      maintenance: "None" as const,
+    const boundaryData = {
+      name: values.boundaryName,
+      workOrder: values.workOrder,
       assignedTo: values.assignedTo,
-      color: values.color,
+      status: "Plan",
       geometry: {
         type: "Polygon" as const,
         coordinates: drawnPolygon.coordinates,
       },
     };
 
-    createFeatureMutation.mutate(featureData);
+    createBoundaryMutation.mutate(boundaryData);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Parcel Area</DialogTitle>
+          <DialogTitle>Create Boundary</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="areaName"
+              name="boundaryName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Area Name</FormLabel>
+                  <FormLabel>Boundary Name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Enter area name"
+                      placeholder="Enter boundary name"
                       {...field}
                     />
                   </FormControl>
@@ -187,62 +148,16 @@ export default function SupervisorPolygonModal({
 
             <FormField
               control={form.control}
-              name="areaNumber"
+              name="workOrder"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Area Number</FormLabel>
+                  <FormLabel>Work Order</FormLabel>
                   <FormControl>
                     <Input
+                      placeholder="Enter work order number"
                       {...field}
-                      readOnly
-                      className="bg-gray-50"
-                      placeholder="Auto-generated"
                     />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="featureType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Feature Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select feature type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Residential">Residential</SelectItem>
-                      <SelectItem value="Commercial">Commercial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Parcel Color</FormLabel>
-                  <div className="flex items-center space-x-3">
-                    <FormControl>
-                      <input
-                        type="color"
-                        value={field.value}
-                        onChange={field.onChange}
-                        className="h-10 w-16 rounded border border-gray-300 cursor-pointer"
-                      />
-                    </FormControl>
-                    <div className="text-sm text-gray-600">{field.value}</div>
-                  </div>
                   <FormMessage />
                 </FormItem>
               )}
