@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
 
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
@@ -180,6 +182,104 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Feature Creation Section */}
+        <Card className="bg-white border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
+              Available Features to Add
+            </CardTitle>
+            <CardDescription>
+              Create infrastructure features within your assigned areas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Feature Type Statistics */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-700">Towers</p>
+                      <p className="text-2xl font-bold text-blue-900">
+                        {features.filter((f: any) => f.feaType === 'Tower').length}
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-700">Manholes</p>
+                      <p className="text-2xl font-bold text-green-900">
+                        {features.filter((f: any) => f.feaType === 'Manhole').length}
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-purple-700">Fiber Cables</p>
+                      <p className="text-2xl font-bold text-purple-900">
+                        {features.filter((f: any) => f.feaType === 'FiberCable').length}
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-orange-700">Equipment</p>
+                      <p className="text-2xl font-bold text-orange-900">
+                        {features.filter((f: any) => f.feaType === 'Equipment').length}
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* MapView Button */}
+              <div className="pt-4 border-t">
+                <Button 
+                  className="w-full bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] hover:from-[#1a4d9e] hover:to-[#0a2347] text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
+                  onClick={() => setLocation('/map')}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                  </svg>
+                  Open Map to Add Features
+                </Button>
+                <p className="text-sm text-gray-500 text-center mt-2">
+                  Create new infrastructure features within your assigned boundary areas
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
