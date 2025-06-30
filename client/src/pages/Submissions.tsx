@@ -84,9 +84,11 @@ export default function Submissions() {
   });
 
   const submitTaskMutation = useMutation({
-    mutationFn: async ({ taskId, file, description }: { taskId: string; file: File; description: string }) => {
+    mutationFn: async ({ taskId, files, description }: { taskId: string; files: File[]; description: string }) => {
       const formData = new FormData();
-      formData.append('file', file);
+      files.forEach((file, index) => {
+        formData.append('files', file);
+      });
       formData.append('description', description);
 
       const response = await fetch(`/api/tasks/${taskId}/submissions`, {
@@ -109,7 +111,7 @@ export default function Submissions() {
       queryClient.invalidateQueries({ queryKey: ['/api/submissions'] });
       setIsSubmissionModalOpen(false);
       setSelectedTask(null);
-      setSubmissionFile(null);
+      setSubmissionFiles([]);
       setSubmissionDescription("");
     },
     onError: (error: any) => {
@@ -283,7 +285,7 @@ export default function Submissions() {
                             setIsSubmissionModalOpen(open);
                             if (!open) {
                               setSelectedTask(null);
-                              setSubmissionFile(null);
+                              setSubmissionFiles([]);
                               setSubmissionDescription("");
                             }
                           }}>
