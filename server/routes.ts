@@ -1503,7 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/tasks/:taskId/submissions",
     isAuthenticated,
-    upload.single("file"),
+    upload.array("files", 10),
     validateObjectId("taskId"),
     async (req, res) => {
       try {
@@ -1511,8 +1511,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = req.user as any;
         const { description } = req.body;
 
-        if (!req.file) {
-          return res.status(400).json({ message: "File is required" });
+        if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+          return res.status(400).json({ message: "At least one file is required" });
         }
 
         // Verify task exists and user has access
@@ -1526,14 +1526,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Not authorized to submit for this task" });
         }
 
+        const files = (req.files as Express.Multer.File[]).map(file => ({
+          fileName: file.originalname,
+          fileUrl: `/uploads/${file.filename}`,
+          fileType: file.mimetype,
+          fileSize: file.size,
+        }));
+
         const submissionData = {
           taskId: taskId,
           userId: user._id.toString(),
           teamId: user.teamId?.toString() || undefined,
-          fileName: req.file.originalname,
-          fileUrl: `/uploads/${req.file.filename}`,
-          fileType: req.file.mimetype,
-          fileSize: req.file.size,
+          files: files,
           description: description || "",
           submissionStatus: "Pending" as const,
         };

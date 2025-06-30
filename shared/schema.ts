@@ -552,10 +552,12 @@ export interface ITaskSubmission extends Document {
   taskId: Types.ObjectId;
   userId: Types.ObjectId;
   teamId?: Types.ObjectId;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  fileSize: number;
+  files: Array<{
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    fileSize: number;
+  }>;
   description?: string;
   submissionStatus: 'Pending' | 'Reviewed' | 'Approved' | 'Rejected';
   reviewedBy?: Types.ObjectId;
@@ -608,25 +610,27 @@ const taskSubmissionSchema = new Schema<ITaskSubmission>(
       ref: "Team",
       required: false,
     },
-    fileName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    fileUrl: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    fileType: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    fileSize: {
-      type: Number,
-      required: true,
-    },
+    files: [{
+      fileName: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      fileUrl: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      fileType: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      fileSize: {
+        type: Number,
+        required: true,
+      },
+    }],
     description: {
       type: String,
       trim: true,
@@ -754,10 +758,12 @@ export const insertTaskSubmissionSchema = z.object({
   taskId: z.string(),
   userId: z.string(),
   teamId: z.string().optional(),
-  fileName: z.string().min(1),
-  fileUrl: z.string().min(1),
-  fileType: z.string().min(1),
-  fileSize: z.number().positive(),
+  files: z.array(z.object({
+    fileName: z.string().min(1),
+    fileUrl: z.string().min(1),
+    fileType: z.string().min(1),
+    fileSize: z.number().positive(),
+  })),
   description: z.string().optional(),
   submissionStatus: z.enum(['Pending', 'Reviewed', 'Approved', 'Rejected']).default('Pending'),
 });

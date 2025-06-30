@@ -19,10 +19,12 @@ interface TaskSubmission {
   taskId: string;
   userId: string;
   teamId: string;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  fileSize: number;
+  files: Array<{
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    fileSize: number;
+  }>;
   description?: string;
   submissionStatus: 'Pending' | 'Reviewed' | 'Approved' | 'Rejected';
   reviewComments?: string;
@@ -359,8 +361,17 @@ export default function Reports() {
                                   <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                                     <span>Submitted: {new Date(submission.createdAt).toLocaleDateString()}</span>
                                     <span>•</span>
-                                    <span className="break-all">{submission.fileName}</span>
+                                    <span className="break-all">{submission.files.length} file{submission.files.length !== 1 ? 's' : ''}</span>
                                   </div>
+                                  {submission.files.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                      {submission.files.map((file, index) => (
+                                        <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded break-all">
+                                          {file.fileName}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                   <Badge variant={
