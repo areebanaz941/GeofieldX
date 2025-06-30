@@ -395,7 +395,7 @@ export default function CreateFeatureModal({
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="no-options" disabled>
                           No options available
                         </SelectItem>
                       )}

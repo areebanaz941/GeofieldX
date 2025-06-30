@@ -66,7 +66,7 @@ export default function AdvancedSearchModal({
                 <SelectValue placeholder="All Features" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Features</SelectItem>
+                <SelectItem value="all-features">All Features</SelectItem>
                 <SelectItem value="Tower">Tower</SelectItem>
                 <SelectItem value="Manhole">Manhole</SelectItem>
                 <SelectItem value="FiberCable">Fiber Cable</SelectItem>
@@ -91,7 +91,7 @@ export default function AdvancedSearchModal({
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all-types">All Types</SelectItem>
                 <SelectItem value="Mobillink">Tower: Mobillink</SelectItem>
                 <SelectItem value="Ptcl">Tower: PTCL</SelectItem>
                 <SelectItem value="2-way">Manhole: 2-way</SelectItem>
@@ -111,7 +111,7 @@ export default function AdvancedSearchModal({
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all-statuses">All Statuses</SelectItem>
                 <SelectItem value="New">New</SelectItem>
                 <SelectItem value="InProgress">In Progress</SelectItem>
                 <SelectItem value="Completed">Completed</SelectItem>
