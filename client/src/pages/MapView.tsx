@@ -91,6 +91,12 @@ export default function MapView() {
     },
   });
 
+  // Fetch feature templates for creating features on map
+  const { data: featureTemplates = [] } = useQuery({
+    queryKey: ["/api/feature-templates"],
+    enabled: user?.role === "Supervisor",
+  });
+
   // Update user location
   const updateLocationMutation = useMutation({
     mutationFn: ({ lat, lng }: { lat: number; lng: number }) => 
@@ -548,6 +554,7 @@ export default function MapView() {
         onOpenChange={setFeatureSelectionOpen}
         onFeatureSelect={handleFeatureSelect}
         userRole={user?.role || ''}
+        featureTemplates={featureTemplates}
       />
       
       {advancedSearchModalOpen && (
