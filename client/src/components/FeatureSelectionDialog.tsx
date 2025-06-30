@@ -70,6 +70,19 @@ const FeatureSelectionDialog = ({
     }
   ];
 
+  // Additional feature types for supervisors
+  const supervisorFeatureTypes = [
+    ...defaultFeatureTypes,
+    {
+      id: 'Boundary',
+      name: 'Boundary',
+      icon: parcelIcon,
+      drawingType: 'polygon' as const,
+      description: 'Work area boundary',
+      color: '#FF9800'
+    }
+  ];
+
   // Convert feature templates to the format expected by the dialog (for supervisors)
   const templateTypes = featureTemplates.map((template: any) => ({
     id: template.name,
@@ -83,9 +96,9 @@ const FeatureSelectionDialog = ({
            template.geometryType === 'LineString' ? '#3F51B5' : '#009688'
   }));
 
-  // Use default features for field teams, templates for supervisors
+  // Use default features for field teams, supervisor features + templates for supervisors
   const availableFeatures = userRole === 'Field' ? defaultFeatureTypes : 
-                           (templateTypes.length > 0 ? templateTypes : defaultFeatureTypes);
+                           (templateTypes.length > 0 ? [...supervisorFeatureTypes, ...templateTypes] : supervisorFeatureTypes);
 
   const handleFeatureSelect = (feature: typeof templateTypes[0]) => {
     const instructions = {

@@ -379,12 +379,12 @@ export default function MapView() {
     setDrawnPolygon({ coordinates: polygonData.coordinates });
     setDrawingMode(false);
     
-    // For all users - check if it's a parcel/boundary feature
-    if (selectedFeatureType === "Parcel" && user?.role === "Supervisor") {
-      // Supervisor creating parcel/boundary - use supervisor modal
+    // Check if it's a boundary feature for supervisors
+    if (selectedFeatureType === "Boundary" && user?.role === "Supervisor") {
+      // Supervisor creating boundary - use supervisor modal with simplified form
       setSupervisorPolygonModalOpen(true);
     } else {
-      // Regular polygon feature creation (for other polygon features or field users)
+      // Regular polygon feature creation (for other polygon features or all users)
       setCreateFeatureModalOpen(true);
     }
     
