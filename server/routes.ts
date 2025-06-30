@@ -997,6 +997,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update feature
+  app.patch("/api/features/:id", isAuthenticated, validateObjectId("id"), async (req, res) => {
+    try {
+      const featureId = req.params.id;
+      const user = req.user as any;
+      
+      // Get the feature first to check permissions
+      const existingFeature = await storage.getFeature(featureId);
+      if (!existingFeature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      
+      // Check if user has permission to update this feature
+      // Supervisors can update any feature, field users can only update their own team's features
+      if (user.role === "Field") {
+        if (existingFeature.teamId?.toString() !== user.teamId?.toString()) {
+          return res.status(403).json({ message: "You can only update features created by your team" });
+        }
+      }
+      
+      // Parse the update data
+      const updateData = req.body;
+      
+      // Remove fields that shouldn't be updated directly
+      delete updateData._id;
+      delete updateData.createdAt;
+      delete updateData.updatedAt;
+      delete updateData.createdBy;
+      delete updateData.geometry; // Prevent geometry updates through this endpoint
+      
+      const updatedFeature = await storage.updateFeature(featureId, updateData);
+      if (!updatedFeature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      
+      res.json(updatedFeature);
+    } catch (error) {
+      console.error("Update feature error:", error);
+      res.status(500).json({ message: "Failed to update feature" });
+    }
+  });
+
   // Boundary routes
   app.post("/api/boundaries", isSupervisor, async (req, res) => {
     try {
