@@ -92,6 +92,12 @@ function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange }: TeamCardP
             <span className="font-medium">Created:</span>{" "}
             {new Date(team.createdAt).toLocaleDateString()}
           </div>
+          {team.city && (
+            <div className="text-sm">
+              <span className="font-medium">City:</span>{" "}
+              {team.city}
+            </div>
+          )}
           <div className="text-sm">
             <span className="font-medium">Members:</span>{" "}
             {teamMembers.length}
@@ -293,11 +299,24 @@ export default function FieldTeams() {
     }
   });
   
+  // Get unique cities from teams
+  const uniqueCities = Array.from(new Set(teams.map((team: any) => team.city).filter(Boolean))) as string[];
+  
   // Filter users based on search
   const filteredUsers = fieldUsers.filter((user: IUser) =>
     (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (user.username?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
+  
+  // Filter teams based on city and search
+  const filteredTeams = teams.filter((team: any) => {
+    const matchesCity = !cityFilter || team.city === cityFilter;
+    const matchesSearch = !searchTerm || 
+      (team.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (team.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (team.city?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    return matchesCity && matchesSearch;
+  });
   
   // Get tasks assigned to each user's team
   const getUserTasks = (userId: string) => {
@@ -452,13 +471,23 @@ export default function FieldTeams() {
             </div>
           </div>
             
-          <div className="mb-4">
+          <div className="mb-4 flex gap-4 flex-wrap">
             <Input
               placeholder="Search team members or teams..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-xs"
             />
+            <select 
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">All Cities</option>
+              {uniqueCities.map((city: string) => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
           </div>
             
           <TabsContent value="members" className="mt-0">
@@ -607,19 +636,13 @@ export default function FieldTeams() {
             )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {teams.length > 0 ? (
-                teams
+              {filteredTeams.length > 0 ? (
+                filteredTeams
                   // Filter teams based on user role:
                   // - Supervisors can see all teams
                   // - Field users can only see their own team
                   .filter((team: any) => 
                     isSupervisor ? true : (user?.teamId === team._id)
-                  )
-                  // Apply text search filtering
-                  .filter((team: any) => 
-                    searchTerm === "" || 
-                    team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                    (team.description || "").toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((team: any) => (
                     <TeamCard 
@@ -632,7 +655,7 @@ export default function FieldTeams() {
                   ))
               ) : (
                 <div className="col-span-full text-center py-8 text-gray-500">
-                  {searchTerm
+                  {searchTerm || cityFilter
                     ? "No teams match your search criteria"
                     : isSupervisor 
                       ? "No teams created yet. Create your first team using the button above"

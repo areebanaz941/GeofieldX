@@ -104,6 +104,13 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 30, 2025**: Added city field to team creation form and implemented city filtering in team management
+  - Added city field to team schema (ITeam interface) and MongoDB team model
+  - Updated team creation form in supervisor dashboard to include optional city input field
+  - Implemented city filtering dropdown in team management interface showing all unique cities
+  - Enhanced TeamCard component to display city information when available
+  - Added comprehensive filtering: teams can now be filtered by both city and search text
+  - Updated team creation form validation to include city field in Zod schema
 - **June 28, 2025**: Enhanced field team dashboard with comprehensive team information display
   - Added team name prominently displayed at the top of field user dashboard
   - Implemented team member count showing all users registered with same team name
