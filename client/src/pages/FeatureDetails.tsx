@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getFeature } from "@/lib/api";
-import { IFeature } from "../../../shared/schema";
+import { IFeature, ITeam } from "../../../shared/schema";
 
 export default function FeatureDetails() {
   const { featureType, featureId } = useParams();
@@ -16,6 +16,28 @@ export default function FeatureDetails() {
     queryKey: ['/api/features', featureId],
     queryFn: () => getFeature(featureId!),
     enabled: !!featureId,
+  });
+
+  // Fetch team details if feature has a teamId
+  const { data: creatorTeam } = useQuery<ITeam>({
+    queryKey: ['/api/teams', feature?.teamId],
+    queryFn: async () => {
+      const response = await fetch(`/api/teams/${feature?.teamId}`);
+      if (!response.ok) throw new Error('Failed to fetch team details');
+      return response.json();
+    },
+    enabled: !!feature?.teamId,
+  });
+
+  // Fetch team details if feature is assigned to a team
+  const { data: assignedTeam } = useQuery<ITeam>({
+    queryKey: ['/api/teams', feature?.assignedTo],
+    queryFn: async () => {
+      const response = await fetch(`/api/teams/${feature?.assignedTo}`);
+      if (!response.ok) throw new Error('Failed to fetch assigned team details');
+      return response.json();
+    },
+    enabled: !!feature?.assignedTo,
   });
 
   const getStatusColor = (status: string) => {
@@ -298,9 +320,17 @@ export default function FeatureDetails() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-500">Assigned To</label>
-                <p className="text-sm text-gray-900">
-                  {feature.assignedTo ? 'Team Assigned' : 'Unassigned'}
-                </p>
+                <div className="mt-1">
+                  {feature.assignedTo && assignedTeam ? (
+                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">
+                      {assignedTeam.name}
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-gray-100 text-gray-800">
+                      Unassigned
+                    </Badge>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Created By</label>
@@ -310,8 +340,18 @@ export default function FeatureDetails() {
               </div>
               {feature.teamId && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Team ID</label>
-                  <p className="text-sm text-gray-900 font-mono">{feature.teamId.toString()}</p>
+                  <label className="text-sm font-medium text-gray-500">Creator Team</label>
+                  <div className="mt-1">
+                    {creatorTeam ? (
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                        {creatorTeam.name}
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-gray-100 text-gray-800">
+                        Loading team...
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
