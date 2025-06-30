@@ -104,6 +104,16 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 30, 2025**: Enhanced supervisor features sidebar with comprehensive detailed feature listings and click functionality
+  - Added detailed feature information display for each feature type (Tower, Manhole, FiberCable, Parcel)
+  - Implemented collapsible feature type sections with counts and status badges
+  - Added individual feature cards showing name, number, status, state, and specific type
+  - Implemented click functionality to view feature details in same page or open in new tab
+  - Added boundary details section with assignment status and category information
+  - Enhanced sidebar with status and state color coding for quick visual identification
+  - Added "View Details" and "Open in New Tab" buttons for each feature with hover interactions
+  - Limited initial display to 5 features per type with "View All" buttons for complete listings
+  - Integrated with existing FeatureList and FeatureDetails pages for seamless navigation
 - **June 30, 2025**: Enhanced field team dashboard with comprehensive fixes and improvements
   - Fixed boundary assignment display to show proper backend feature data (type, number, status)
   - Corrected image upload form response format from 'images' to 'imagePaths' for proper database storage

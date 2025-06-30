@@ -3,11 +3,14 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import useAuth from "@/hooks/useAuth";
 import FeatureCreationWorkflow from "./FeatureCreationWorkflow";
+import { getAllFeatures, getAllBoundaries } from "@/lib/api";
+import { ExternalLink } from "lucide-react";
 
 export default function SideNavigation() {
   const [location, setLocation] = useLocation();
@@ -17,6 +20,37 @@ export default function SideNavigation() {
   
   // Feature creation workflow state
   const [featureCreationWorkflowOpen, setFeatureCreationWorkflowOpen] = useState(false);
+  const [expandedFeatureType, setExpandedFeatureType] = useState<string | null>(null);
+  
+  // Helper functions
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'New': return 'bg-blue-100 text-blue-800';
+      case 'InProgress': return 'bg-yellow-100 text-yellow-800';
+      case 'Completed': return 'bg-green-100 text-green-800';
+      case 'Active': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStateColor = (state: string) => {
+    switch (state) {
+      case 'Plan': return 'bg-orange-100 text-orange-800';
+      case 'Under Construction': return 'bg-amber-100 text-amber-800';
+      case 'As-Built': return 'bg-emerald-100 text-emerald-800';
+      case 'Abandoned': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const openFeatureInNewTab = (featureType: string, featureId: string) => {
+    const url = `/features/${featureType.toLowerCase()}/${featureId}`;
+    window.open(url, '_blank');
+  };
+
+  const openFeatureDetails = (featureType: string, featureId: string) => {
+    setLocation(`/features/${featureType.toLowerCase()}/${featureId}`);
+  };
 
   if (!user) return null;
 
@@ -25,6 +59,30 @@ export default function SideNavigation() {
     queryKey: ["/api/feature-templates"],
     enabled: user?.role === "Supervisor",
   });
+
+  // Fetch all features and boundaries for detailed sidebar display
+  const { data: features = [] } = useQuery({
+    queryKey: ["/api/features"],
+    queryFn: getAllFeatures,
+    enabled: user?.role === "Supervisor",
+  });
+
+  const { data: boundaries = [] } = useQuery({
+    queryKey: ["/api/boundaries"],
+    queryFn: getAllBoundaries,
+    enabled: user?.role === "Supervisor",
+  });
+
+  // Group features by type
+  const featuresByType = {
+    Tower: features.filter((f: any) => f.feaType === 'Tower'),
+    Manhole: features.filter((f: any) => f.feaType === 'Manhole'),
+    FiberCable: features.filter((f: any) => f.feaType === 'FiberCable'),
+    Parcel: features.filter((f: any) => f.feaType === 'Parcel'),
+  };
+
+  // Get boundaries (which are basically Parcel features with assignedTo)
+  const boundaryFeatures = boundaries.filter((b: any) => b.assignedTo);
 
   // Handle feature creation completion
   const handleFeatureCreated = (newTemplate: any) => {
@@ -140,7 +198,7 @@ export default function SideNavigation() {
             <div className="pt-3 mt-3 border-t border-neutral-200">
               <div className="flex items-center justify-between px-3 mb-2">
                 <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                  Features
+                  Features ({features.length})
                 </h3>
                 <Button
                   variant="ghost"
@@ -154,37 +212,216 @@ export default function SideNavigation() {
                   </svg>
                 </Button>
               </div>
-              <div className="mt-2 space-y-1">
-                {featureTemplates.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-neutral-500 text-center">
-                    No templates created yet. Use the + button above to create your first template.
-                  </div>
-                ) : (
-                  featureTemplates.map((template: any) => (
+              
+              {/* Feature Types with Details */}
+              <div className="mt-2 space-y-1 max-h-96 overflow-y-auto">
+                {Object.entries(featuresByType).map(([type, typeFeatures]) => (
+                  <div key={type} className="space-y-1">
+                    {/* Feature Type Header */}
                     <Button
-                      key={template._id}
                       variant="ghost"
-                      className="w-full justify-start text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
-                      onClick={() => toast({
-                        title: "Template Selected",
-                        description: `"${template.name}" template ready for use on the map.`,
-                      })}
+                      className="w-full justify-between text-left p-2 h-auto"
+                      onClick={() => setExpandedFeatureType(expandedFeatureType === type ? null : type)}
                     >
-                      <div className="mr-3 text-neutral-500">
-                        <i className={
-                          template.geometryType === 'Point' ? 'ri-map-pin-2-line' :
-                          template.geometryType === 'LineString' ? 'ri-route-line' :
-                          'ri-shape-2-line'
-                        }></i>
+                      <div className="flex items-center space-x-2">
+                        {featureTypes.find(ft => ft.name.includes(type))?.icon}
+                        <span className="text-sm font-medium">{type}s</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {typeFeatures.length}
+                        </Badge>
                       </div>
-                      <div className="flex flex-col items-start">
-                        <span className="text-sm">{template.name}</span>
-                        <span className="text-xs text-neutral-400">
-                          {template.geometryType === 'LineString' ? 'Line' : template.geometryType}
-                        </span>
-                      </div>
+                      <svg
+                        className={`w-4 h-4 transition-transform ${
+                          expandedFeatureType === type ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </Button>
-                  ))
+                    
+                    {/* Expanded Feature List */}
+                    {expandedFeatureType === type && (
+                      <div className="ml-4 space-y-1">
+                        {typeFeatures.slice(0, 5).map((feature: any) => (
+                          <div
+                            key={feature._id}
+                            className="group p-2 rounded hover:bg-gray-50 cursor-pointer border border-gray-100"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-1 mb-1">
+                                  <span className="text-xs font-medium truncate">{feature.name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {feature.feaNo}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center space-x-1 mb-1">
+                                  <Badge className={`text-xs px-1 py-0 ${getStatusColor(feature.feaStatus)}`}>
+                                    {feature.feaStatus}
+                                  </Badge>
+                                  <Badge className={`text-xs px-1 py-0 ${getStateColor(feature.feaState)}`}>
+                                    {feature.feaState}
+                                  </Badge>
+                                </div>
+                                {feature.specificType && (
+                                  <p className="text-xs text-gray-500 truncate">
+                                    Type: {feature.specificType}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openFeatureDetails(feature.feaType, feature._id);
+                                  }}
+                                  title="View details"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openFeatureInNewTab(feature.feaType, feature._id);
+                                  }}
+                                  title="Open in new tab"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {typeFeatures.length > 5 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs text-blue-600 hover:text-blue-800"
+                            onClick={() => setLocation(`/features/${type.toLowerCase()}`)}
+                          >
+                            View all {typeFeatures.length} {type.toLowerCase()}s →
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {/* Boundaries Section */}
+                {boundaryFeatures.length > 0 && (
+                  <div className="space-y-1 border-t border-gray-100 pt-2 mt-2">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-between text-left p-2 h-auto"
+                      onClick={() => setExpandedFeatureType(expandedFeatureType === 'Boundaries' ? null : 'Boundaries')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M3 3H21V21H3V3ZM5 5V19H19V5H5ZM7 7H17V17H7V7ZM9 9V15H15V9H9Z"/>
+                        </svg>
+                        <span className="text-sm font-medium">Boundaries</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {boundaryFeatures.length}
+                        </Badge>
+                      </div>
+                      <svg
+                        className={`w-4 h-4 transition-transform ${
+                          expandedFeatureType === 'Boundaries' ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </Button>
+                    
+                    {expandedFeatureType === 'Boundaries' && (
+                      <div className="ml-4 space-y-1">
+                        {boundaryFeatures.slice(0, 5).map((boundary: any) => (
+                          <div
+                            key={boundary._id}
+                            className="group p-2 rounded hover:bg-gray-50 cursor-pointer border border-gray-100"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-1 mb-1">
+                                  <span className="text-xs font-medium truncate">{boundary.name}</span>
+                                </div>
+                                <div className="flex items-center space-x-1 mb-1">
+                                  <Badge className="text-xs px-1 py-0 bg-blue-100 text-blue-800">
+                                    {boundary.status || 'Active'}
+                                  </Badge>
+                                  {boundary.assignedTo && (
+                                    <Badge variant="outline" className="text-xs px-1 py-0">
+                                      Assigned
+                                    </Badge>
+                                  )}
+                                </div>
+                                {boundary.category && (
+                                  <p className="text-xs text-gray-500 truncate">
+                                    Category: {boundary.category}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Show boundary details in modal or navigate to boundary page
+                                    toast({
+                                      title: "Boundary Details",
+                                      description: `${boundary.name} - ${boundary.status || 'Active'}`,
+                                    });
+                                  }}
+                                  title="View boundary details"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {boundaryFeatures.length > 5 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs text-blue-600 hover:text-blue-800"
+                            onClick={() => toast({
+                              title: "All Boundaries",
+                              description: "Navigate to boundaries management page",
+                            })}
+                          >
+                            View all {boundaryFeatures.length} boundaries →
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {features.length === 0 && (
+                  <div className="px-3 py-4 text-xs text-neutral-500 text-center">
+                    No features found. Create features on the map to see them here.
+                  </div>
                 )}
               </div>
             </div>
