@@ -194,7 +194,7 @@ export default function FeatureDetails() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {feature.images.map((imagePath, index) => {
+                  {feature.images.map((imagePath: string, index: number) => {
                     let imageUrl = imagePath;
                     if (!imagePath.startsWith('http') && !imagePath.startsWith('/')) {
                       imageUrl = `/uploads/${imagePath}`;

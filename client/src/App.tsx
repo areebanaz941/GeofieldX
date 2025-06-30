@@ -12,6 +12,8 @@ import TaskList from "./pages/TaskList";
 import FieldTeams from "./pages/FieldTeams";
 import Reports from "./pages/Reports";
 import Submissions from "./pages/Submissions";
+import FeatureList from "./pages/FeatureList";
+import FeatureDetails from "./pages/FeatureDetails";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AuthenticatedRoutes } from "./components/AuthenticatedRoutes";
 
@@ -62,6 +64,16 @@ function App() {
             <Route path="/submissions">
               <AuthenticatedRoutes>
                 <Submissions />
+              </AuthenticatedRoutes>
+            </Route>
+            <Route path="/features/:featureType">
+              <AuthenticatedRoutes>
+                <FeatureList />
+              </AuthenticatedRoutes>
+            </Route>
+            <Route path="/features/:featureType/:featureId">
+              <AuthenticatedRoutes>
+                <FeatureDetails />
               </AuthenticatedRoutes>
             </Route>
             <Route component={NotFound} />
