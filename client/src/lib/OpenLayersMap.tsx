@@ -220,13 +220,13 @@ const OpenLayersMap = ({
           // Use blue for assigned boundaries, green for unassigned boundaries, original color for other polygons
           let fillColor, strokeColor;
           if (isParcel) {
+            // Make boundaries hollow (no fill) with dashed outline
+            fillColor = 'rgba(0, 0, 0, 0)'; // Completely transparent fill
             if (featureData?.assignedTo) {
-              // Assigned boundary - blue
-              fillColor = 'rgba(33, 150, 243, 0.3)';
+              // Assigned boundary - blue dashed outline
               strokeColor = '#2196F3';
             } else {
-              // Unassigned boundary - green
-              fillColor = 'rgba(76, 175, 80, 0.3)';
+              // Unassigned boundary - green dashed outline
               strokeColor = '#4CAF50';
             }
           } else {
@@ -249,7 +249,8 @@ const OpenLayersMap = ({
             }),
             stroke: new Stroke({
               color: strokeColor,
-              width: strokeWidth
+              width: strokeWidth,
+              lineDash: isParcel ? [8, 8] : undefined // Dashed line for boundaries, solid for others
             }),
             text: new Text({
               text: labelText,
