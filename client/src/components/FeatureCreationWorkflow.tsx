@@ -35,8 +35,6 @@ export default function FeatureCreationWorkflow({ open, onOpenChange, onFeatureC
   const { user } = useAuth();
   const { toast } = useToast();
   
-  console.log("FeatureCreationWorkflow render - open:", open);
-  
   const [step, setStep] = useState<'name' | 'type' | 'geometry' | 'details'>('name');
   const [formData, setFormData] = useState({
     name: '',
