@@ -1,14 +1,28 @@
-import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Settings, Calendar, User, Building, Cable, Square, Radio } from "lucide-react";
+import { useParams, Link, useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, MapPin, Settings, Calendar, User, Building, Cable, Square, Radio, Edit, Trash2, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import type { IFeature, ITeam } from "@shared/schema";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect } from "react";
+import type { IFeature, ITeam, IUser } from "@shared/schema";
 
 export default function FeatureDetails() {
   const { featureType, featureId } = useParams<{ featureType: string; featureId: string }>();
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<IFeature>>({});
 
   // Fetch individual feature details
   const { data: feature, isLoading, error } = useQuery<IFeature>({
@@ -21,17 +35,109 @@ export default function FeatureDetails() {
     enabled: !!featureId,
   });
 
-  // Fetch team details if feature has a teamId
-  const { data: creatorTeam } = useQuery<ITeam>({
-    queryKey: ['/api/teams', feature?.teamId],
-    enabled: !!feature?.teamId,
+  // Fetch all teams to get team details
+  const { data: teams = [] } = useQuery<ITeam[]>({
+    queryKey: ['/api/teams'],
   });
 
-  // Fetch team details if feature is assigned to a team
-  const { data: assignedTeam } = useQuery<ITeam>({
-    queryKey: ['/api/teams', feature?.assignedTo],
-    enabled: !!feature?.assignedTo,
+  // Fetch all users to get creator details
+  const { data: users = [] } = useQuery<IUser[]>({
+    queryKey: ['/api/users'],
   });
+
+  // Find relevant team and creator
+  const assignedTeam = teams.find(team => team._id?.toString() === feature?.teamId?.toString());
+  const createdByUser = users.find(user => user._id?.toString() === feature?.createdBy?.toString());
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/features/${featureId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete feature');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Feature deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/features'] });
+      setLocation(`/features/${featureType.toLowerCase()}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete feature",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async (updatedFeature: Partial<IFeature>) => {
+      const response = await fetch(`/api/features/${featureId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedFeature),
+      });
+      if (!response.ok) throw new Error('Failed to update feature');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Feature updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/features', featureId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/features'] });
+      setIsEditOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update feature",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle edit form submission
+  const handleUpdateFeature = () => {
+    updateMutation.mutate(editForm);
+  };
+
+  // Handle view on map
+  const handleViewOnMap = () => {
+    // Navigate to map with feature highlighted
+    setLocation(`/map?feature=${featureId}`);
+  };
+
+  // Handle delete confirmation
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this feature? This action cannot be undone.')) {
+      deleteMutation.mutate();
+    }
+  };
+
+  // Initialize edit form when feature loads
+  useEffect(() => {
+    if (feature && !editForm.name) {
+      setEditForm({
+        name: feature.name,
+        feaNo: feature.feaNo,
+        feaState: feature.feaState,
+        feaStatus: feature.feaStatus,
+        specificType: feature.specificType,
+        maintenance: feature.maintenance,
+        teamId: feature.teamId,
+      });
+    }
+  }, [feature]);
 
   const getFeatureIcon = (type: string) => {
     switch (type) {
@@ -112,6 +218,122 @@ export default function FeatureDetails() {
             </div>
           </div>
         </div>
+
+        {/* Action Buttons - Supervisor Only */}
+        {user?.role === 'Supervisor' && (
+          <div className="flex items-center gap-2">
+            <Button onClick={handleViewOnMap} variant="outline" size="sm">
+              <Eye className="h-4 w-4 mr-2" />
+              View on Map
+            </Button>
+            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Feature</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                  <div>
+                    <Label htmlFor="name">Feature Name</Label>
+                    <Input
+                      id="name"
+                      value={editForm.name || ''}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="feaNo">Feature Number</Label>
+                    <Input
+                      id="feaNo"
+                      value={editForm.feaNo || ''}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, feaNo: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="feaStatus">Status</Label>
+                    <Select value={editForm.feaStatus} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaStatus: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Assigned">Assigned</SelectItem>
+                        <SelectItem value="Unassigned">Unassigned</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="Delayed">Delayed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="feaState">State</Label>
+                    <Select value={editForm.feaState} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaState: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="As-Built">As-Built</SelectItem>
+                        <SelectItem value="Design">Design</SelectItem>
+                        <SelectItem value="Proposed">Proposed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="specificType">Specific Type</Label>
+                    <Input
+                      id="specificType"
+                      value={editForm.specificType || ''}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, specificType: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maintenance">Maintenance</Label>
+                    <Select value={editForm.maintenance} onValueChange={(value) => setEditForm(prev => ({ ...prev, maintenance: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select maintenance" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Required">Required</SelectItem>
+                        <SelectItem value="Not Required">Not Required</SelectItem>
+                        <SelectItem value="Scheduled">Scheduled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="teamId">Assigned Team</Label>
+                    <Select value={editForm.teamId?.toString()} onValueChange={(value) => setEditForm(prev => ({ ...prev, teamId: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team._id?.toString()} value={team._id?.toString()}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleUpdateFeature} disabled={updateMutation.isPending}>
+                    {updateMutation.isPending ? 'Updating...' : 'Update'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={handleDelete} variant="destructive" size="sm" disabled={deleteMutation.isPending}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -256,7 +478,7 @@ export default function FeatureDetails() {
           </Card>
 
           {/* Team Information */}
-          {(creatorTeam || assignedTeam) && (
+          {(assignedTeam || createdByUser) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -265,47 +487,25 @@ export default function FeatureDetails() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {creatorTeam && (
+                {assignedTeam && (
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Created by Team</label>
-                    <p className="font-medium">{creatorTeam.name}</p>
-                    {creatorTeam.city && (
-                      <p className="text-sm text-gray-600">{creatorTeam.city}</p>
+                    <label className="text-sm font-medium text-gray-500">Assigned Team</label>
+                    <p className="font-medium">{assignedTeam.name}</p>
+                    {assignedTeam.city && (
+                      <p className="text-sm text-gray-600">{assignedTeam.city}</p>
                     )}
                   </div>
                 )}
-                {assignedTeam && assignedTeam._id !== creatorTeam?._id && (
-                  <>
-                    <Separator />
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Assigned to Team</label>
-                      <p className="font-medium">{assignedTeam.name}</p>
-                      {assignedTeam.city && (
-                        <p className="text-sm text-gray-600">{assignedTeam.city}</p>
-                      )}
-                    </div>
-                  </>
+                {createdByUser && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Created By</label>
+                    <p className="font-medium">{createdByUser.username}</p>
+                    <p className="text-sm text-gray-600">{createdByUser.role}</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
           )}
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <MapPin className="h-4 w-4 mr-2" />
-                View on Map
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Settings className="h-4 w-4 mr-2" />
-                Edit Feature
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
