@@ -57,6 +57,7 @@ export default function MapView() {
   // Feature selection dialog state
   const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
   const [selectedFeatureType, setSelectedFeatureType] = useState<string>('');
+  const [supervisorPolygonModalOpen, setSupervisorPolygonModalOpen] = useState(false);
   
   // Feature creation workflow state (moved to sidebar)
   // const [featureCreationWorkflowOpen, setFeatureCreationWorkflowOpen] = useState(false);
@@ -357,37 +358,21 @@ export default function MapView() {
   const handlePolygonCreated = (polygonData: { name: string; coordinates: number[][][] }) => {
     console.log('handlePolygonCreated called with:', polygonData);
     
-    // For field users, validate polygon is within assigned boundaries
-    if (user?.role === "Field" && boundaries.length > 0) {
-      const assignedBoundary = boundaries[0];
-      const isWithinBoundary = isPolygonInAssignedBoundary(polygonData.coordinates);
-      
-      console.log('Boundary validation:', { isWithinBoundary, boundaries: boundaries.length });
-      
-      if (!isWithinBoundary) {
-        toast({
-          title: "Outside Boundary",
-          description: "Parcels can only be created within your assigned boundary area.",
-          variant: "destructive"
-        });
-        // Clear the drawn polygon
-        setClearPolygon(true);
-        setTimeout(() => setClearPolygon(false), 100);
-        setDrawingMode(false);
-        return;
-      }
-    }
-    
-    // Store the drawn polygon for feature creation
+    // Store the drawn polygon for feature creation (remove strict boundary validation)
     setDrawnPolygon({ coordinates: polygonData.coordinates });
     setDrawingMode(false);
     
-    // Automatically open the CreateFeatureModal for parcel creation
-    setCreateFeatureModalOpen(true);
+    // For supervisors, open the supervisor polygon modal (parcel creation)
+    if (user?.role === "Supervisor") {
+      setSupervisorPolygonModalOpen(true);
+    } else {
+      // For field users, open the regular feature creation modal
+      setCreateFeatureModalOpen(true);
+    }
     
     toast({
       title: "Polygon completed",
-      description: "Fill out the form to save this parcel feature.",
+      description: "Fill out the form to save this feature.",
     });
   };
 

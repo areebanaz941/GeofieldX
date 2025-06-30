@@ -1,206 +1,98 @@
-import { useParams, Link, useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Settings, Calendar, User, Building, Cable, Square, Radio, Edit, Trash2, Eye } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useParams, useLocation } from "wouter";
+import { ArrowLeft, MapPin, Calendar, User, Settings, Image as ImageIcon, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { useState, useEffect } from "react";
-import type { IFeature, ITeam, IUser } from "@shared/schema";
+import { getFeature } from "@/lib/api";
+import { IFeature } from "../../../shared/schema";
 
 export default function FeatureDetails() {
-  const { featureType, featureId } = useParams<{ featureType: string; featureId: string }>();
+  const { featureType, featureId } = useParams();
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<IFeature>>({});
 
-  // Fetch individual feature details
-  const { data: feature, isLoading, error } = useQuery<IFeature>({
+  const { data: feature, isLoading, error } = useQuery({
     queryKey: ['/api/features', featureId],
-    queryFn: async () => {
-      const response = await fetch(`/api/features/${featureId}`);
-      if (!response.ok) throw new Error('Failed to fetch feature details');
-      return response.json();
-    },
+    queryFn: () => getFeature(featureId!),
     enabled: !!featureId,
   });
 
-  // Fetch all teams to get team details
-  const { data: teams = [] } = useQuery<ITeam[]>({
-    queryKey: ['/api/teams'],
-  });
-
-  // Fetch all users to get creator details
-  const { data: users = [] } = useQuery<IUser[]>({
-    queryKey: ['/api/users'],
-  });
-
-  // Find relevant team and creator
-  const assignedTeam = teams.find(team => team._id?.toString() === feature?.teamId?.toString());
-  const createdByUser = users.find(user => user._id?.toString() === feature?.createdBy?.toString());
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/features/${featureId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete feature');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Feature deleted successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/features'] });
-      setLocation(`/features/${featureType.toLowerCase()}`);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete feature",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: async (updatedFeature: Partial<IFeature>) => {
-      const response = await fetch(`/api/features/${featureId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedFeature),
-      });
-      if (!response.ok) throw new Error('Failed to update feature');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Feature updated successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/features', featureId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/features'] });
-      setIsEditOpen(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update feature",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle edit form submission
-  const handleUpdateFeature = () => {
-    updateMutation.mutate(editForm);
-  };
-
-  // Handle view on map
-  const handleViewOnMap = () => {
-    // Navigate to map with feature highlighted
-    setLocation(`/map?feature=${featureId}`);
-  };
-
-  // Handle delete confirmation
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this feature? This action cannot be undone.')) {
-      deleteMutation.mutate();
-    }
-  };
-
-  // Initialize edit form when feature loads
-  useEffect(() => {
-    if (feature && !editForm.name) {
-      setEditForm({
-        name: feature.name,
-        feaNo: feature.feaNo,
-        feaState: feature.feaState,
-        feaStatus: feature.feaStatus,
-        specificType: feature.specificType,
-        maintenance: feature.maintenance,
-        teamId: feature.teamId,
-      });
-    }
-  }, [feature]);
-
-  const getFeatureIcon = (type: string) => {
-    switch (type) {
-      case 'Tower':
-        return <Radio className="h-6 w-6" />;
-      case 'Manhole':
-        return <Building className="h-6 w-6" />;
-      case 'FiberCable':
-        return <Cable className="h-6 w-6" />;
-      case 'Parcel':
-        return <Square className="h-6 w-6" />;
-      default:
-        return <MapPin className="h-6 w-6" />;
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed':
-        return 'bg-green-100 text-green-800';
-      case 'InProgress':
-        return 'bg-blue-100 text-blue-800';
-      case 'Assigned':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Delayed':
-        return 'bg-red-100 text-red-800';
+      case 'New': return 'bg-blue-100 text-blue-800';
+      case 'InProgress': return 'bg-yellow-100 text-yellow-800';
+      case 'Completed': return 'bg-green-100 text-green-800';
+      case 'Active': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStateColor = (state: string) => {
+    switch (state) {
+      case 'Plan': return 'bg-orange-100 text-orange-800';
+      case 'Under Construction': return 'bg-amber-100 text-amber-800';
+      case 'As-Built': return 'bg-emerald-100 text-emerald-800';
+      case 'Abandoned': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatCoordinates = (geometry: any) => {
+    if (!geometry) return 'N/A';
+    
+    switch (geometry.type) {
+      case 'Point':
+        const [lng, lat] = geometry.coordinates;
+        return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      case 'LineString':
+        return `Line with ${geometry.coordinates.length} points`;
+      case 'Polygon':
+        return `Polygon with ${geometry.coordinates[0].length} vertices`;
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'Unknown geometry';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p>Loading feature details...</p>
-            </div>
-            <Link href={`/features/${featureType}`}>
-              <Button variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to {featureType}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="p-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !feature) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="p-6">
         <Card>
-          <CardContent className="p-6">
-            <p className="text-red-600 mb-4">Failed to load feature details.</p>
-            <Link href={`/features/${featureType}`}>
-              <Button variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to {featureType}
-              </Button>
-            </Link>
+          <CardContent className="p-8 text-center">
+            <p className="text-red-500">Error loading feature details.</p>
+            <Button 
+              variant="outline" 
+              onClick={() => setLocation('/features/all')}
+              className="mt-4"
+            >
+              Back to Features
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -208,144 +100,31 @@ export default function FeatureDetails() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Link href={`/features/${featureType.toLowerCase()}`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to {featureType}
-            </Button>
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="text-blue-600">
-              {getFeatureIcon(feature.feaType)}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">
-                {feature.name || `${feature.feaType} #${feature.feaNo}`}
-              </h1>
-              <p className="text-gray-600">Feature Details</p>
-            </div>
-          </div>
+      <div className="flex items-center space-x-4">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => setLocation(`/features/${featureType || 'all'}`)}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Features
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900">{feature.name}</h1>
+          <p className="text-gray-600">{feature.feaType} Feature Details</p>
         </div>
-
-        {/* Action Buttons - Supervisor Only */}
-        {user?.role === 'Supervisor' && (
-          <div className="flex items-center gap-2">
-            <Button onClick={handleViewOnMap} variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
-              View on Map
-            </Button>
-            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Edit Feature</DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                  <div>
-                    <Label htmlFor="name">Feature Name</Label>
-                    <Input
-                      id="name"
-                      value={editForm.name || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="feaNo">Feature Number</Label>
-                    <Input
-                      id="feaNo"
-                      value={editForm.feaNo || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, feaNo: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="feaStatus">Status</Label>
-                    <Select value={editForm.feaStatus} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaStatus: value as any }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="New">New</SelectItem>
-                        <SelectItem value="InProgress">In Progress</SelectItem>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="feaState">State</Label>
-                    <Select value={editForm.feaState} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaState: value as any }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select state" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="As-Built">As-Built</SelectItem>
-                        <SelectItem value="Plan">Plan</SelectItem>
-                        <SelectItem value="Under Construction">Under Construction</SelectItem>
-                        <SelectItem value="Abandoned">Abandoned</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="specificType">Specific Type</Label>
-                    <Input
-                      id="specificType"
-                      value={editForm.specificType || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, specificType: e.target.value as any }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="maintenance">Maintenance</Label>
-                    <Select value={editForm.maintenance} onValueChange={(value) => setEditForm(prev => ({ ...prev, maintenance: value as any }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select maintenance" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Required">Required</SelectItem>
-                        <SelectItem value="None">None</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="teamId">Assigned Team</Label>
-                    <Select value={editForm.teamId?.toString()} onValueChange={(value) => setEditForm(prev => ({ ...prev, teamId: value as any }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team._id?.toString()} value={team._id?.toString()}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleUpdateFeature} disabled={updateMutation.isPending}>
-                    {updateMutation.isPending ? 'Updating...' : 'Update'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button onClick={handleDelete} variant="destructive" size="sm" disabled={deleteMutation.isPending}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </div>
-        )}
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm">
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button variant="outline" size="sm">
+            <MapPin className="h-4 w-4 mr-2" />
+            View on Map
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -354,39 +133,73 @@ export default function FeatureDetails() {
           {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Basic Information
-              </CardTitle>
+              <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Feature Type</label>
-                  <p className="text-lg font-semibold">{feature.feaType}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Feature Number</label>
                   <p className="text-lg font-semibold">{feature.feaNo}</p>
                 </div>
                 <div>
+                  <label className="text-sm font-medium text-gray-500">Feature Type</label>
+                  <p className="text-lg font-semibold">{feature.feaType}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Specific Type</label>
+                  <p className="text-lg font-semibold">{feature.specificType}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Maintenance Status</label>
+                  <p className="text-lg font-semibold">{feature.maintenance}</p>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="flex space-x-4">
+                <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
-                  <Badge className={`${getStatusColor(feature.feaStatus)} mt-1`}>
-                    {feature.feaStatus}
-                  </Badge>
+                  <div className="mt-1">
+                    <Badge className={getStatusColor(feature.feaStatus)}>
+                      {feature.feaStatus}
+                    </Badge>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">State</label>
-                  <Badge variant="outline" className="mt-1">
-                    {feature.feaState}
-                  </Badge>
+                  <div className="mt-1">
+                    <Badge className={getStateColor(feature.feaState)}>
+                      {feature.feaState}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              {feature.specificType && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Specific Type</label>
-                  <p className="font-medium">{feature.specificType}</p>
-                </div>
+
+              {feature.color && feature.feaType === 'Parcel' && (
+                <>
+                  <Separator />
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Parcel Color</label>
+                    <div className="flex items-center space-x-3 mt-2">
+                      <div 
+                        className="w-8 h-8 rounded border border-gray-300"
+                        style={{ backgroundColor: feature.color }}
+                      ></div>
+                      <span className="text-lg font-semibold">{feature.color}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {feature.remarks && (
+                <>
+                  <Separator />
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Remarks</label>
+                    <p className="mt-1 text-gray-900">{feature.remarks}</p>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -394,112 +207,140 @@ export default function FeatureDetails() {
           {/* Location Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Location Details
-              </CardTitle>
+              <CardTitle>Location Information</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {feature.geometry && feature.geometry.coordinates && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Coordinates</label>
-                    <p className="font-mono text-sm bg-gray-100 p-2 rounded">
-                      {feature.geometry.type === 'Point' && feature.geometry.coordinates && (
-                        `Lat: ${feature.geometry.coordinates[1]?.toFixed(6)}, Lng: ${feature.geometry.coordinates[0]?.toFixed(6)}`
-                      )}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Geometry Type</label>
-                  <p className="font-medium">{feature.geometry?.type || 'Unknown'}</p>
-                </div>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Geometry Type</label>
+                <p className="text-lg font-semibold">{feature.geometry?.type || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Coordinates</label>
+                <p className="text-sm text-gray-700 font-mono bg-gray-50 p-2 rounded">
+                  {formatCoordinates(feature.geometry)}
+                </p>
               </div>
             </CardContent>
           </Card>
 
           {/* Images */}
-          {feature.images && feature.images.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Images</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ImageIcon className="h-5 w-5 mr-2" />
+                Images ({feature.images?.length || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {feature.images && feature.images.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {feature.images.map((image, index) => (
+                  {feature.images.map((imageUrl, index) => (
                     <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img
-                        src={`/uploads/${image}`}
+                      <img 
+                        src={imageUrl} 
                         alt={`Feature image ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                        onClick={() => window.open(imageUrl, '_blank')}
                       />
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <ImageIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                  <p>No images attached to this feature</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Technical Details */}
+          {/* Timestamps */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Technical Details
+              <CardTitle className="flex items-center">
+                <Calendar className="h-5 w-5 mr-2" />
+                Timeline
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Maintenance</label>
-                <Badge variant="outline" className="mt-1 block w-fit">
-                  {feature.maintenance}
-                </Badge>
+                <label className="text-sm font-medium text-gray-500">Created</label>
+                <p className="text-sm text-gray-900">{formatDate(feature.createdAt)}</p>
               </div>
-              {feature.createdAt && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Last Updated</label>
+                <p className="text-sm text-gray-900">{formatDate(feature.lastUpdated)}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Modified</label>
+                <p className="text-sm text-gray-900">{formatDate(feature.updatedAt)}</p>
+              </div>
+              {feature.maintenanceDate && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Created Date</label>
-                  <p className="flex items-center gap-2 mt-1">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(feature.createdAt).toLocaleDateString()}
-                  </p>
+                  <label className="text-sm font-medium text-gray-500">Maintenance Date</label>
+                  <p className="text-sm text-gray-900">{formatDate(feature.maintenanceDate)}</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Team Information */}
-          {(assignedTeam || createdByUser) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Team Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {assignedTeam && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Assigned Team</label>
-                    <p className="font-medium">{assignedTeam.name}</p>
-                    {assignedTeam.city && (
-                      <p className="text-sm text-gray-600">{assignedTeam.city}</p>
-                    )}
-                  </div>
-                )}
-                {createdByUser && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Created By</label>
-                    <p className="font-medium">{createdByUser.username}</p>
-                    <p className="text-sm text-gray-600">{createdByUser.role}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* Assignment Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="h-5 w-5 mr-2" />
+                Assignment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Assigned To</label>
+                <p className="text-sm text-gray-900">
+                  {feature.assignedTo ? 'Team Assigned' : 'Unassigned'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Created By</label>
+                <p className="text-sm text-gray-900">
+                  {feature.createdBy ? 'Supervisor' : 'System'}
+                </p>
+              </div>
+              {feature.teamId && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Team ID</label>
+                  <p className="text-sm text-gray-900 font-mono">{feature.teamId.toString()}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Feature
+              </Button>
+              <Button variant="outline" className="w-full">
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Add Images
+              </Button>
+              <Button variant="outline" className="w-full">
+                <MapPin className="h-4 w-4 mr-2" />
+                View on Map
+              </Button>
+              <Button variant="destructive" className="w-full">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Feature
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
