@@ -302,6 +302,7 @@ export default function CreateFeatureModal({
       ...(values.maintenanceDate && values.maintenanceDate.trim() && { 
         maintenanceDate: new Date(values.maintenanceDate) 
       }),
+      ...(values.color && { color: values.color }),
       ...(values.images && values.images.length > 0 && { images: values.images })
     };
 
