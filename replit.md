@@ -113,6 +113,9 @@ The application uses MongoDB with the following main collections:
   - Added comprehensive "Area Features Overview" section similar to supervisor dashboard but focused on assigned boundaries
   - Enhanced dashboard layout with visual feature statistics per boundary area with proper SVG icons
   - Implemented boundary-specific feature counts (towers, manholes, cables, parcels) with color-coded sections
+  - Fixed feature creation dialog to show default infrastructure features (Tower, Manhole, Fiber Cable, Parcel) for field teams
+  - Added boundary restriction warning message for field teams in feature selection dialog
+  - Enabled direct feature creation without requiring template setup for field team users
 - **June 30, 2025**: Implemented comprehensive supervisor-only access for all feature management functionality
   - Restricted sidebar feature list and plus sign (+) button to supervisors only
   - Created SupervisorRoutes component for role-based route protection

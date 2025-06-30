@@ -34,7 +34,43 @@ const FeatureSelectionDialog = ({
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  // Convert feature templates to the format expected by the dialog
+  // Default infrastructure features available to all users
+  const defaultFeatureTypes = [
+    {
+      id: 'Tower',
+      name: 'Tower',
+      icon: towerIcon,
+      drawingType: 'point' as const,
+      description: 'Communication tower',
+      color: '#E91E63'
+    },
+    {
+      id: 'Manhole',
+      name: 'Manhole',
+      icon: manholeIcon,
+      drawingType: 'point' as const,
+      description: 'Access manhole',
+      color: '#2196F3'
+    },
+    {
+      id: 'FiberCable',
+      name: 'Fiber Cable',
+      icon: fibercableIcon,
+      drawingType: 'line' as const,
+      description: 'Fiber optic cable',
+      color: '#4CAF50'
+    },
+    {
+      id: 'Parcel',
+      name: 'Parcel',
+      icon: parcelIcon,
+      drawingType: 'polygon' as const,
+      description: 'Land parcel area',
+      color: '#9C27B0'
+    }
+  ];
+
+  // Convert feature templates to the format expected by the dialog (for supervisors)
   const templateTypes = featureTemplates.map((template: any) => ({
     id: template.name,
     name: template.name,
@@ -46,6 +82,10 @@ const FeatureSelectionDialog = ({
     color: template.geometryType === 'Point' ? '#E91E63' :
            template.geometryType === 'LineString' ? '#3F51B5' : '#009688'
   }));
+
+  // Use default features for field teams, templates for supervisors
+  const availableFeatures = userRole === 'Field' ? defaultFeatureTypes : 
+                           (templateTypes.length > 0 ? templateTypes : defaultFeatureTypes);
 
   const handleFeatureSelect = (feature: typeof templateTypes[0]) => {
     const instructions = {
@@ -73,14 +113,27 @@ const FeatureSelectionDialog = ({
           </DialogDescription>
         </DialogHeader>
         
+        {/* Warning for field teams about boundary restrictions */}
+        {userRole === 'Field' && (
+          <div className="mx-4 p-3 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-orange-600 mt-0.5 flex-shrink-0">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+            <div className="text-sm text-orange-700">
+              <p className="font-medium">Boundary Restriction</p>
+              <p className="text-xs">Features can only be created within your assigned boundary areas</p>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-2 gap-4 py-4">
-          {templateTypes.length === 0 ? (
+          {availableFeatures.length === 0 ? (
             <div className="col-span-2 text-center py-8 text-muted-foreground">
-              <div className="text-sm">No feature templates available</div>
-              <div className="text-xs mt-1">Create templates using the + button in the sidebar first</div>
+              <div className="text-sm">No feature types available</div>
+              <div className="text-xs mt-1">Contact your administrator</div>
             </div>
           ) : (
-            templateTypes.map((feature) => (
+            availableFeatures.map((feature) => (
               <Button
                 key={feature.id}
                 variant="outline"
