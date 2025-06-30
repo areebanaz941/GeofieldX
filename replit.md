@@ -104,6 +104,15 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 30, 2025**: Implemented comprehensive supervisor-only access for all feature management functionality
+  - Restricted sidebar feature list and plus sign (+) button to supervisors only
+  - Created SupervisorRoutes component for role-based route protection
+  - Protected feature detail pages (/features/:featureType and /features/:featureType/:featureId) with supervisor-only access
+  - Hidden features tab and statistics from field user dashboard
+  - Enhanced sidebar with SVG icons for feature types (tower, manhole, cable, parcel) replacing color indicators
+  - Implemented separate feature detail pages with comprehensive information display
+  - Added FeatureList and FeatureDetails pages with search, filtering, and individual feature information
+  - Field users now have clean interface without feature management capabilities
 - **June 30, 2025**: Added city field to team creation form and implemented city filtering in team management
   - Added city field to team schema (ITeam interface) and MongoDB team model
   - Updated team creation form in supervisor dashboard to include optional city input field

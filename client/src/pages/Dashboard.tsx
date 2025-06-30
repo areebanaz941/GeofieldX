@@ -198,13 +198,15 @@ export default function Dashboard() {
           >
             Overview
           </Button>
-          <Button 
-            variant={activeTab === "features" ? "default" : "outline"}
-            onClick={() => setActiveTab("features")}
-            size="sm"
-          >
-            Features
-          </Button>
+          {user.role === "Supervisor" && (
+            <Button 
+              variant={activeTab === "features" ? "default" : "outline"}
+              onClick={() => setActiveTab("features")}
+              size="sm"
+            >
+              Features
+            </Button>
+          )}
         </div>
       </div>
 
@@ -222,16 +224,18 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="bg-white border-0 shadow-lg">
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-2">
-                  <p className="text-sm text-[#1E5CB3] font-medium">{t('dashboard.totalFeatures')}</p>
-                  <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
-                    {features.length || 0}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {user.role === "Supervisor" && (
+              <Card className="bg-white border-0 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="space-y-2">
+                    <p className="text-sm text-[#1E5CB3] font-medium">{t('dashboard.totalFeatures')}</p>
+                    <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
+                      {features.length || 0}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             <Card className="bg-white border-0 shadow-lg">
               <CardContent className="p-4 sm:p-6">

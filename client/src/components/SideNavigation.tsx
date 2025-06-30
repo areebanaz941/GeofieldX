@@ -112,39 +112,41 @@ export default function SideNavigation() {
             </Button>
           ))}
           
-          <div className="pt-3 mt-3 border-t border-neutral-200">
-            <div className="flex items-center justify-between px-3 mb-2">
-              <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                Features
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 hover:bg-primary-50 hover:text-primary-600"
-                onClick={() => setLocation("/map")}
-                title="Add new feature"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </Button>
-            </div>
-            <div className="mt-2 space-y-1">
-              {featureTypes.map((feature) => (
+          {user.role === "Supervisor" && (
+            <div className="pt-3 mt-3 border-t border-neutral-200">
+              <div className="flex items-center justify-between px-3 mb-2">
+                <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  Features
+                </h3>
                 <Button
-                  key={feature.name}
                   variant="ghost"
-                  className="w-full justify-start text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
-                  onClick={() => setLocation(`/features/${feature.name.toLowerCase()}`)}
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-primary-50 hover:text-primary-600"
+                  onClick={() => setLocation("/map")}
+                  title="Add new feature"
                 >
-                  <div className="mr-3 text-neutral-500">
-                    {feature.icon}
-                  </div>
-                  <span>{feature.name}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </Button>
-              ))}
+              </div>
+              <div className="mt-2 space-y-1">
+                {featureTypes.map((feature) => (
+                  <Button
+                    key={feature.name}
+                    variant="ghost"
+                    className="w-full justify-start text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                    onClick={() => setLocation(`/features/${feature.name.toLowerCase()}`)}
+                  >
+                    <div className="mr-3 text-neutral-500">
+                      {feature.icon}
+                    </div>
+                    <span>{feature.name}</span>
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </nav>
         
         <div className="p-4 border-t border-neutral-200">

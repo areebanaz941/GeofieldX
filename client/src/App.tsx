@@ -16,6 +16,7 @@ import FeatureList from "./pages/FeatureList";
 import FeatureDetails from "./pages/FeatureDetails";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AuthenticatedRoutes } from "./components/AuthenticatedRoutes";
+import { SupervisorRoutes } from "./components/SupervisorRoutes";
 
 function App() {
   return (
@@ -68,12 +69,16 @@ function App() {
             </Route>
             <Route path="/features/:featureType">
               <AuthenticatedRoutes>
-                <FeatureList />
+                <SupervisorRoutes>
+                  <FeatureList />
+                </SupervisorRoutes>
               </AuthenticatedRoutes>
             </Route>
             <Route path="/features/:featureType/:featureId">
               <AuthenticatedRoutes>
-                <FeatureDetails />
+                <SupervisorRoutes>
+                  <FeatureDetails />
+                </SupervisorRoutes>
               </AuthenticatedRoutes>
             </Route>
             <Route component={NotFound} />
