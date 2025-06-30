@@ -859,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json({ 
           message: "Images uploaded successfully",
-          images: imagePaths 
+          imagePaths: imagePaths 
         });
       } catch (error) {
         console.error("Feature image upload error:", error);

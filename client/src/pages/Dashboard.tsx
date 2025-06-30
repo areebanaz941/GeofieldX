@@ -65,9 +65,9 @@ export default function Dashboard() {
     const teamTasks = tasks.filter((task: any) => task.assignedTo?.toString() === user.teamId?.toString());
     const totalTeamTasks = teamTasks.length;
     
-    // Get boundaries assigned to this team
-    const assignedBoundaries = boundaries.filter((boundary: any) => 
-      boundary.assignedTo?.toString() === user.teamId?.toString()
+    // Get boundaries assigned to this team (features with feaType === 'Parcel')
+    const assignedBoundaries = features.filter((feature: any) => 
+      feature.feaType === 'Parcel' && feature.assignedTo?.toString() === user.teamId?.toString()
     );
     
     return (
@@ -147,20 +147,29 @@ export default function Dashboard() {
                       </h4>
                       <div className="mt-1 space-y-1">
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Category:</span> {boundary.category || 'General Area'}
+                          <span className="font-medium">Type:</span> {boundary.feaType}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Number:</span> {boundary.feaNo}
                         </p>
                         <p className="text-sm text-gray-600">
                           <span className="font-medium">Status:</span> 
                           <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
-                            boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
-                            boundary.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                            boundary.feaStatus === 'Active' ? 'bg-green-100 text-green-800' :
+                            boundary.feaStatus === 'New' ? 'bg-blue-100 text-blue-800' :
+                            boundary.feaStatus === 'Completed' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {boundary.status}
+                            {boundary.feaStatus}
                           </span>
                         </p>
-                        {boundary.description && (
-                          <p className="text-sm text-gray-500 mt-2">{boundary.description}</p>
+                        {boundary.specificType && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Type:</span> {boundary.specificType}
+                          </p>
+                        )}
+                        {boundary.remarks && (
+                          <p className="text-sm text-gray-500 mt-2">{boundary.remarks}</p>
                         )}
                       </div>
                     </div>

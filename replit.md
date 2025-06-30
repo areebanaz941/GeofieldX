@@ -104,6 +104,12 @@ The application uses MongoDB with the following main collections:
 - Build and run scripts configured for production deployment
 
 ## Recent Changes
+- **June 30, 2025**: Enhanced field team dashboard with comprehensive fixes and improvements
+  - Fixed boundary assignment display to show proper backend feature data (type, number, status)
+  - Corrected image upload form response format from 'images' to 'imagePaths' for proper database storage
+  - Updated feature popups to display team names instead of team IDs with proper backend queries
+  - Enhanced parcel creation workflow for field teams within assigned boundary validation
+  - Improved field team boundary assignment visualization with real feature data from backend
 - **June 30, 2025**: Implemented comprehensive supervisor-only access for all feature management functionality
   - Restricted sidebar feature list and plus sign (+) button to supervisors only
   - Created SupervisorRoutes component for role-based route protection
