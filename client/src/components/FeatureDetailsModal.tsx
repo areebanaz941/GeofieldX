@@ -1,18 +1,25 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Users, Calendar, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Users, Calendar, Settings, Edit, Trash2 } from "lucide-react";
 import { IFeature, ITeam } from "@shared/schema";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface FeatureDetailsModalProps {
   open: boolean;
   onClose: () => void;
   feature: IFeature | null;
+  onEdit?: (feature: IFeature) => void;
 }
 
-export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsModalProps) {
+export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureDetailsModalProps) {
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
   // Fetch team details if feature has a teamId
   const { data: creatorTeam } = useQuery<ITeam>({
     queryKey: ['/api/teams', feature?.teamId],
@@ -36,10 +43,56 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
     enabled: !!feature?._id && open,
   });
 
+  // Delete feature mutation
+  const deleteFeatureMutation = useMutation({
+    mutationFn: async (featureId: string) => {
+      const response = await fetch(`/api/features/${featureId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete feature');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/features'] });
+      toast({
+        title: "Success",
+        description: "Feature deleted successfully",
+      });
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete feature",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Use fresh feature data if available, otherwise use prop data
   const displayFeature = freshFeature || feature;
 
   if (!displayFeature) return null;
+
+  const handleDelete = async () => {
+    if (!displayFeature?._id) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteFeatureMutation.mutateAsync(displayFeature._id.toString());
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEdit = () => {
+    if (onEdit && displayFeature) {
+      onEdit(displayFeature);
+      onClose();
+    }
+  };
 
   // Debug logging for images
   console.log('Feature data in popup:', displayFeature);
@@ -253,6 +306,32 @@ export function FeatureDetailsModal({ open, onClose, feature }: FeatureDetailsMo
             </CardContent>
           </Card>
         </div>
+        
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 pt-4">
+          <div className="flex gap-2 justify-end w-full">
+            {onEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEdit}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Edit Feature
+              </Button>
+            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={isDeleting || deleteFeatureMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              {isDeleting || deleteFeatureMutation.isPending ? "Deleting..." : "Delete Feature"}
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -257,7 +257,7 @@ const OpenLayersMap = ({
             stroke: new Stroke({
               color: strokeColor,
               width: strokeWidth,
-              lineDash: isParcel ? [8, 8] : undefined // Dashed line for boundaries, solid for others
+              lineDash: (isParcel && !featureData?.color) ? [8, 8] : undefined // Dashed only for boundaries without custom colors
             }),
             text: new Text({
               text: labelText,
