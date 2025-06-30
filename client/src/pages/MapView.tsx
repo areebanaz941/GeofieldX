@@ -477,18 +477,18 @@ export default function MapView() {
         onExpandToggle={() => setTaskPanelExpanded(!taskPanelExpanded)}
       />
       
-      {/* Show appropriate modal based on user role and feature type */}
-      {createFeatureModalOpen && user?.role === "Supervisor" && drawnPolygon && (
+      {/* Supervisor Polygon Modal - for parcel/boundary creation */}
+      {supervisorPolygonModalOpen && (
         <SupervisorPolygonModal
-          open={createFeatureModalOpen}
+          open={supervisorPolygonModalOpen}
           onClose={() => {
-            setCreateFeatureModalOpen(false);
+            setSupervisorPolygonModalOpen(false);
             setDrawnPolygon(null);
             setClearPolygon(true);
             setTimeout(() => setClearPolygon(false), 100);
           }}
           onOpenChange={(open) => {
-            setCreateFeatureModalOpen(open);
+            setSupervisorPolygonModalOpen(open);
             if (!open) {
               setDrawnPolygon(null);
               setClearPolygon(true);
@@ -500,7 +500,8 @@ export default function MapView() {
         />
       )}
 
-      {createFeatureModalOpen && (user?.role !== "Supervisor" || !drawnPolygon) && (
+      {/* Regular Feature Creation Modal */}
+      {createFeatureModalOpen && (
         <CreateFeatureModal
           open={createFeatureModalOpen}
           onClose={() => {
