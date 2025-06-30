@@ -60,6 +60,8 @@ export default function MapView() {
   
   // Feature creation workflow state
   const [featureCreationWorkflowOpen, setFeatureCreationWorkflowOpen] = useState(false);
+  
+  console.log("MapView render - featureCreationWorkflowOpen:", featureCreationWorkflowOpen);
 
   // Handle feature creation completion
   const handleFeatureCreated = (newFeature: IFeature) => {
@@ -427,7 +429,13 @@ export default function MapView() {
         {/* Single Drawing Button - For All Users */}
         <div className="absolute bottom-4 left-4 z-[1000]">
           <Button
-            onClick={() => setFeatureCreationWorkflowOpen(true)}
+            onClick={() => {
+              console.log("Plus button clicked, current state:", featureCreationWorkflowOpen);
+              setFeatureCreationWorkflowOpen(prev => {
+                console.log("Setting featureCreationWorkflowOpen from", prev, "to true");
+                return true;
+              });
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-200"
             title="Create Feature"
           >
