@@ -947,12 +947,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (user.role === "Field") {
-        if (feature.teamId?.toString() !== user.teamId?.toString()) {
+        // Field users can delete features if:
+        // 1. The feature was created by their team, OR
+        // 2. The feature is within a boundary assigned to their team
+        let canDelete = false;
+        
+        // Check if feature was created by their team
+        if (feature.teamId?.toString() === user.teamId?.toString()) {
+          canDelete = true;
+        }
+        
+        // Check if feature is within a boundary assigned to their team
+        if (!canDelete && feature.boundaryId) {
+          const boundary = await storage.getBoundary(feature.boundaryId.toString());
+          // In the current implementation, assignedTo contains the team ID, not user ID
+          if (boundary && boundary.assignedTo?.toString() === user.teamId?.toString()) {
+            canDelete = true;
+          }
+        }
+        
+        if (!canDelete) {
           return res.status(403).json({ 
-            message: "Access denied",
+            message: "You can only delete features created by your team or within your assigned boundaries",
             debug: {
               userTeamId: user.teamId?.toString(),
-              featureTeamId: feature.teamId?.toString()
+              featureTeamId: feature.teamId?.toString(),
+              featureBoundaryId: feature.boundaryId?.toString()
             }
           });
         }
@@ -983,10 +1003,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user has permission to update this feature
-      // Supervisors can update any feature, field users can only update their own team's features
+      // Supervisors can update any feature, field users can only update their own team's features or features within assigned boundaries
       if (user.role === "Field") {
-        if (existingFeature.teamId?.toString() !== user.teamId?.toString()) {
-          return res.status(403).json({ message: "You can only update features created by your team" });
+        let canEdit = false;
+        
+        // Check if feature was created by their team
+        if (existingFeature.teamId?.toString() === user.teamId?.toString()) {
+          canEdit = true;
+        }
+        
+        // Check if feature is within a boundary assigned to their team
+        if (!canEdit && existingFeature.boundaryId) {
+          const boundary = await storage.getBoundary(existingFeature.boundaryId.toString());
+          // In the current implementation, assignedTo contains the team ID, not user ID
+          if (boundary && boundary.assignedTo?.toString() === user.teamId?.toString()) {
+            canEdit = true;
+          }
+        }
+        
+        if (!canEdit) {
+          return res.status(403).json({ 
+            message: "You can only update features created by your team or within your assigned boundaries"
+          });
         }
       }
       
