@@ -186,6 +186,7 @@ export interface ITeam extends Document {
   _id: Types.ObjectId;
   name: string;
   description?: string;
+  city?: string;
   status: TeamStatus;
   createdBy: Types.ObjectId;
   approvedBy?: Types.ObjectId;
@@ -202,6 +203,10 @@ const teamSchema = new Schema<ITeam>(
       trim: true,
     },
     description: {
+      type: String,
+      trim: true,
+    },
+    city: {
       type: String,
       trim: true,
     },
@@ -746,6 +751,7 @@ export const insertTaskSubmissionSchema = z.object({
 export const insertTeamSchema = z.object({
   name: z.string().min(1).trim(),
   description: z.string().optional(),
+  city: z.string().optional(),
   status: z.enum(TEAM_STATUSES).default("Pending"),
   createdBy: z.string().optional(),
 });

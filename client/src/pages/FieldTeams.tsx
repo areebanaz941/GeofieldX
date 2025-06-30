@@ -190,6 +190,7 @@ function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange }: TeamCardP
 const teamFormSchema = z.object({
   name: z.string().min(3, { message: "Team name must be at least 3 characters" }),
   description: z.string().optional(),
+  city: z.string().optional(),
 });
 
 export default function FieldTeams() {
@@ -197,6 +198,7 @@ export default function FieldTeams() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<ITeam | null>(null);
   
@@ -206,6 +208,7 @@ export default function FieldTeams() {
     defaultValues: {
       name: "",
       description: "",
+      city: "",
     },
   });
   
@@ -403,6 +406,22 @@ export default function FieldTeams() {
                                   placeholder="Enter team description" 
                                   className="resize-none" 
                                   rows={3}
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter city name" 
                                   {...field} 
                                 />
                               </FormControl>
