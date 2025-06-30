@@ -168,13 +168,8 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                     })}
                   </div>
                 </div>
-              ) : (
-                <div className="text-center py-3 text-xs text-muted-foreground">
-                  No images uploaded for this feature
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           )}
 
           {/* Basic Information */}
