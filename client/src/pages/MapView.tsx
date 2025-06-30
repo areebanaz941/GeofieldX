@@ -349,6 +349,7 @@ export default function MapView() {
 
   // Handle feature selection from dialog
   const handleFeatureSelect = (featureType: string, drawingType: 'point' | 'line' | 'polygon') => {
+    console.log('🟢 Feature selected:', featureType, 'drawing type:', drawingType);
     setSelectedFeatureType(featureType);
     
     // Reset all drawing modes
@@ -360,13 +361,16 @@ export default function MapView() {
     // Set appropriate drawing mode based on feature type
     switch (drawingType) {
       case 'point':
+        console.log('🟢 Activating point selection mode');
         setPointSelectionMode(true);
         break;
       case 'line':
+        console.log('🟢 Activating line drawing mode');
         setLineDrawingMode(true);
         setLinePoints([]);
         break;
       case 'polygon':
+        console.log('🟢 Activating polygon drawing mode');
         setDrawingMode(true);
         break;
     }

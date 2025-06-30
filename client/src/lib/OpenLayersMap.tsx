@@ -564,7 +564,8 @@ const OpenLayersMap = ({
     }
 
     // Handle line drawing mode
-    if (lineDrawingMode && onMapClick && onMapDoubleClick) {
+    if (lineDrawingMode && !drawInteractionRef.current && mapRef.current) {
+      console.log('🔵 Activating line drawing mode');
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
         source: source,
@@ -592,8 +593,11 @@ const OpenLayersMap = ({
       });
 
       drawInteractionRef.current.on('drawend', (event) => {
+        console.log('🔵 Line drawing completed');
         const geometry = event.feature.getGeometry() as LineString;
         const coordinates = geometry.getCoordinates();
+        
+        console.log('🔵 Line coordinates:', coordinates.length, 'points');
         
         // Validate point count
         if (coordinates.length < 2) {
@@ -611,9 +615,14 @@ const OpenLayersMap = ({
           return { lat, lng };
         });
 
+        console.log('🔵 Converted coordinates:', lonLatCoordinates);
+
         // Pass the line coordinates to the completion handler
         if (onLineCreated) {
+          console.log('🔵 Calling onLineCreated handler');
           onLineCreated({ coordinates: lonLatCoordinates });
+        } else {
+          console.warn('🔵 No onLineCreated handler available');
         }
 
         // Remove the draw interaction after line completion
