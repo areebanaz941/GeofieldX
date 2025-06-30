@@ -36,6 +36,8 @@ const supervisorPolygonSchema = z.object({
   areaName: z.string().min(1, "Area name is required"),
   areaNumber: z.string().min(1, "Area number is required"),
   assignedTo: z.string().min(1, "Please select a team"),
+  color: z.string().min(1, "Please select a color"),
+  featureType: z.string().min(1, "Please select feature type"),
 });
 
 type SupervisorPolygonFormValues = z.infer<typeof supervisorPolygonSchema>;
@@ -96,6 +98,8 @@ export default function SupervisorPolygonModal({
       areaName: "",
       areaNumber: nextAreaNumber,
       assignedTo: "",
+      color: "#4CAF50",
+      featureType: "Residential",
     },
   });
 
@@ -141,11 +145,12 @@ export default function SupervisorPolygonModal({
       name: values.areaName,
       feaNo: values.areaNumber,
       feaType: "Parcel" as const,
-      specificType: "Residential" as const, // Use valid enum value
+      specificType: values.featureType as const,
       feaState: "Plan" as const,
       feaStatus: "New" as const,
       maintenance: "None" as const,
       assignedTo: values.assignedTo,
+      color: values.color, // Add color to the feature data
       geometry: {
         type: "Polygon" as const,
         coordinates: drawnPolygon.coordinates,
@@ -194,6 +199,56 @@ export default function SupervisorPolygonModal({
                       placeholder="Auto-generated"
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="featureType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Feature Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select feature type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Residential">Residential</SelectItem>
+                      <SelectItem value="Commercial">Commercial</SelectItem>
+                      <SelectItem value="Industrial">Industrial</SelectItem>
+                      <SelectItem value="Agricultural">Agricultural</SelectItem>
+                      <SelectItem value="Government">Government</SelectItem>
+                      <SelectItem value="Educational">Educational</SelectItem>
+                      <SelectItem value="Healthcare">Healthcare</SelectItem>
+                      <SelectItem value="Recreational">Recreational</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="color"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Parcel Color</FormLabel>
+                  <div className="flex items-center space-x-3">
+                    <FormControl>
+                      <input
+                        type="color"
+                        value={field.value}
+                        onChange={field.onChange}
+                        className="h-10 w-16 rounded border border-gray-300 cursor-pointer"
+                      />
+                    </FormControl>
+                    <div className="text-sm text-gray-600">{field.value}</div>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

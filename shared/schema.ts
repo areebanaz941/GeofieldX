@@ -302,6 +302,7 @@ export interface IFeature extends Document {
   boundaryId?: Types.ObjectId;
   assignedTo?: Types.ObjectId;
   teamId?: Types.ObjectId;
+  color?: string; // Custom color for parcels
   images?: string[];
   createdAt: Date;
   updatedAt: Date;
