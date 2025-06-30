@@ -3,14 +3,31 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import useAuth from "@/hooks/useAuth";
+import FeatureCreationWorkflow from "./FeatureCreationWorkflow";
 
 export default function SideNavigation() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { toast } = useToast();
+  
+  // Feature creation workflow state
+  const [featureCreationWorkflowOpen, setFeatureCreationWorkflowOpen] = useState(false);
 
   if (!user) return null;
+
+  // Handle feature creation completion
+  const handleFeatureCreated = (newFeature: any) => {
+    toast({
+      title: "Feature Created",
+      description: `${newFeature.feaType} "${newFeature.name}" has been created and is now visible on all dashboards.`,
+    });
+    // Refresh features data
+    queryClient.invalidateQueries({ queryKey: ["/api/features"] });
+  };
 
   const isActive = (path: string) => {
     return location === path;
@@ -122,8 +139,8 @@ export default function SideNavigation() {
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0 hover:bg-primary-50 hover:text-primary-600"
-                  onClick={() => setLocation("/map")}
-                  title="Add new feature"
+                  onClick={() => setFeatureCreationWorkflowOpen(true)}
+                  title="Create new feature"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -168,6 +185,13 @@ export default function SideNavigation() {
           </Button>
         </div>
       </div>
+
+      {/* Feature Creation Workflow */}
+      <FeatureCreationWorkflow
+        open={featureCreationWorkflowOpen}
+        onOpenChange={setFeatureCreationWorkflowOpen}
+        onFeatureCreated={handleFeatureCreated}
+      />
     </div>
   );
 }
