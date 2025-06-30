@@ -113,6 +113,10 @@ The application uses MongoDB with the following main collections:
   - Added comprehensive error handling and placeholder images for missing files
   - Enhanced supervisor dashboard to fetch real feature data from backend instead of mock data
   - Streamlined interface separating navigation (sidebar) from detailed information (dedicated pages)
+  - Fixed Edit and Delete button functionality in FeatureDetails page with proper API integration
+  - Added confirmation dialog for feature deletion with proper error handling
+  - Implemented edit feature navigation to map view and view on map functionality
+  - Enhanced buttons with loading states and proper disabled states during operations
 - **June 30, 2025**: Enhanced field team dashboard with comprehensive fixes and improvements
   - Fixed boundary assignment display to show proper backend feature data (type, number, status)
   - Corrected image upload form response format from 'images' to 'imagePaths' for proper database storage

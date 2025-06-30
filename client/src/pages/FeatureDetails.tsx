@@ -1,16 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, MapPin, Calendar, User, Settings, Image as ImageIcon, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 import { getFeature } from "@/lib/api";
 import { IFeature, ITeam } from "../../../shared/schema";
 
 export default function FeatureDetails() {
   const { featureType, featureId } = useParams();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: feature, isLoading, error } = useQuery({
     queryKey: ['/api/features', featureId],
@@ -23,6 +28,61 @@ export default function FeatureDetails() {
     console.log('🎯 Feature data in FeatureDetails:', feature);
     console.log('🖼️ Feature images:', feature.images);
   }
+
+  // Delete mutation
+  const deleteFeatureMutation = useMutation({
+    mutationFn: async (featureId: string) => {
+      const response = await fetch(`/api/features/${featureId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete feature');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/features'] });
+      toast({
+        title: "Success",
+        description: "Feature deleted successfully",
+      });
+      setLocation(`/features/${featureType || 'all'}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete feature",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!feature?._id) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this feature? This action cannot be undone.');
+    if (!confirmed) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteFeatureMutation.mutateAsync(feature._id.toString());
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle edit (redirect to map view with edit mode)
+  const handleEdit = () => {
+    if (!feature?._id) return;
+    setLocation(`/map?editFeature=${feature._id}`);
+  };
+
+  // Handle view on map
+  const handleViewOnMap = () => {
+    if (!feature?._id) return;
+    setLocation(`/map?feature=${feature._id}`);
+  };
 
   // Fetch team details if feature has a teamId
   const { data: creatorTeam } = useQuery<ITeam>({
@@ -144,11 +204,11 @@ export default function FeatureDetails() {
           <p className="text-gray-600">{feature.feaType} Feature Details</p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleEdit}>
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleViewOnMap}>
             <MapPin className="h-4 w-4 mr-2" />
             View on Map
           </Button>
@@ -387,21 +447,22 @@ export default function FeatureDetails() {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleEdit}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Feature
               </Button>
-              <Button variant="outline" className="w-full">
-                <ImageIcon className="h-4 w-4 mr-2" />
-                Add Images
-              </Button>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleViewOnMap}>
                 <MapPin className="h-4 w-4 mr-2" />
                 View on Map
               </Button>
-              <Button variant="destructive" className="w-full">
+              <Button 
+                variant="destructive" 
+                className="w-full"
+                onClick={handleDelete}
+                disabled={isDeleting || deleteFeatureMutation.isPending}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete Feature
+                {isDeleting || deleteFeatureMutation.isPending ? "Deleting..." : "Delete Feature"}
               </Button>
             </CardContent>
           </Card>
