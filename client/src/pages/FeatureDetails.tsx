@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
@@ -66,7 +65,7 @@ export default function FeatureDetails() {
       queryClient.invalidateQueries({ queryKey: ['/api/features'] });
       setLocation(`/features/${featureType.toLowerCase()}`);
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to delete feature",
@@ -97,7 +96,7 @@ export default function FeatureDetails() {
       queryClient.invalidateQueries({ queryKey: ['/api/features'] });
       setIsEditOpen(false);
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to update feature",
@@ -155,34 +154,47 @@ export default function FeatureDetails() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'inactive':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'maintenance':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    switch (status) {
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      case 'InProgress':
+        return 'bg-blue-100 text-blue-800';
+      case 'Assigned':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Delayed':
+        return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p>Loading feature details...</p>
+            </div>
+            <Link href={`/features/${featureType}`}>
+              <Button variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to {featureType}
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (error || !feature) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
         <Card>
-          <CardContent className="text-center py-12">
-            <p className="text-red-600 mb-4">Failed to load feature details</p>
+          <CardContent className="p-6">
+            <p className="text-red-600 mb-4">Failed to load feature details.</p>
             <Link href={`/features/${featureType}`}>
               <Button variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -256,28 +268,29 @@ export default function FeatureDetails() {
                   </div>
                   <div>
                     <Label htmlFor="feaStatus">Status</Label>
-                    <Select value={editForm.feaStatus} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaStatus: value }))}>
+                    <Select value={editForm.feaStatus} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaStatus: value as any }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Assigned">Assigned</SelectItem>
-                        <SelectItem value="Unassigned">Unassigned</SelectItem>
+                        <SelectItem value="New">New</SelectItem>
+                        <SelectItem value="InProgress">In Progress</SelectItem>
                         <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Delayed">Delayed</SelectItem>
+                        <SelectItem value="Active">Active</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label htmlFor="feaState">State</Label>
-                    <Select value={editForm.feaState} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaState: value }))}>
+                    <Select value={editForm.feaState} onValueChange={(value) => setEditForm(prev => ({ ...prev, feaState: value as any }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select state" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="As-Built">As-Built</SelectItem>
-                        <SelectItem value="Design">Design</SelectItem>
-                        <SelectItem value="Proposed">Proposed</SelectItem>
+                        <SelectItem value="Plan">Plan</SelectItem>
+                        <SelectItem value="Under Construction">Under Construction</SelectItem>
+                        <SelectItem value="Abandoned">Abandoned</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -286,25 +299,24 @@ export default function FeatureDetails() {
                     <Input
                       id="specificType"
                       value={editForm.specificType || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, specificType: e.target.value }))}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, specificType: e.target.value as any }))}
                     />
                   </div>
                   <div>
                     <Label htmlFor="maintenance">Maintenance</Label>
-                    <Select value={editForm.maintenance} onValueChange={(value) => setEditForm(prev => ({ ...prev, maintenance: value }))}>
+                    <Select value={editForm.maintenance} onValueChange={(value) => setEditForm(prev => ({ ...prev, maintenance: value as any }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select maintenance" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Required">Required</SelectItem>
-                        <SelectItem value="Not Required">Not Required</SelectItem>
-                        <SelectItem value="Scheduled">Scheduled</SelectItem>
+                        <SelectItem value="None">None</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label htmlFor="teamId">Assigned Team</Label>
-                    <Select value={editForm.teamId?.toString()} onValueChange={(value) => setEditForm(prev => ({ ...prev, teamId: value }))}>
+                    <Select value={editForm.teamId?.toString()} onValueChange={(value) => setEditForm(prev => ({ ...prev, teamId: value as any }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select team" />
                       </SelectTrigger>
@@ -388,60 +400,42 @@ export default function FeatureDetails() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {feature.geometry && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Geometry Type</label>
-                    <p className="font-medium">{feature.geometry.type}</p>
-                  </div>
+              <div className="space-y-3">
+                {feature.geometry && feature.geometry.coordinates && (
                   <div>
                     <label className="text-sm font-medium text-gray-500">Coordinates</label>
-                    <div className="bg-gray-50 p-3 rounded-md font-mono text-sm">
-                      {feature.geometry.type === 'Point' 
-                        ? `[${feature.geometry.coordinates.join(', ')}]`
-                        : JSON.stringify(feature.geometry.coordinates, null, 2)
-                      }
-                    </div>
+                    <p className="font-mono text-sm bg-gray-100 p-2 rounded">
+                      {feature.geometry.type === 'Point' && feature.geometry.coordinates && (
+                        `Lat: ${feature.geometry.coordinates[1]?.toFixed(6)}, Lng: ${feature.geometry.coordinates[0]?.toFixed(6)}`
+                      )}
+                    </p>
                   </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Geometry Type</label>
+                  <p className="font-medium">{feature.geometry?.type || 'Unknown'}</p>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
-          {/* Feature Images */}
-          {feature.images && Array.isArray(feature.images) && feature.images.length > 0 && (
+          {/* Images */}
+          {feature.images && feature.images.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Feature Images</CardTitle>
+                <CardTitle>Images</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {feature.images.map((imagePath: string, index: number) => {
-                    let imageUrl = imagePath;
-                    if (!imagePath.startsWith('http') && !imagePath.startsWith('/')) {
-                      imageUrl = `/uploads/${imagePath}`;
-                    } else if (!imagePath.startsWith('http') && !imagePath.startsWith('/uploads/')) {
-                      imageUrl = `/uploads/${imagePath}`;
-                    }
-
-                    return (
-                      <div key={index} className="border rounded-lg overflow-hidden">
-                        <img
-                          src={imageUrl}
-                          alt={`Feature image ${index + 1}`}
-                          className="w-full h-48 object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.nextElementSibling?.classList.remove('hidden');
-                          }}
-                        />
-                        <div className="hidden bg-gray-100 h-48 flex items-center justify-center text-gray-500">
-                          Image not available
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {feature.images.map((image, index) => (
+                    <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={`/uploads/${image}`}
+                        alt={`Feature image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

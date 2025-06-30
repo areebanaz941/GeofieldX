@@ -645,6 +645,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update feature
+  app.patch("/api/features/:id", isSupervisor, validateObjectId("id"), async (req, res) => {
+    try {
+      const featureId = req.params.id;
+      const updateData = req.body;
+
+      const feature = await storage.getFeature(featureId);
+      if (!feature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+
+      const updatedFeature = await storage.updateFeature(featureId, updateData);
+      res.json(updatedFeature);
+    } catch (error) {
+      console.error("Update feature error:", error);
+      res.status(500).json({ message: "Failed to update feature" });
+    }
+  });
+
+  // Delete feature
+  app.delete("/api/features/:id", isSupervisor, validateObjectId("id"), async (req, res) => {
+    try {
+      const featureId = req.params.id;
+
+      const feature = await storage.getFeature(featureId);
+      if (!feature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+
+      const deleted = await storage.deleteFeature(featureId);
+      if (deleted) {
+        res.json({ message: "Feature deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete feature" });
+      }
+    } catch (error) {
+      console.error("Delete feature error:", error);
+      res.status(500).json({ message: "Failed to delete feature" });
+    }
+  });
+
   app.get("/api/features", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
