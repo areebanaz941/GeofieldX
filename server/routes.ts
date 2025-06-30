@@ -965,6 +965,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Delete feature
+  app.delete("/api/features/:id", isAuthenticated, validateObjectId("id"), async (req, res) => {
+    try {
+      const featureId = req.params.id;
+      const user = req.user as any;
+      
+      // Get the feature first to check permissions
+      const feature = await storage.getFeature(featureId);
+      if (!feature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      
+      // Check if user has permission to delete this feature
+      // Supervisors can delete any feature, field users can only delete their own team's features
+      if (user.role === "Field") {
+        if (feature.teamId?.toString() !== user.teamId?.toString()) {
+          return res.status(403).json({ message: "You can only delete features created by your team" });
+        }
+      }
+      
+      const success = await storage.deleteFeature(featureId);
+      if (!success) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      
+      res.json({ message: "Feature deleted successfully" });
+    } catch (error) {
+      console.error("Delete feature error:", error);
+      res.status(500).json({ message: "Failed to delete feature" });
+    }
+  });
+
   // Boundary routes
   app.post("/api/boundaries", isSupervisor, async (req, res) => {
     try {

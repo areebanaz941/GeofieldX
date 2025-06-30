@@ -19,6 +19,7 @@ import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import FeatureSelectionDialog from "@/components/FeatureSelectionDialog";
 
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
+import { EditFeatureModal } from "@/components/EditFeatureModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,6 +54,8 @@ export default function MapView() {
   const [selectedBoundary, setSelectedBoundary] = useState<any | null>(null);
   const [featureDetailsModalOpen, setFeatureDetailsModalOpen] = useState(false);
   const [clickedFeature, setClickedFeature] = useState<IFeature | null>(null);
+  const [editFeatureModalOpen, setEditFeatureModalOpen] = useState(false);
+  const [featureToEdit, setFeatureToEdit] = useState<IFeature | null>(null);
   
   // Feature selection dialog state
   const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
@@ -615,8 +618,21 @@ export default function MapView() {
           setClickedFeature(null);
         }}
         feature={clickedFeature}
+        onEdit={(feature) => {
+          setFeatureToEdit(feature);
+          setEditFeatureModalOpen(true);
+        }}
       />
 
+      {/* Edit Feature Modal */}
+      <EditFeatureModal
+        open={editFeatureModalOpen}
+        onClose={() => {
+          setEditFeatureModalOpen(false);
+          setFeatureToEdit(null);
+        }}
+        feature={featureToEdit}
+      />
 
     </>
   );
