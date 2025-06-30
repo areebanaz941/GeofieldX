@@ -97,8 +97,7 @@ const FeatureSelectionDialog = ({
   }));
 
   // Use default features for field teams, supervisor features + templates for supervisors
-  const availableFeatures = userRole === 'Field' ? defaultFeatureTypes : 
-                           (templateTypes.length > 0 ? [...supervisorFeatureTypes, ...templateTypes] : supervisorFeatureTypes);
+  const availableFeatures = userRole === 'Field' ? defaultFeatureTypes : supervisorFeatureTypes;
 
   const handleFeatureSelect = (feature: typeof templateTypes[0]) => {
     const instructions = {

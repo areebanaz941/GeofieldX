@@ -110,7 +110,7 @@ export default function SupervisorPolygonModal({
       name: values.boundaryName,
       workOrder: values.workOrder,
       assignedTo: values.assignedTo,
-      status: "Plan",
+      status: "New",
       geometry: {
         type: "Polygon" as const,
         coordinates: drawnPolygon.coordinates,
