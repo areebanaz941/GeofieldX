@@ -45,6 +45,7 @@ const formSchema = z.object({
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
   remarks: z.string().optional(),
+  color: z.string().optional(),
   geometry: z.object({
     type: z.enum(["Point", "LineString", "Polygon"]),
     coordinates: z.array(z.any())
@@ -91,6 +92,7 @@ export default function CreateFeatureModal({
       maintenance: "None",
       maintenanceDate: "",
       remarks: "",
+      color: "#3B82F6", // Default blue color for parcels
       geometry: undefined,
     },
   });
@@ -112,6 +114,7 @@ export default function CreateFeatureModal({
         maintenance: "None",
         maintenanceDate: "",
         remarks: "",
+        color: "#3B82F6", // Default blue color for parcels
         geometry: undefined,
         images: [], // Initialize images as empty array but don't reset if already has values
       });
@@ -136,7 +139,7 @@ export default function CreateFeatureModal({
         options = ["10F", "24F"];
         break;
       case "Parcel":
-        options = ["Commercial", "Residential"];
+        options = ["Commercial", "Residential", "Water Body", "Vegetation", "Agricultural", "Industrial", "Recreational", "Government", "Mixed Use", "Vacant Land"];
         break;
       default:
         options = [];
@@ -405,6 +408,64 @@ export default function CreateFeatureModal({
                 </FormItem>
               )}
             />
+            
+            {/* Color Palette Selection for Parcels */}
+            {feaType === "Parcel" && (
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parcel Color</FormLabel>
+                    <FormControl>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-8 gap-2">
+                          {[
+                            { color: "#3B82F6", name: "Blue" },
+                            { color: "#10B981", name: "Green" }, 
+                            { color: "#F59E0B", name: "Orange" },
+                            { color: "#EF4444", name: "Red" },
+                            { color: "#8B5CF6", name: "Purple" },
+                            { color: "#06B6D4", name: "Cyan" },
+                            { color: "#84CC16", name: "Lime" },
+                            { color: "#F97316", name: "Orange-600" },
+                            { color: "#EC4899", name: "Pink" },
+                            { color: "#6366F1", name: "Indigo" },
+                            { color: "#14B8A6", name: "Teal" },
+                            { color: "#A855F7", name: "Violet" },
+                            { color: "#22C55E", name: "Green-500" },
+                            { color: "#F472B6", name: "Pink-400" },
+                            { color: "#FBBF24", name: "Yellow" },
+                            { color: "#64748B", name: "Slate" }
+                          ].map(({ color, name }) => (
+                            <button
+                              key={color}
+                              type="button"
+                              className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform ${
+                                field.value === color 
+                                  ? 'border-gray-800 ring-2 ring-gray-400' 
+                                  : 'border-gray-300 hover:border-gray-500'
+                              }`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => field.onChange(color)}
+                              title={name}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-6 h-6 rounded border-2 border-gray-300" 
+                            style={{ backgroundColor: field.value || "#3B82F6" }}
+                          />
+                          <span className="text-sm text-gray-600">Selected Color</span>
+                        </div>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <FormField
               control={form.control}
