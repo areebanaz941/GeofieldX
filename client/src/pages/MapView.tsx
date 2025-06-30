@@ -375,15 +375,16 @@ export default function MapView() {
   const handlePolygonCreated = (polygonData: { name: string; coordinates: number[][][] }) => {
     console.log('handlePolygonCreated called with:', polygonData);
     
-    // Store the drawn polygon for feature creation (remove strict boundary validation)
+    // Store the drawn polygon for feature creation
     setDrawnPolygon({ coordinates: polygonData.coordinates });
     setDrawingMode(false);
     
-    // For supervisors, open the supervisor polygon modal (parcel creation)
-    if (user?.role === "Supervisor") {
+    // For all users - check if it's a parcel/boundary feature
+    if (selectedFeatureType === "Parcel" && user?.role === "Supervisor") {
+      // Supervisor creating parcel/boundary - use supervisor modal
       setSupervisorPolygonModalOpen(true);
     } else {
-      // For field users, open the regular feature creation modal
+      // Regular polygon feature creation (for other polygon features or field users)
       setCreateFeatureModalOpen(true);
     }
     
