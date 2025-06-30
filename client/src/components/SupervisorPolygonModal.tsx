@@ -145,12 +145,12 @@ export default function SupervisorPolygonModal({
       name: values.areaName,
       feaNo: values.areaNumber,
       feaType: "Parcel" as const,
-      specificType: values.featureType as const,
+      specificType: values.featureType as "Residential" | "Commercial",
       feaState: "Plan" as const,
       feaStatus: "New" as const,
       maintenance: "None" as const,
       assignedTo: values.assignedTo,
-      color: values.color, // Add color to the feature data
+      color: values.color,
       geometry: {
         type: "Polygon" as const,
         coordinates: drawnPolygon.coordinates,
@@ -219,12 +219,6 @@ export default function SupervisorPolygonModal({
                     <SelectContent>
                       <SelectItem value="Residential">Residential</SelectItem>
                       <SelectItem value="Commercial">Commercial</SelectItem>
-                      <SelectItem value="Industrial">Industrial</SelectItem>
-                      <SelectItem value="Agricultural">Agricultural</SelectItem>
-                      <SelectItem value="Government">Government</SelectItem>
-                      <SelectItem value="Educational">Educational</SelectItem>
-                      <SelectItem value="Healthcare">Healthcare</SelectItem>
-                      <SelectItem value="Recreational">Recreational</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

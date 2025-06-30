@@ -217,17 +217,24 @@ const OpenLayersMap = ({
           const strokeWidth = Math.max(1, Math.min(3, zoom / 5));
           const isParcel = featureType === 'Parcel';
           
-          // Use blue for assigned boundaries, green for unassigned boundaries, original color for other polygons
+          // Use custom colors for parcels if available, otherwise use assignment-based colors
           let fillColor, strokeColor;
           if (isParcel) {
-            // Make boundaries hollow (no fill) with dashed outline
-            fillColor = 'rgba(0, 0, 0, 0)'; // Completely transparent fill
-            if (featureData?.assignedTo) {
-              // Assigned boundary - blue dashed outline
-              strokeColor = '#2196F3';
+            // Check if parcel has a custom color
+            if (featureData?.color) {
+              // Use custom color with transparency for fill
+              fillColor = `${featureData.color}40`; // 25% opacity
+              strokeColor = featureData.color;
             } else {
-              // Unassigned boundary - green dashed outline
-              strokeColor = '#4CAF50';
+              // Make boundaries hollow (no fill) with dashed outline for default parcels
+              fillColor = 'rgba(0, 0, 0, 0)'; // Completely transparent fill
+              if (featureData?.assignedTo) {
+                // Assigned boundary - blue dashed outline
+                strokeColor = '#2196F3';
+              } else {
+                // Unassigned boundary - green dashed outline
+                strokeColor = '#4CAF50';
+              }
             }
           } else {
             // Other polygon types - original colors

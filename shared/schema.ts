@@ -387,6 +387,10 @@ const featureSchema = new Schema<IFeature>(
       type: Schema.Types.ObjectId,
       ref: "Team",
     },
+    color: {
+      type: String,
+      trim: true,
+    },
     images: {
       type: [String],
       default: [],
@@ -701,6 +705,7 @@ export const insertFeatureSchema = z.object({
   boundaryId: z.string().optional(),
   assignedTo: z.string().optional(),
   teamId: z.string().optional(),
+  color: z.string().optional(),
   images: z.array(z.string()).optional(),
 });
 
