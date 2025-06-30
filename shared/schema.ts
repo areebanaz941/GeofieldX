@@ -789,6 +789,50 @@ export type UserWithTeam = IUser & {
   team?: ITeam;
 };
 
+// Feature Template Schema
+export interface IFeatureTemplate extends Document {
+  _id: Types.ObjectId;
+  name: string;
+  geometryType: 'Point' | 'LineString' | 'Polygon';
+  createdBy: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const featureTemplateSchema = new Schema<IFeatureTemplate>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    geometryType: {
+      type: String,
+      enum: ['Point', 'LineString', 'Polygon'],
+      required: true,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+export const FeatureTemplate = mongoose.model<IFeatureTemplate>('FeatureTemplate', featureTemplateSchema);
+
+// Insert schemas for feature templates
+export const insertFeatureTemplateSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  geometryType: z.enum(['Point', 'LineString', 'Polygon']),
+  createdBy: z.string(),
+});
+
+export type InsertFeatureTemplate = z.infer<typeof insertFeatureTemplateSchema>;
+
 // Utility function to convert ObjectId to string for frontend
 export const toObjectId = (id: string): Types.ObjectId =>
   new Types.ObjectId(id);

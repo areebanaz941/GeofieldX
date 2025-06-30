@@ -19,6 +19,8 @@ import {
   insertTaskEvidenceSchema,
   insertTaskSubmissionSchema,
   insertTeamSchema,
+  insertFeatureTemplateSchema,
+  FeatureTemplate,
   isValidObjectId,
 } from "@shared/schema";
 import { z } from "zod";
@@ -1418,6 +1420,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // Feature Templates Routes
+  app.post("/api/feature-templates", isAuthenticated, isSupervisor, async (req, res) => {
+    try {
+      const validatedData = insertFeatureTemplateSchema.parse(req.body);
+      const user = req.user as any;
+      
+      const templateData = {
+        ...validatedData,
+        createdBy: user._id
+      };
+      
+      const template = new FeatureTemplate(templateData);
+      await template.save();
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Create feature template error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create feature template" });
+    }
+  });
+
+  app.get("/api/feature-templates", isAuthenticated, isSupervisor, async (req, res) => {
+    try {
+      const templates = await FeatureTemplate.find()
+        .populate('createdBy', 'username')
+        .sort({ createdAt: -1 });
+      res.json(templates);
+    } catch (error) {
+      console.error("Get feature templates error:", error);
+      res.status(500).json({ message: "Failed to fetch feature templates" });
+    }
+  });
+
+  app.delete("/api/feature-templates/:id", isAuthenticated, isSupervisor, async (req, res) => {
+    try {
+      const templateId = req.params.id;
+      
+      if (!isValidObjectId(templateId)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+      
+      const template = await FeatureTemplate.findByIdAndDelete(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Delete feature template error:", error);
+      res.status(500).json({ message: "Failed to delete feature template" });
+    }
+  });
 
   // Bulk operations routes
   app.patch("/api/tasks/bulk-status", isAuthenticated, async (req, res) => {
