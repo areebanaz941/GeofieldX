@@ -43,7 +43,7 @@ export default function Submissions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  const [submissionFiles, setSubmissionFiles] = useState<File[]>([]);
   const [submissionDescription, setSubmissionDescription] = useState("");
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
 
@@ -122,27 +122,43 @@ export default function Submissions() {
   });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File Too Large",
-          description: "Please select a file smaller than 10MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-      setSubmissionFile(file);
+    const files = Array.from(event.target.files || []);
+    
+    // Check each file size (10MB limit per file)
+    const oversizedFiles = files.filter(file => file.size > 10 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "Files Too Large",
+        description: `${oversizedFiles.length} file(s) exceed the 10MB limit. Please select smaller files.`,
+        variant: "destructive",
+      });
+      return;
     }
+
+    // Check total number of files (max 10 files)
+    const totalFiles = submissionFiles.length + files.length;
+    if (totalFiles > 10) {
+      toast({
+        title: "Too Many Files",
+        description: "Maximum 10 files allowed per submission.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmissionFiles([...submissionFiles, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setSubmissionFiles(submissionFiles.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTask || !submissionFile) {
+    if (!selectedTask || submissionFiles.length === 0) {
       toast({
         title: "Missing Information",
-        description: "Please select a task and file before submitting.",
+        description: "Please select a task and at least one file before submitting.",
         variant: "destructive",
       });
       return;
@@ -150,7 +166,7 @@ export default function Submissions() {
 
     submitTaskMutation.mutate({
       taskId: selectedTask._id,
-      file: submissionFile,
+      files: submissionFiles,
       description: submissionDescription,
     });
   };
@@ -291,11 +307,11 @@ export default function Submissions() {
                                     id="file"
                                     type="file"
                                     onChange={handleFileChange}
-                                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-                                    required
+                                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.csv,.ppt,.pptx"
+                                    multiple
                                   />
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Supported formats: PDF, DOC, DOCX, TXT, Images. Max size: 10MB
+                                    Supported formats: PDF, DOC, DOCX, TXT, Excel, CSV, PowerPoint, Images. Max 10 files, 10MB each
                                   </p>
                                 </div>
                                 
@@ -310,22 +326,38 @@ export default function Submissions() {
                                   />
                                 </div>
 
-                                {submissionFile && (
-                                  <div className="p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                      <FileText className="h-4 w-4 text-gray-500" />
-                                      <span className="text-sm font-medium">{submissionFile.name}</span>
+                                {submissionFiles.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm font-medium">Selected Files ({submissionFiles.length}/10):</div>
+                                    <div className="max-h-32 overflow-y-auto space-y-2">
+                                      {submissionFiles.map((file, index) => (
+                                        <div key={index} className="p-2 bg-gray-50 rounded-lg flex items-center justify-between">
+                                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                            <div className="min-w-0 flex-1">
+                                              <span className="text-sm font-medium block truncate">{file.name}</span>
+                                              <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                            </div>
+                                          </div>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeFile(index)}
+                                            className="text-red-500 hover:text-red-700 p-1 h-auto"
+                                          >
+                                            ×
+                                          </Button>
+                                        </div>
+                                      ))}
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {formatFileSize(submissionFile.size)}
-                                    </p>
                                   </div>
                                 )}
 
                                 <div className="flex gap-2 pt-4">
                                   <Button 
                                     type="submit" 
-                                    disabled={!submissionFile || submitTaskMutation.isPending}
+                                    disabled={submissionFiles.length === 0 || submitTaskMutation.isPending}
                                     className="flex-1"
                                   >
                                     {submitTaskMutation.isPending ? "Submitting..." : "Submit"}
