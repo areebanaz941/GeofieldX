@@ -86,6 +86,20 @@ export default function MapView() {
     queryFn: getAllBoundaries,
   });
 
+  // Debug data for supervisors
+  useEffect(() => {
+    if (user?.role === "Supervisor") {
+      console.log("🔍 Supervisor MapView Data:", {
+        featuresCount: features.length,
+        boundariesCount: boundaries.length,
+        tasksCount: tasks.length,
+        teamsCount: fieldUsers.length,
+        features: features.slice(0, 3), // Show first 3 features
+        boundaries: boundaries.slice(0, 3) // Show first 3 boundaries
+      });
+    }
+  }, [features, boundaries, tasks, fieldUsers, user]);
+
   const { data: teams = [] } = useQuery({
     queryKey: ["/api/teams"],
     queryFn: async () => {
