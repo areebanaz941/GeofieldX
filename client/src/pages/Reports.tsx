@@ -386,35 +386,58 @@ export default function Reports() {
                                     {submission.submissionStatus}
                                   </Badge>
                                   <div className="flex flex-wrap gap-1 sm:gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        // Open file in new tab for preview
-                                        window.open(submission.fileUrl, '_blank');
-                                      }}
-                                      className="text-xs px-2 py-1"
-                                    >
-                                      <Eye className="w-3 h-3 mr-1" />
-                                      Preview
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        // Download file
-                                        const link = document.createElement('a');
-                                        link.href = submission.fileUrl;
-                                        link.download = submission.fileName;
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                      }}
-                                      className="text-xs px-2 py-1"
-                                    >
-                                      <Download className="w-3 h-3 mr-1" />
-                                      Download
-                                    </Button>
+                                    {submission.files.length === 1 ? (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            window.open(submission.files[0].fileUrl, '_blank');
+                                          }}
+                                          className="text-xs px-2 py-1"
+                                        >
+                                          <Eye className="w-3 h-3 mr-1" />
+                                          Preview
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = submission.files[0].fileUrl;
+                                            link.download = submission.files[0].fileName;
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                          }}
+                                          className="text-xs px-2 py-1"
+                                        >
+                                          <Download className="w-3 h-3 mr-1" />
+                                          Download
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          submission.files.forEach((file, index) => {
+                                            setTimeout(() => {
+                                              const link = document.createElement('a');
+                                              link.href = file.fileUrl;
+                                              link.download = file.fileName;
+                                              document.body.appendChild(link);
+                                              link.click();
+                                              document.body.removeChild(link);
+                                            }, index * 100);
+                                          });
+                                        }}
+                                        className="text-xs px-2 py-1"
+                                      >
+                                        <Download className="w-3 h-3 mr-1" />
+                                        Download All ({submission.files.length})
+                                      </Button>
+                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -453,7 +476,14 @@ export default function Reports() {
               {selectedSubmission && (
                 <>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">File: {selectedSubmission.fileName}</p>
+                    <p className="text-sm font-medium">Files ({selectedSubmission.files.length}):</p>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {selectedSubmission.files.map((file, index) => (
+                        <div key={index} className="text-xs bg-gray-50 p-2 rounded">
+                          {file.fileName}
+                        </div>
+                      ))}
+                    </div>
                     <p className="text-sm text-gray-600">{selectedSubmission.description}</p>
                   </div>
                   
