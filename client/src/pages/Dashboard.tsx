@@ -192,11 +192,128 @@ export default function Dashboard() {
           </Card>
         )}
 
+        {/* Feature Overview Section - Similar to Supervisor Dashboard */}
+        <Card className="bg-white border-0 shadow-lg overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] text-white">
+            <CardTitle className="text-white">Area Features Overview</CardTitle>
+            <CardDescription className="text-gray-100">
+              Features within your assigned boundary areas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            {assignedBoundaries.length > 0 ? (
+              <div className="space-y-6">
+                {assignedBoundaries.map((boundary: any) => {
+                  // Get features within this boundary area (features with matching boundaryId)
+                  const boundaryFeatures = features.filter((feature: any) => 
+                    feature.boundaryId?.toString() === boundary._id?.toString()
+                  );
+                  
+                  const boundaryStats = {
+                    towers: boundaryFeatures.filter((f: any) => f.feaType === 'Tower').length,
+                    manholes: boundaryFeatures.filter((f: any) => f.feaType === 'Manhole').length,
+                    fiberCables: boundaryFeatures.filter((f: any) => f.feaType === 'FiberCable').length,
+                    parcels: boundaryFeatures.filter((f: any) => f.feaType === 'Parcel').length
+                  };
+                  
+                  return (
+                    <div key={boundary._id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-lg text-[#1E5CB3]">{boundary.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Area #{boundary.feaNo}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            boundary.feaStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+                            boundary.feaStatus === 'InProgress' ? 'bg-blue-100 text-blue-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {boundary.feaStatus}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                          <div className="w-8 h-8 mx-auto mb-2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-600 w-full h-full">
+                              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                              <path d="M2 17l10 5 10-5"/>
+                              <path d="M2 12l10 5 10-5"/>
+                            </svg>
+                          </div>
+                          <div className="text-2xl font-bold text-red-600">{boundaryStats.towers}</div>
+                          <div className="text-sm text-gray-600">Towers</div>
+                        </div>
+                        
+                        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="w-8 h-8 mx-auto mb-2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600 w-full h-full">
+                              <circle cx="12" cy="12" r="10"/>
+                              <path d="M12 6v6l4 2"/>
+                            </svg>
+                          </div>
+                          <div className="text-2xl font-bold text-blue-600">{boundaryStats.manholes}</div>
+                          <div className="text-sm text-gray-600">Manholes</div>
+                        </div>
+                        
+                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                          <div className="w-8 h-8 mx-auto mb-2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600 w-full h-full">
+                              <path d="M8 2v4"/>
+                              <path d="M16 2v4"/>
+                              <path d="M21 6H3"/>
+                              <path d="M21 6v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6"/>
+                            </svg>
+                          </div>
+                          <div className="text-2xl font-bold text-green-600">{boundaryStats.fiberCables}</div>
+                          <div className="text-sm text-gray-600">Cables</div>
+                        </div>
+                        
+                        <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="w-8 h-8 mx-auto mb-2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-600 w-full h-full">
+                              <path d="M3 3h18v18H3z"/>
+                              <path d="M9 9h6v6H9z"/>
+                            </svg>
+                          </div>
+                          <div className="text-2xl font-bold text-purple-600">{boundaryStats.parcels}</div>
+                          <div className="text-sm text-gray-600">Parcels</div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 pt-3 border-t border-gray-200">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Total Features in Area:</span>
+                          <span className="font-semibold text-[#1E5CB3] text-lg">
+                            {boundaryStats.towers + boundaryStats.manholes + boundaryStats.fiberCables + boundaryStats.parcels}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <div className="w-20 h-20 mx-auto mb-4 text-gray-300">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="w-full h-full">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                </div>
+                <p className="text-lg font-medium mb-2">No Assigned Boundaries</p>
+                <p className="text-sm">Your team hasn't been assigned any boundary areas yet.</p>
+                <p className="text-xs text-gray-400 mt-1">Contact your supervisor for area assignments.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Feature Creation Section */}
         <Card className="bg-white border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="text-lg font-semibold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
-              Available Features to Add
+              Quick Actions
             </CardTitle>
             <CardDescription>
               Create infrastructure features within your assigned areas
@@ -204,8 +321,38 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {/* Quick Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button
+                  onClick={() => setLocation('/map')}
+                  className="bg-[#1E5CB3] hover:bg-[#0D2E5A] text-white py-3 h-auto flex flex-col items-center gap-2"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
+                  </svg>
+                  <div className="text-center">
+                    <div className="font-semibold">Open Map View</div>
+                    <div className="text-xs opacity-75">Add features to your areas</div>
+                  </div>
+                </Button>
+                
+                <Button
+                  onClick={() => setLocation('/tasks')}
+                  variant="outline"
+                  className="border-[#1E5CB3] text-[#1E5CB3] hover:bg-[#1E5CB3] hover:text-white py-3 h-auto flex flex-col items-center gap-2"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <div className="text-center">
+                    <div className="font-semibold">View All Tasks</div>
+                    <div className="text-xs opacity-75">Check assigned work</div>
+                  </div>
+                </Button>
+              </div>
+
               {/* Feature Type Statistics */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
