@@ -115,6 +115,68 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
         </DialogHeader>
         
         <div className="space-y-3 sm:space-y-4">
+          {/* Feature Images */}
+          {displayFeature.images && Array.isArray(displayFeature.images) && displayFeature.images.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-sm font-medium">
+                  Feature Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    {displayFeature.images.length} image{displayFeature.images.length !== 1 ? 's' : ''} uploaded
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 sm:max-h-60 overflow-y-auto">
+                    {displayFeature.images.map((imagePath, index) => {
+                      // Debug each image path
+                      console.log(`Image ${index + 1}:`, imagePath);
+                      
+                      // Handle different path formats
+                      let imageUrl = imagePath;
+                      if (!imagePath.startsWith('http') && !imagePath.startsWith('/')) {
+                        imageUrl = `/uploads/${imagePath}`;
+                      } else if (!imagePath.startsWith('http') && !imagePath.startsWith('/uploads/')) {
+                        imageUrl = `/uploads/${imagePath}`;
+                      }
+                      
+                      console.log(`Final image URL ${index + 1}:`, imageUrl);
+                      
+                      return (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageUrl}
+                            alt={`${displayFeature.name} - Image ${index + 1}`}
+                            className="w-full h-20 sm:h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              window.open(imageUrl, '_blank');
+                            }}
+                            onError={(e) => {
+                              console.error(`Failed to load image ${index + 1}:`, imageUrl);
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                            onLoad={() => {
+                              console.log(`Successfully loaded image ${index + 1}:`, imageUrl);
+                            }}
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">
+                            Click to enlarge
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-3 text-xs text-muted-foreground">
+                  No images uploaded for this feature
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          )}
+
           {/* Basic Information */}
           <Card>
             <CardHeader className="pb-2 sm:pb-3">
@@ -245,66 +307,7 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
             </Card>
           )}
 
-          {/* Feature Images */}
-          <Card>
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm font-medium">
-                Feature Images
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {displayFeature.images && Array.isArray(displayFeature.images) && displayFeature.images.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    {displayFeature.images.length} image{displayFeature.images.length !== 1 ? 's' : ''} uploaded
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 sm:max-h-60 overflow-y-auto">
-                    {displayFeature.images.map((imagePath, index) => {
-                      // Debug each image path
-                      console.log(`Image ${index + 1}:`, imagePath);
-                      
-                      // Handle different path formats
-                      let imageUrl = imagePath;
-                      if (!imagePath.startsWith('http') && !imagePath.startsWith('/')) {
-                        imageUrl = `/uploads/${imagePath}`;
-                      } else if (!imagePath.startsWith('http') && !imagePath.startsWith('/uploads/')) {
-                        imageUrl = `/uploads/${imagePath}`;
-                      }
-                      
-                      console.log(`Final image URL ${index + 1}:`, imageUrl);
-                      
-                      return (
-                        <div key={index} className="relative group">
-                          <img
-                            src={imageUrl}
-                            alt={`${displayFeature.name} - Image ${index + 1}`}
-                            className="w-full h-20 sm:h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => {
-                              window.open(imageUrl, '_blank');
-                            }}
-                            onError={(e) => {
-                              console.error(`Failed to load image ${index + 1}:`, imageUrl);
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                            onLoad={() => {
-                              console.log(`Successfully loaded image ${index + 1}:`, imageUrl);
-                            }}
-                          />
-                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">
-                            Click to enlarge
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-3 sm:py-4 text-xs sm:text-sm text-muted-foreground">
-                  No images uploaded for this feature
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
         </div>
         
         <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 pt-4">
