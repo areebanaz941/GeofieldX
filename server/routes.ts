@@ -1001,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update feature
-  app.patch("/api/features/:id", isAuthenticated, validateObjectId("id"), async (req, res) => {
+  app.patch("/api/features/:id", isAuthenticated, validateObjectId("id"), upload.array('images', 10), async (req, res) => {
     try {
       const featureId = req.params.id;
       const user = req.user as any;
@@ -1038,8 +1038,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Process uploaded images
+      const imagePaths: string[] = [];
+      if (req.files && Array.isArray(req.files)) {
+        const uploadedFiles = req.files as Express.Multer.File[];
+        imagePaths.push(...uploadedFiles.map(file => `/uploads/${file.filename}`));
+        console.log("📸 Processed image paths for update:", imagePaths);
+      }
+      
       // Parse the update data
       const updateData = req.body;
+      
+      // If new images were uploaded, replace the existing images
+      if (imagePaths.length > 0) {
+        updateData.images = imagePaths;
+        console.log("📸 Updating feature with new images:", imagePaths);
+      }
       
       // Remove fields that shouldn't be updated directly
       delete updateData._id;

@@ -166,8 +166,43 @@ export async function getFeature(featureId: string) {
 }
 
 export async function updateFeature(featureId: string, featureData: any) {
-  const res = await apiRequest('PUT', `/api/features/${featureId}`, featureData);
-  return await res.json();
+  // If there are image files, use FormData to upload them
+  if (featureData.images && featureData.images.length > 0 && featureData.images[0] instanceof File) {
+    console.log("🎯 Updating feature with image files:", featureData.images);
+    
+    const formData = new FormData();
+    
+    // Add all non-image fields to FormData
+    Object.keys(featureData).forEach(key => {
+      if (key !== 'images') {
+        const value = featureData[key];
+        formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+    });
+    
+    // Add image files
+    featureData.images.forEach((file: File) => {
+      formData.append('images', file);
+    });
+    
+    // Use fetch directly for FormData uploads
+    const res = await fetch(`/api/features/${featureId}`, {
+      method: 'PATCH',
+      body: formData,
+      credentials: 'include'
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to update feature');
+    }
+    
+    return await res.json();
+  } else {
+    // No images or already processed, send as JSON
+    console.log("🎯 Updating feature without images");
+    const res = await apiRequest('PATCH', `/api/features/${featureId}`, featureData);
+    return await res.json();
+  }
 }
 
 export async function deleteFeature(featureId: string) {
