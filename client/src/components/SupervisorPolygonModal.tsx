@@ -73,11 +73,10 @@ export default function SupervisorPolygonModal({
   });
 
   const createBoundaryMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/boundaries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/boundaries', data);
+      return await res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/boundaries"] });
       toast({
@@ -193,12 +192,12 @@ export default function SupervisorPolygonModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={createFeatureMutation.isPending}
+                disabled={createBoundaryMutation.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createFeatureMutation.isPending}>
-                {createFeatureMutation.isPending ? "Creating..." : "Create Area"}
+              <Button type="submit" disabled={createBoundaryMutation.isPending}>
+                {createBoundaryMutation.isPending ? "Creating..." : "Create Boundary"}
               </Button>
             </DialogFooter>
           </form>
