@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
 import { IUser, ITask, ITeam, InsertTeam } from "../../../shared/schema";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,20 +32,6 @@ function getInitials(name: string | undefined) {
     .map((n) => n[0])
     .join("")
     .toUpperCase();
-}
-
-function getActiveStatus(lastActive: Date | null | undefined) {
-  if (!lastActive) return "Offline";
-  
-  const now = new Date();
-  const lastActiveTime = new Date(lastActive);
-  const diffMs = now.getTime() - lastActiveTime.getTime();
-  const diffMinutes = Math.floor(diffMs / 1000 / 60);
-  
-  if (diffMinutes < 5) return "Active";
-  if (diffMinutes < 30) return "Recently active";
-  if (diffMinutes < 60) return "Away";
-  return "Offline";
 }
 
 // TeamCard component for displaying team information
@@ -279,34 +264,8 @@ export default function FieldTeams() {
     }
   });
   
-  // Mutation for assigning user to team
-  const assignUserToTeamMutation = useMutation({
-    mutationFn: ({ userId, teamId }: { userId: number, teamId: number }) => 
-      assignUserToTeam(userId, teamId),
-    onSuccess: () => {
-      toast({
-        title: "User assigned to team",
-        description: "The user has been assigned to the team successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/users/field"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to assign user to team",
-        description: "An error occurred while assigning the user to the team",
-        variant: "destructive",
-      });
-    }
-  });
-  
   // Get unique cities from teams
   const uniqueCities = Array.from(new Set(teams.map((team: any) => team.city).filter(Boolean))) as string[];
-  
-  // Filter users based on search
-  const filteredUsers = fieldUsers.filter((user: IUser) =>
-    (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (user.username?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-  );
   
   // Filter teams based on city and search
   const filteredTeams = teams.filter((team: any) => {
@@ -317,43 +276,6 @@ export default function FieldTeams() {
       (team.city?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     return matchesCity && matchesSearch;
   });
-  
-  // Get tasks assigned to each user's team
-  const getUserTasks = (userId: string) => {
-    const user = fieldUsers.find((u: any) => u._id === userId);
-    if (!user?.teamId) return [];
-    return tasks.filter((task: any) => task.assignedTo === user.teamId);
-  };
-  
-  // Calculate completion rate for each user
-  const getUserCompletionRate = (userId: string) => {
-    const userTasks = getUserTasks(userId);
-    if (userTasks.length === 0) return 0;
-    
-    const completedTasks = userTasks.filter((task: any) => task.status === "Completed");
-    return Math.round((completedTasks.length / userTasks.length) * 100);
-  };
-  
-  // Get team details for a user
-  const getUserTeam = (userId: string) => {
-    const user = fieldUsers.find((u: any) => u._id === userId);
-    if (!user?.teamId) return null;
-    return teams.find((team: any) => team._id === user.teamId) || null;
-  };
-
-  // Get tasks assigned to a specific team
-  const getTeamTasks = (teamId: string) => {
-    return tasks.filter((task: any) => task.assignedTo === teamId);
-  };
-
-  // Calculate team completion rate
-  const getTeamCompletionRate = (teamId: string) => {
-    const teamTasks = getTeamTasks(teamId);
-    if (teamTasks.length === 0) return 0;
-    
-    const completedTasks = teamTasks.filter((task: any) => task.status === "Completed");
-    return Math.round((completedTasks.length / teamTasks.length) * 100);
-  };
   
   // Handle team creation form submission
   const onSubmit = async (values: z.infer<typeof teamFormSchema>) => {
@@ -371,17 +293,13 @@ export default function FieldTeams() {
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-[#E0F7F6] to-[#EBF5F0] min-h-screen">
       <div className="container mx-auto max-w-6xl">
-        <Tabs defaultValue="members" className="w-full">
+        <div className="w-full">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">Field Teams</h1>
-              <p className="text-sm text-gray-600 mt-1">Manage your field teams and members</p>
+              <p className="text-sm text-gray-600 mt-1">Manage your field teams</p>
             </div>
             <div className="flex gap-2">
-              <TabsList>
-                <TabsTrigger value="members">Team Members</TabsTrigger>
-                <TabsTrigger value="teams">Team Management</TabsTrigger>
-              </TabsList>
               {user?.role === "Supervisor" && (
                 <Dialog open={createTeamOpen} onOpenChange={setCreateTeamOpen}>
                   <DialogTrigger asChild>
@@ -473,7 +391,7 @@ export default function FieldTeams() {
             
           <div className="mb-4 flex gap-4 flex-wrap">
             <Input
-              placeholder="Search team members or teams..."
+              placeholder="Search teams..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-xs"
@@ -489,198 +407,63 @@ export default function FieldTeams() {
               ))}
             </select>
           </div>
-            
-          <TabsContent value="members" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((fieldUser: any) => {
-                  const userTasks = getUserTasks(fieldUser._id);
-                  const completionRate = getUserCompletionRate(fieldUser._id);
-                  const activeStatus = getActiveStatus(fieldUser.lastActive);
-                  const userTeam = getUserTeam(fieldUser._id);
-                  
-                  return (
-                    <Card key={fieldUser._id} className="overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="p-5">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center space-x-4">
-                              <Avatar className="h-12 w-12 border-2 border-white bg-primary-100 text-primary-600">
-                                <AvatarFallback>{getInitials(fieldUser.name)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <h3 className="font-medium">{fieldUser.name}</h3>
-                                <p className="text-sm text-gray-500">{fieldUser.email}</p>
-                                {userTeam && (
-                                  <Badge className="mt-1 bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
-                                    {userTeam.name}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <Badge
-                              variant="outline"
-                              className={`
-                                ${activeStatus === "Active" ? "bg-green-100 text-green-700 border-green-200" : ""}
-                                ${activeStatus === "Recently active" ? "bg-blue-100 text-blue-700 border-blue-200" : ""}
-                                ${activeStatus === "Away" ? "bg-yellow-100 text-yellow-700 border-yellow-200" : ""}
-                                ${activeStatus === "Offline" ? "bg-gray-100 text-gray-700 border-gray-200" : ""}
-                              `}
-                            >
-                              {activeStatus}
-                            </Badge>
-                          </div>
-                          
-                          <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-gray-500">
-                            <div className="space-y-1">
-                              <p>Assigned Tasks</p>
-                              <p className="text-lg font-semibold text-gray-900">{userTasks.length}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p>Completion Rate</p>
-                              <p className="text-lg font-semibold text-gray-900">{completionRate}%</p>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-4">
-                            <h4 className="text-xs font-medium uppercase text-gray-500 mb-2">Task Status</h4>
-                            <div className="space-y-1">
-                              <div className="flex justify-between items-center text-xs">
-                                <span>Completed</span>
-                                <span>{userTasks.filter((t: ITask) => t.status === "Completed").length}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span>In Progress</span>
-                                <span>{userTasks.filter((t: ITask) => t.status === "InProgress").length}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span>Assigned</span>
-                                <span>{userTasks.filter((t: ITask) => t.status === "Unassigned").length}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {fieldUser.lastActive && (
-                            <div className="mt-4 text-xs text-gray-500">
-                              Last active: {new Date(fieldUser.lastActive).toLocaleString()}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="bg-gray-50 px-5 py-3 flex justify-between border-t">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              toast({
-                                title: "View on map",
-                                description: "This feature will navigate to map view centered on this team member",
-                              });
-                            }}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
-                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                              <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                            Locate
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              toast({
-                                title: "View tasks",
-                                description: "This feature will show all tasks assigned to this team member",
-                              });
-                            }}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
-                              <path d="M3 5v14"></path>
-                              <path d="M12 5v14"></path>
-                              <path d="M7 7l0 0"></path>
-                              <path d="M7 11l0 0"></path>
-                              <path d="M16 7l0 0"></path>
-                              <path d="M16 11l0 0"></path>
-                              <path d="M16 15l0 0"></path>
-                            </svg>
-                            Tasks
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              ) : (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  {searchTerm
-                    ? "No team members match your search criteria"
-                    : "No field team members found"}
-                </div>
-              )}
+          
+          {/* Show a notice for field users that they can only see their own team */}
+          {!isSupervisor && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-4 text-blue-800">
+              <p className="text-sm font-medium flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                As a field team member, you can only view information about your own team
+              </p>
             </div>
-          </TabsContent>
-            
-          <TabsContent value="teams" className="mt-0">
-            {/* Show a notice for field users that they can only see their own team */}
-            {!isSupervisor && (
-              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-4 text-blue-800">
-                <p className="text-sm font-medium flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                  As a field team member, you can only view information about your own team
-                </p>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTeams.length > 0 ? (
+              filteredTeams
+                // Filter teams based on user role:
+                // - Supervisors can see all teams
+                // - Field users can only see their own team
+                .filter((team: any) => 
+                  isSupervisor ? true : (user?.teamId === team._id)
+                )
+                .map((team: any) => (
+                  <TeamCard 
+                    key={team._id} 
+                    team={team} 
+                    fieldUsers={fieldUsers} 
+                    tasks={tasks || []}
+                    handleTeamStatusChange={handleTeamStatusChange} 
+                  />
+                ))
+            ) : (
+              <div className="col-span-full text-center py-8 text-gray-500">
+                {searchTerm || cityFilter
+                  ? "No teams match your search criteria"
+                  : isSupervisor 
+                    ? "No teams created yet. Create your first team using the button above"
+                    : "No teams available"
+                }
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredTeams.length > 0 ? (
-                filteredTeams
-                  // Filter teams based on user role:
-                  // - Supervisors can see all teams
-                  // - Field users can only see their own team
-                  .filter((team: any) => 
-                    isSupervisor ? true : (user?.teamId === team._id)
-                  )
-                  .map((team: any) => (
-                    <TeamCard 
-                      key={team._id} 
-                      team={team} 
-                      fieldUsers={fieldUsers} 
-                      tasks={tasks || []}
-                      handleTeamStatusChange={handleTeamStatusChange} 
-                    />
-                  ))
-              ) : (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  {searchTerm || cityFilter
-                    ? "No teams match your search criteria"
-                    : isSupervisor 
-                      ? "No teams created yet. Create your first team using the button above"
-                      : "No teams available"
-                  }
-                </div>
-              )}
-              
-              {/* No teams found after filtering */}
-              {teams.length > 0 && 
-               teams.filter((team: any) => isSupervisor ? true : (user?.teamId === team._id))
-                 .filter((team: any) => 
-                   searchTerm === "" || 
-                   team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                   (team.description || "").toLowerCase().includes(searchTerm.toLowerCase())
-                 ).length === 0 && (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  {isSupervisor
-                    ? "No teams match your search criteria"
-                    : "You are not currently assigned to a team"}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+            {/* No teams found after filtering */}
+            {teams.length > 0 &&
+              filteredTeams.filter((team: any) => 
+                isSupervisor ? true : (user?.teamId === team._id)
+               ).length === 0 && (
+              <div className="col-span-full text-center py-8 text-gray-500">
+                {isSupervisor
+                  ? "No teams match your search criteria"
+                  : "You are not currently assigned to a team"}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
