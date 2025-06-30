@@ -846,8 +846,8 @@ const OpenLayersMap = ({
       selectInteractionRef.current = null;
     }
 
-    // Add select interaction only when not in selection modes
-    if (!pointSelectionMode && !lineDrawingMode && !selectionMode) {
+    // Add select interaction only when not in any drawing/selection modes
+    if (!pointSelectionMode && !lineDrawingMode && !selectionMode && !drawingMode) {
       selectInteractionRef.current = new Select({
         condition: click,
         layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current].filter(Boolean)
@@ -874,7 +874,7 @@ const OpenLayersMap = ({
 
       map.addInteraction(selectInteractionRef.current);
     }
-  }, [pointSelectionMode, lineDrawingMode, selectionMode, onFeatureClick, onTeamClick, onBoundaryClick]);
+  }, [pointSelectionMode, lineDrawingMode, selectionMode, drawingMode, onFeatureClick, onTeamClick, onBoundaryClick]);
 
   return (
     <div className={className}>
