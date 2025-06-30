@@ -17,6 +17,7 @@ import AdvancedSearchModal from "@/components/AdvancedSearchModal";
 import FeatureAssignmentModal from "@/components/FeatureAssignmentModal";
 import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import FeatureSelectionDialog from "@/components/FeatureSelectionDialog";
+import FeatureCreationWorkflow from "@/components/FeatureCreationWorkflow";
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +57,19 @@ export default function MapView() {
   // Feature selection dialog state
   const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
   const [selectedFeatureType, setSelectedFeatureType] = useState<string>('');
+  
+  // Feature creation workflow state
+  const [featureCreationWorkflowOpen, setFeatureCreationWorkflowOpen] = useState(false);
+
+  // Handle feature creation completion
+  const handleFeatureCreated = (newFeature: IFeature) => {
+    toast({
+      title: "Feature Created",
+      description: `${newFeature.feaType} "${newFeature.name}" has been created and is now visible on all dashboards.`,
+    });
+    // Refresh features data
+    queryClient.invalidateQueries({ queryKey: ["/api/features"] });
+  };
   
   // Fetch data
   const { data: features = [] } = useQuery({
@@ -413,13 +427,12 @@ export default function MapView() {
         {/* Single Drawing Button - For All Users */}
         <div className="absolute bottom-4 left-4 z-[1000]">
           <Button
-            onClick={() => setFeatureSelectionOpen(true)}
+            onClick={() => setFeatureCreationWorkflowOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-200"
             title="Create Feature"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+              <path d="M12 5v14m-7-7h14"/>
             </svg>
           </Button>
         </div>
@@ -619,6 +632,13 @@ export default function MapView() {
           setClickedFeature(null);
         }}
         feature={clickedFeature}
+      />
+
+      {/* Feature Creation Workflow */}
+      <FeatureCreationWorkflow
+        open={featureCreationWorkflowOpen}
+        onOpenChange={setFeatureCreationWorkflowOpen}
+        onFeatureCreated={handleFeatureCreated}
       />
     </>
   );
