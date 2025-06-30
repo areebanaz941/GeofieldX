@@ -115,15 +115,44 @@ export async function getTaskEvidence(taskId: number) {
 }
 
 // Feature API
-export async function createFeature(featureData: InsertFeature) {
-  // Check if the feature data contains images that need to be uploaded
-  if (featureData.images && featureData.images.length > 0) {
-    // For now, send as JSON - the images should already be uploaded URLs from ImageUpload component
-    console.log("🎯 Creating feature with images:", featureData.images);
+export async function createFeature(featureData: any) {
+  // If there are image files, use FormData to upload them
+  if (featureData.images && featureData.images.length > 0 && featureData.images[0] instanceof File) {
+    console.log("🎯 Creating feature with image files:", featureData.images);
+    
+    const formData = new FormData();
+    
+    // Add all non-image fields to FormData
+    Object.keys(featureData).forEach(key => {
+      if (key !== 'images') {
+        const value = featureData[key];
+        formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+    });
+    
+    // Add image files
+    featureData.images.forEach((file: File) => {
+      formData.append('images', file);
+    });
+    
+    // Use fetch directly for FormData uploads
+    const res = await fetch('/api/features', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to create feature');
+    }
+    
+    return await res.json();
+  } else {
+    // No images or already processed, send as JSON
+    console.log("🎯 Creating feature without images");
+    const res = await apiRequest('POST', '/api/features', featureData);
+    return await res.json();
   }
-  
-  const res = await apiRequest('POST', '/api/features', featureData);
-  return await res.json();
 }
 
 export async function getAllFeatures() {

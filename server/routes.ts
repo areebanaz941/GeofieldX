@@ -596,13 +596,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Feature routes
-  app.post("/api/features", isAuthenticated, async (req, res) => {
+  app.post("/api/features", isAuthenticated, upload.array('images', 10), async (req, res) => {
     try {
       const user = req.user as any;
       
       // Debug logging to check if images are being received
       console.log("🎯 Feature creation request body:", req.body);
       console.log("📸 Images array received:", req.body.images);
+      console.log("📸 Uploaded files:", req.files);
+      
+      // Process uploaded images
+      const imagePaths: string[] = [];
+      if (req.files && Array.isArray(req.files)) {
+        const uploadedFiles = req.files as Express.Multer.File[];
+        imagePaths.push(...uploadedFiles.map(file => `/uploads/${file.filename}`));
+        console.log("📸 Processed image paths:", imagePaths);
+      }
       
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
@@ -671,6 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const featureData = insertFeatureSchema.parse({
         ...req.body,
         createdBy: user._id.toString(),
+        images: imagePaths, // Use the uploaded image paths instead of the form data
       });
 
       console.log("✅ Parsed feature data:", featureData);
