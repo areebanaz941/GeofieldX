@@ -619,7 +619,9 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg transition-colors">
                       <div className="flex items-center">
-                        <div className="w-4 h-4 rounded-full bg-red-500 mr-3"></div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-red-600 mr-3">
+                          <path d="M7.5 4C7.5 2.34315 8.84315 1 10.5 1H13.5C15.1569 1 16.5 2.34315 16.5 4V5H18C18.5523 5 19 5.44772 19 6C19 6.55228 18.5523 7 18 7H16.5V9H18C18.5523 9 19 9.44772 19 10C19 10.5523 18.5523 11 18 11H16.5V13H18C18.5523 13 19 13.4477 19 14C19 14.5523 18.5523 15 18 15H16.5V17H18C18.5523 17 19 17.4477 19 18C19 18.5523 18.5523 19 18 19H16.5V21C16.5 21.5523 16.0523 22 15.5 22H8.5C7.94772 22 7.5 21.5523 7.5 21V19H6C5.44772 19 5 18.5523 5 18C5 17.4477 5.44772 17 6 17H7.5V15H6C5.44772 15 5 14.5523 5 14C5 13.4477 5.44772 13 6 13H7.5V11H6C5.44772 11 5 10.5523 5 10C5 9.44772 5.44772 9 6 9H7.5V7H6C5.44772 7 5 6.55228 5 6C5 5.44772 5.44772 5 6 5H7.5V4ZM10.5 3C9.94772 3 9.5 3.44772 9.5 4V21H14.5V4C14.5 3.44772 14.0523 3 13.5 3H10.5Z"/>
+                        </svg>
                         <span className="font-medium">Towers</span>
                       </div>
                       <span className="tabular-nums font-semibold">{featureStats.towers}</span>
@@ -627,7 +629,9 @@ export default function Dashboard() {
                     
                     <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg transition-colors">
                       <div className="flex items-center">
-                        <div className="w-4 h-4 rounded-full bg-blue-500 mr-3"></div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-600 mr-3">
+                          <path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20ZM12 6C8.69 6 6 8.69 6 12S8.69 18 12 18 18 15.31 18 12 15.31 6 12 6ZM12 16C9.79 16 8 14.21 8 12S9.79 8 12 8 16 9.79 16 12 14.21 16 12 16Z"/>
+                        </svg>
                         <span className="font-medium">Manholes</span>
                       </div>
                       <span className="tabular-nums font-semibold">{featureStats.manholes}</span>
@@ -635,7 +639,9 @@ export default function Dashboard() {
                     
                     <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg transition-colors">
                       <div className="flex items-center">
-                        <div className="w-4 h-4 rounded-full bg-green-500 mr-3"></div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-green-600 mr-3">
+                          <path d="M20 5H4C2.9 5 2 5.9 2 7V17C2 18.1 2.9 19 4 19H20C21.1 19 22 18.1 22 17V7C22 5.9 21.1 5 20 5ZM20 17H4V7H20V17ZM6 9H8V15H6V9ZM10 9H12V15H10V9ZM14 9H16V15H14V9ZM18 9H20V15H18V9Z"/>
+                        </svg>
                         <span className="font-medium">Fiber Cables</span>
                       </div>
                       <span className="tabular-nums font-semibold">{featureStats.fiberCables}</span>
@@ -643,7 +649,9 @@ export default function Dashboard() {
                     
                     <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg transition-colors">
                       <div className="flex items-center">
-                        <div className="w-4 h-4 rounded-full bg-purple-500 mr-3"></div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-purple-600 mr-3">
+                          <path d="M3 3H21V21H3V3ZM5 5V19H19V5H5ZM7 7H17V17H7V7ZM9 9V15H15V9H9Z"/>
+                        </svg>
                         <span className="font-medium">Land Parcels</span>
                       </div>
                       <span className="tabular-nums font-semibold">{featureStats.parcels}</span>

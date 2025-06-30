@@ -18,6 +18,12 @@ export default function FeatureDetails() {
     enabled: !!featureId,
   });
 
+  // Debug logging for feature data
+  if (feature) {
+    console.log('🎯 Feature data in FeatureDetails:', feature);
+    console.log('🖼️ Feature images:', feature.images);
+  }
+
   // Fetch team details if feature has a teamId
   const { data: creatorTeam } = useQuery<ITeam>({
     queryKey: ['/api/teams', feature?.teamId],
@@ -256,16 +262,34 @@ export default function FeatureDetails() {
             <CardContent>
               {feature.images && feature.images.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {feature.images.map((imageUrl, index) => (
-                    <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={imageUrl} 
-                        alt={`Feature image ${index + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                        onClick={() => window.open(imageUrl, '_blank')}
-                      />
-                    </div>
-                  ))}
+                  {feature.images.map((imagePath, index) => {
+                    // Handle different image path formats
+                    let imageUrl = imagePath;
+                    if (!imagePath.startsWith('http') && !imagePath.startsWith('/')) {
+                      imageUrl = `/uploads/${imagePath}`;
+                    } else if (!imagePath.startsWith('http') && !imagePath.startsWith('/uploads/')) {
+                      imageUrl = `/uploads/${imagePath}`;
+                    }
+                    
+                    return (
+                      <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        <img 
+                          src={imageUrl} 
+                          alt={`Feature image ${index + 1}`}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                          onClick={() => window.open(imageUrl, '_blank')}
+                          onError={(e) => {
+                            console.error(`Failed to load image ${index + 1}:`, imageUrl);
+                            // Show placeholder on error
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDNWMjFIM1YzSDIxWk0xOSA1SDVWMTZMMTI1IDEwSDEzTDE2IDE0SDE5VjVaIiBmaWxsPSIjOTk5OTk5Ii8+CjwvcGF0aD4KPC9zdmc+';
+                          }}
+                          onLoad={() => {
+                            console.log(`Successfully loaded image ${index + 1}:`, imageUrl);
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
