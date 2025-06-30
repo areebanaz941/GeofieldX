@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import useAuth from "@/hooks/useAuth";
 import FeatureCreationWorkflow from "./FeatureCreationWorkflow";
 
@@ -19,14 +20,20 @@ export default function SideNavigation() {
 
   if (!user) return null;
 
+  // Fetch feature templates for supervisor sidebar
+  const { data: featureTemplates = [] } = useQuery({
+    queryKey: ["/api/feature-templates"],
+    enabled: user?.role === "Supervisor",
+  });
+
   // Handle feature creation completion
-  const handleFeatureCreated = (newFeature: any) => {
+  const handleFeatureCreated = (newTemplate: any) => {
     toast({
-      title: "Feature Created",
-      description: `${newFeature.feaType} "${newFeature.name}" has been created and is now visible on all dashboards.`,
+      title: "Feature Template Created",
+      description: `"${newTemplate.name}" template is ready to use on the map.`,
     });
-    // Refresh features data
-    queryClient.invalidateQueries({ queryKey: ["/api/features"] });
+    // Refresh feature templates data
+    queryClient.invalidateQueries({ queryKey: ["/api/feature-templates"] });
   };
 
   const isActive = (path: string) => {
@@ -148,19 +155,37 @@ export default function SideNavigation() {
                 </Button>
               </div>
               <div className="mt-2 space-y-1">
-                {featureTypes.map((feature) => (
-                  <Button
-                    key={feature.name}
-                    variant="ghost"
-                    className="w-full justify-start text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
-                    onClick={() => setLocation(`/features/${feature.name.toLowerCase()}`)}
-                  >
-                    <div className="mr-3 text-neutral-500">
-                      {feature.icon}
-                    </div>
-                    <span>{feature.name}</span>
-                  </Button>
-                ))}
+                {featureTemplates.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-neutral-500 text-center">
+                    No templates created yet. Use the + button above to create your first template.
+                  </div>
+                ) : (
+                  featureTemplates.map((template: any) => (
+                    <Button
+                      key={template._id}
+                      variant="ghost"
+                      className="w-full justify-start text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                      onClick={() => toast({
+                        title: "Template Selected",
+                        description: `"${template.name}" template ready for use on the map.`,
+                      })}
+                    >
+                      <div className="mr-3 text-neutral-500">
+                        <i className={
+                          template.geometryType === 'Point' ? 'ri-map-pin-2-line' :
+                          template.geometryType === 'LineString' ? 'ri-route-line' :
+                          'ri-shape-2-line'
+                        }></i>
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm">{template.name}</span>
+                        <span className="text-xs text-neutral-400">
+                          {template.geometryType === 'LineString' ? 'Line' : template.geometryType}
+                        </span>
+                      </div>
+                    </Button>
+                  ))
+                )}
               </div>
             </div>
           )}
