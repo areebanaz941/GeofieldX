@@ -606,11 +606,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📸 Uploaded files:", req.files);
       
       // Process uploaded images
-      const imagePaths: string[] = [];
+      let imagePaths: string[] = [];
+      
+      // Check if images are being uploaded as files (FormData)
       if (req.files && Array.isArray(req.files)) {
         const uploadedFiles = req.files as Express.Multer.File[];
-        imagePaths.push(...uploadedFiles.map(file => `/uploads/${file.filename}`));
-        console.log("📸 Processed image paths:", imagePaths);
+        imagePaths = uploadedFiles.map(file => `/uploads/${file.filename}`);
+        console.log("📸 Processed image paths from files:", imagePaths);
+      }
+      // Check if images are already uploaded and passed as paths in the body
+      else if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
+        imagePaths = req.body.images.filter((path: string) => path && path.startsWith('/uploads/'));
+        console.log("📸 Using existing image paths from body:", imagePaths);
       }
       
       // Field users can only create features within their assigned boundaries
@@ -1039,11 +1046,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Process uploaded images
-      const imagePaths: string[] = [];
+      let imagePaths: string[] = [];
+      
+      // Check if images are being uploaded as files (FormData)
       if (req.files && Array.isArray(req.files)) {
         const uploadedFiles = req.files as Express.Multer.File[];
-        imagePaths.push(...uploadedFiles.map(file => `/uploads/${file.filename}`));
-        console.log("📸 Processed image paths for update:", imagePaths);
+        imagePaths = uploadedFiles.map(file => `/uploads/${file.filename}`);
+        console.log("📸 Processed image paths from files for update:", imagePaths);
+      }
+      // Check if images are already uploaded and passed as paths in the body
+      else if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
+        imagePaths = req.body.images.filter((path: string) => path && path.startsWith('/uploads/'));
+        console.log("📸 Using existing image paths from body for update:", imagePaths);
       }
       
       // Parse the update data
