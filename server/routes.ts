@@ -28,6 +28,23 @@ import createMemoryStore from "memorystore";
 
 const MemoryStore = createMemoryStore(session);
 
+// Helper function to check if a point is inside a polygon using ray casting algorithm
+function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
+  const [x, y] = point;
+  let inside = false;
+  
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  
+  return inside;
+}
+
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -589,13 +606,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
-        if (!req.body.boundaryId) {
-          return res.status(403).json({ message: "Field users must specify a boundaryId when creating features outside assigned areas" });
+        // Get all boundaries assigned to the user's team
+        const allBoundaries = await storage.getAllBoundaries();
+        const assignedBoundaries = allBoundaries.filter(boundary => 
+          boundary.assignedTo?.toString() === user.teamId?.toString()
+        );
+        
+        if (assignedBoundaries.length === 0) {
+          return res.status(403).json({ message: "No boundaries assigned to your team" });
         }
         
-        const boundary = await storage.getBoundary(req.body.boundaryId);
-        if (!boundary || boundary.assignedTo?.toString() !== user.teamId?.toString()) {
-          return res.status(403).json({ message: "Cannot create features outside assigned parcel area" });
+        // Check if the feature geometry is within any assigned boundary
+        let isWithinBoundary = false;
+        const featureGeometry = req.body.geometry;
+        
+        if (featureGeometry) {
+          for (const boundary of assignedBoundaries) {
+            if (boundary.geometry) {
+              try {
+                const boundaryGeom = typeof boundary.geometry === 'string' 
+                  ? JSON.parse(boundary.geometry) 
+                  : boundary.geometry;
+                
+                if (boundaryGeom.type === "Polygon" && featureGeometry.type === "Polygon") {
+                  // Check if polygon is within boundary (simplified check)
+                  const featureCoords = featureGeometry.coordinates[0];
+                  const boundaryCoords = boundaryGeom.coordinates[0];
+                  
+                  // Check if at least one point of feature is within boundary
+                  for (const [lng, lat] of featureCoords) {
+                    if (isPointInPolygon([lng, lat], boundaryCoords)) {
+                      isWithinBoundary = true;
+                      req.body.boundaryId = boundary._id.toString();
+                      break;
+                    }
+                  }
+                  
+                  if (isWithinBoundary) break;
+                } else if (boundaryGeom.type === "Polygon" && featureGeometry.type === "Point") {
+                  // Point in polygon check
+                  const [lng, lat] = featureGeometry.coordinates;
+                  if (isPointInPolygon([lng, lat], boundaryGeom.coordinates[0])) {
+                    isWithinBoundary = true;
+                    req.body.boundaryId = boundary._id.toString();
+                    break;
+                  }
+                }
+              } catch (error) {
+                console.error('Error checking boundary geometry:', error);
+              }
+            }
+          }
+        }
+        
+        if (!isWithinBoundary) {
+          return res.status(403).json({ message: "Features can only be created within assigned boundary areas" });
         }
         
         // Add team ID to feature for proper filtering
