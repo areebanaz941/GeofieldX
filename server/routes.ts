@@ -1740,33 +1740,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Name and type are required" });
         }
 
-        // Parse uploaded shapefile using shapefile library
-        const shapefile = require('shapefile');
+        // For now, skip shapefile parsing and just store the uploaded file
+        // Future implementation can add parsing capabilities
         const features: any[] = [];
-
-        try {
-          await shapefile.open(req.file.path)
-            .then((source: any) => source.read()
-              .then(function read(result: any): any {
-                if (result.done) return;
-                if (result.value) {
-                  features.push({
-                    type: "Feature",
-                    geometry: result.value.geometry,
-                    properties: result.value.properties || {}
-                  });
-                }
-                return source.read().then(read);
-              })
-            );
-        } catch (parseError) {
-          console.error('Error parsing shapefile:', parseError);
-          return res.status(400).json({ message: "Invalid shapefile format" });
-        }
-
-        if (features.length === 0) {
-          return res.status(400).json({ message: "No features found in shapefile" });
-        }
+        const featureCount = 0; // Will be determined when parsing is implemented
 
         const shapefileData = {
           name,
