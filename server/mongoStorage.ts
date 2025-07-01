@@ -575,13 +575,26 @@ export class MongoStorage implements IStorage {
   // Shapefile operations
   async createShapefile(shapefileData: InsertShapefile): Promise<IShapefile> {
     try {
+      console.log(`💾 Creating shapefile "${shapefileData.name}" with ${shapefileData.features.length} features`);
+      console.log(`💾 First feature sample:`, shapefileData.features[0]);
+      
       const shapefile = new Shapefile({
         ...shapefileData,
         uploadedBy: new Types.ObjectId(shapefileData.uploadedBy),
         assignedTo: shapefileData.assignedTo ? new Types.ObjectId(shapefileData.assignedTo) : undefined,
         teamId: shapefileData.teamId ? new Types.ObjectId(shapefileData.teamId) : undefined,
       });
+      
+      console.log(`💾 Shapefile object before save:`, {
+        name: shapefile.name,
+        featuresCount: shapefile.features.length,
+        firstFeature: shapefile.features[0]
+      });
+      
       await shapefile.save();
+      
+      console.log(`💾 Shapefile saved successfully with ${shapefile.features.length} features`);
+      
       return shapefile;
     } catch (error) {
       console.error("Error creating shapefile:", error);
