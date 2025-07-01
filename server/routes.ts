@@ -1740,10 +1740,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Name and type are required" });
         }
 
-        // For now, skip shapefile parsing and just store the uploaded file
-        // Future implementation can add parsing capabilities
-        const features: any[] = [];
-        const featureCount = 0; // Will be determined when parsing is implemented
+        console.log(`📦 Processing shapefile upload: ${req.file.originalname}`);
+        
+        let features: any[] = [];
+        
+        try {
+          // Import required modules for shapefile processing
+          const AdmZip = require('adm-zip');
+          const shapefile = require('shapefile');
+          const fs = require('fs');
+          const path = require('path');
+
+          // Extract ZIP file
+          const zip = new AdmZip(req.file.path);
+          const zipEntries = zip.getEntries();
+          
+          console.log(`📂 ZIP contains ${zipEntries.length} files`);
+          
+          // Find .shp file
+          const shpEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith('.shp'));
+          
+          if (!shpEntry) {
+            throw new Error('No .shp file found in ZIP archive');
+          }
+
+          console.log(`📍 Found SHP file: ${shpEntry.entryName}`);
+
+          // Extract to temporary directory
+          const tempDir = path.join(__dirname, '../temp', Date.now().toString());
+          fs.mkdirSync(tempDir, { recursive: true });
+          
+          try {
+            zip.extractAllTo(tempDir, true);
+            
+            // Get the .shp file path
+            const shpFilePath = path.join(tempDir, shpEntry.entryName);
+            
+            console.log(`🔍 Reading shapefile from: ${shpFilePath}`);
+            
+            // Read shapefile
+            const source = await shapefile.open(shpFilePath);
+            
+            let result;
+            while (!(result = await source.read()).done) {
+              const feature = result.value;
+              
+              if (feature && feature.geometry && feature.properties) {
+                features.push({
+                  geometry: feature.geometry,
+                  properties: feature.properties
+                });
+              }
+            }
+            
+            console.log(`✅ Extracted ${features.length} features from shapefile`);
+            
+          } finally {
+            // Clean up temporary files
+            try {
+              fs.rmSync(tempDir, { recursive: true, force: true });
+            } catch (cleanupError) {
+              console.warn('Failed to cleanup temp files:', cleanupError);
+            }
+          }
+          
+        } catch (parseError) {
+          console.error('❌ Shapefile parsing error:', parseError);
+          // Continue with empty features array if parsing fails
+          features = [];
+        }
 
         const shapefileData = {
           name,
@@ -1753,12 +1818,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           features,
           uploadedBy: uploadedBy || userId,
           assignedTo: assignedTo || undefined,
-          teamId: assignedTo || undefined, // Use assignedTo as teamId for now
+          teamId: assignedTo || undefined,
           filePath: req.file.path,
           isVisible: true,
         };
 
         const newShapefile = await storage.createShapefile(shapefileData);
+        
+        console.log(`🎯 Shapefile "${name}" saved with ${features.length} features`);
+        
         res.status(201).json(newShapefile);
       } catch (error) {
         console.error("Shapefile upload error:", error);
