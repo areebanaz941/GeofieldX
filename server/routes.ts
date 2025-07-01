@@ -1745,11 +1745,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let features: any[] = [];
         
         try {
-          // Import required modules for shapefile processing
-          const AdmZip = require('adm-zip');
-          const shapefile = require('shapefile');
-          const fs = require('fs');
-          const path = require('path');
+          // Import required modules for shapefile processing using ES modules
+          const AdmZip = (await import('adm-zip')).default;
+          const shapefile = await import('shapefile');
+          const fs = await import('fs');
+          const path = await import('path');
 
           // Extract ZIP file
           const zip = new AdmZip(req.file.path);
@@ -1767,7 +1767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`📍 Found SHP file: ${shpEntry.entryName}`);
 
           // Extract to temporary directory
-          const tempDir = path.join(__dirname, '../temp', Date.now().toString());
+          const tempDir = path.join(process.cwd(), 'temp', Date.now().toString());
           fs.mkdirSync(tempDir, { recursive: true });
           
           try {

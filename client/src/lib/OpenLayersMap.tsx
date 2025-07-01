@@ -996,7 +996,7 @@ const OpenLayersMap = ({
     if (!pointSelectionMode && !lineDrawingMode && !selectionMode && !drawingMode) {
       selectInteractionRef.current = new Select({
         condition: click,
-        layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current, shapefilesLayerRef.current].filter(Boolean)
+        layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current, shapefilesLayerRef.current].filter((layer): layer is VectorLayer<any> => layer !== null)
       });
 
       selectInteractionRef.current.on('select', (event) => {

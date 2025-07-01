@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shapefile Leaflet Visualization</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        
+        .file-input-wrapper {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .file-input-wrapper:hover {
+            background: #2980b9;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .info {
+            margin-left: 20px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 12px;
+        }
+        
+        .legend-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border: 1px solid #ccc;
+        }
+        
+        .status {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        .success {
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Shapefile Leaflet Visualization</h1>
+            <p>Upload and visualize shapefiles on an interactive map</p>
+        </div>
+        
+        <div class="controls">
+            <label class="file-input-wrapper">
+                <input type="file" id="shapefileInput" accept=".zip,.shp" multiple>
+                📁 Choose Shapefile (.zip or .shp + associated files)
+            </label>
+            <span class="info">
+                Upload either a ZIP file containing shapefile components or select multiple files (.shp, .dbf, .shx, .prj)
+            </span>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="status" id="status">
+            Ready to load shapefile data...
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <!-- Shapefile parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shpjs/3.6.3/shp.min.js"></script>
+
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([40.7128, -74.0060], 10); // Default to NYC
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Store loaded layers for management
+        let shapefileLayers = [];
+        
+        // Color palette for different features
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e'];
+        let colorIndex = 0;
+        
+        // Status update function
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // Function to get a random color
+        function getNextColor() {
+            const color = colors[colorIndex % colors.length];
+            colorIndex++;
+            return color;
+        }
+        
+        // Function to style features
+        function styleFeature(feature) {
+            return {
+                fillColor: getNextColor(),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.7
+            };
+        }
+        
+        // Function to add popup to features
+        function onEachFeature(feature, layer) {
+            if (feature.properties) {
+                // Create popup content from properties
+                let popupContent = '<div style="max-height: 200px; overflow-y: auto;">';
+                popupContent += '<strong>Feature Properties:</strong><br>';
+                
+                for (const [key, value] of Object.entries(feature.properties)) {
+                    if (value !== null && value !== undefined) {
+                        popupContent += `<strong>${key}:</strong> ${value}<br>`;
+                    }
+                }
+                popupContent += '</div>';
+                
+                layer.bindPopup(popupContent);
+            }
+        }
+        
+        // Function to clear existing layers
+        function clearLayers() {
+            shapefileLayers.forEach(layer => {
+                map.removeLayer(layer);
+            });
+            shapefileLayers = [];
+            colorIndex = 0;
+        }
+        
+        // Function to load and display shapefile
+        function loadShapefile(file) {
+            updateStatus('Loading shapefile...', 'info');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    // Parse the shapefile
+                    shp(e.target.result).then(function(geojson) {
+                        // Clear existing layers
+                        clearLayers();
+                        
+                        // Add the GeoJSON to the map
+                        const layer = L.geoJSON(geojson, {
+                            style: styleFeature,
+                            onEachFeature: onEachFeature
+                        });
+                        
+                        shapefileLayers.push(layer);
+                        layer.addTo(map);
+                        
+                        // Fit map to the data bounds
+                        if (layer.getBounds().isValid()) {
+                            map.fitBounds(layer.getBounds());
+                        }
+                        
+                        // Update status
+                        const featureCount = geojson.features ? geojson.features.length : 0;
+                        updateStatus(`Successfully loaded ${featureCount} features`, 'success');
+                        
+                        // Add legend
+                        addLegend(geojson);
+                        
+                    }).catch(function(error) {
+                        console.error('Error parsing shapefile:', error);
+                        updateStatus('Error parsing shapefile: ' + error.message, 'error');
+                    });
+                } catch (error) {
+                    console.error('Error reading file:', error);
+                    updateStatus('Error reading file: ' + error.message, 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                updateStatus('Error reading file', 'error');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // Function to add legend
+        function addLegend(geojson) {
+            // Remove existing legend
+            const existingLegend = document.querySelector('.legend-control');
+            if (existingLegend) {
+                existingLegend.remove();
+            }
+            
+            // Create new legend
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'legend legend-control');
+                div.innerHTML = '<strong>Shapefile Features</strong><br>';
+                
+                if (geojson.features && geojson.features.length > 0) {
+                    const sampleFeature = geojson.features[0];
+                    div.innerHTML += `<div class="legend-item">
+                        <div class="legend-color" style="background-color: ${colors[0]}"></div>
+                        <span>Features (${geojson.features.length} total)</span>
+                    </div>`;
+                    
+                    // Show geometry type
+                    if (sampleFeature.geometry) {
+                        div.innerHTML += `<div style="margin-top: 8px; font-size: 11px; color: #666;">
+                            Type: ${sampleFeature.geometry.type}
+                        </div>`;
+                    }
+                }
+                
+                return div;
+            };
+            legend.addTo(map);
+        }
+        
+        // Handle file input
+        document.getElementById('shapefileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            
+            if (files.length === 0) {
+                return;
+            }
+            
+            // Check if it's a ZIP file
+            if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+                loadShapefile(files[0]);
+                return;
+            }
+            
+            // Handle multiple files (look for .shp file)
+            let shpFile = null;
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].name.toLowerCase().endsWith('.shp')) {
+                    shpFile = files[i];
+                    break;
+                }
+            }
+            
+            if (shpFile) {
+                loadShapefile(shpFile);
+            } else {
+                updateStatus('Please select a .zip file or include a .shp file', 'error');
+            }
+        });
+        
+        // Example: Load a sample dataset (you can remove this in production)
+        // This demonstrates how to load GeoJSON data directly
+        function loadSampleData() {
+            // Simple sample GeoJSON for demonstration
+            const sampleGeoJSON = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {
+                            "name": "Sample Polygon 1",
+                            "population": "100000",
+                            "area": "50 sq km"
+                        },
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [-74.0059, 40.7128],
+                                [-74.0059, 40.7628],
+                                [-73.9559, 40.7628],
+                                [-73.9559, 40.7128],
+                                [-74.0059, 40.7128]
+                            ]]
+                        }
+                    },
+                    {
+                        "type": "Feature",
+                        "properties": {
+                            "name": "Sample Polygon 2",
+                            "population": "75000",
+                            "area": "35 sq km"
+                        },
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [-73.9559, 40.7128],
+                                [-73.9559, 40.7628],
+                                [-73.9059, 40.7628],
+                                [-73.9059, 40.7128],
+                                [-73.9559, 40.7128]
+                            ]]
+                        }
+                    }
+                ]
+            };
+            
+            const layer = L.geoJSON(sampleGeoJSON, {
+                style: styleFeature,
+                onEachFeature: onEachFeature
+            });
+            
+            shapefileLayers.push(layer);
+            layer.addTo(map);
+            map.fitBounds(layer.getBounds());
+            
+            updateStatus('Sample data loaded. Upload your own shapefile to replace it.', 'success');
+            addLegend(sampleGeoJSON);
+        }
+        
+        // Load sample data on page load
+        loadSampleData();
+    </script>
+</body>
+</html>
