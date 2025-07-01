@@ -542,20 +542,67 @@ export default function MapView() {
 
   return (
     <>
-      <div className="flex h-full">
+      <div className="flex flex-col lg:flex-row h-full">
         {/* Map Container */}
-        <div className="relative flex-1 z-0">
-          {/* Show Recent Shapefile Button */}
-          {shapefiles && shapefiles.length > 0 && (
-            <div className="absolute top-4 left-4 z-10">
+        <div className="relative flex-1 z-0 h-[60vh] lg:h-full">
+          {/* Mobile Controls Bar - Top */}
+          <div className="absolute top-2 left-2 right-2 z-[1000] lg:hidden flex flex-wrap gap-2 justify-between">
+            {/* Show Recent Shapefile Button */}
+            {shapefiles && shapefiles.length > 0 && (
               <button
                 onClick={zoomToRecentShapefile}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-lg flex items-center gap-1 text-xs font-medium transition-colors"
               >
-                📍 Show Recent Shapefile
+                📍 Shapefile
               </button>
+            )}
+            
+            {/* Shapefile Upload - Mobile */}
+            <div className="ml-auto">
+              <ShapefileUpload
+                userRole={user?.role as 'Supervisor' | 'Field' || 'Field'}
+                userId={user?._id?.toString() || ''}
+                onUploadSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
+                  toast({
+                    title: "Upload Complete",
+                    description: "Shapefile has been uploaded successfully",
+                  });
+                }}
+              />
             </div>
-          )}
+          </div>
+
+          {/* Desktop Controls */}
+          <div className="hidden lg:block">
+            {/* Show Recent Shapefile Button - Desktop */}
+            {shapefiles && shapefiles.length > 0 && (
+              <div className="absolute top-4 left-4 z-10">
+                <button
+                  onClick={zoomToRecentShapefile}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
+                >
+                  📍 Show Recent Shapefile
+                </button>
+              </div>
+            )}
+            
+            {/* Shapefile Upload Button - Desktop Top Right */}
+            <div className="absolute top-4 right-4 z-[1000]">
+              <ShapefileUpload
+                userRole={user?.role as 'Supervisor' | 'Field' || 'Field'}
+                userId={user?._id?.toString() || ''}
+                onUploadSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
+                  toast({
+                    title: "Upload Complete",
+                    description: "Shapefile has been uploaded successfully",
+                  });
+                }}
+              />
+            </div>
+          </div>
+
           <OpenLayersMap
           features={features}
           teams={fieldUsers}
@@ -579,25 +626,9 @@ export default function MapView() {
           clearDrawnPolygon={clearPolygon}
           className="w-full h-full"
         />
-
-        {/* Shapefile Upload Button - Top Right */}
-        <div className="absolute top-4 right-4 z-[1000]">
-          <ShapefileUpload
-            userRole={user?.role as 'Supervisor' | 'Field' || 'Field'}
-            userId={user?._id?.toString() || ''}
-            onUploadSuccess={() => {
-              // Refetch shapefiles when upload succeeds
-              queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
-              toast({
-                title: "Upload Complete",
-                description: "Shapefile has been uploaded successfully",
-              });
-            }}
-          />
-        </div>
         
-        {/* Single Drawing Button - For All Users */}
-        <div className="absolute bottom-4 left-4 z-[1000]">
+        {/* Mobile Drawing Button - Bottom Center */}
+        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-[1000] lg:hidden">
           <Button
             onClick={() => setFeatureSelectionOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-200"
@@ -610,9 +641,44 @@ export default function MapView() {
           </Button>
         </div>
         
-        {/* Show boundary info for field users */}
+        {/* Desktop Drawing Button - For All Users */}
+        <div className="absolute bottom-4 left-4 z-[1000] hidden lg:block">
+          <Button
+            onClick={() => setFeatureSelectionOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg transition-all duration-200"
+            title="Create Feature"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+            </svg>
+          </Button>
+        </div>
+
+        {/* Show boundary info for field users - Mobile */}
         {user?.role === "Field" && (
-          <div className="absolute bottom-20 left-4 z-[1000]">
+          <div className="absolute bottom-20 left-2 right-2 z-[1000] lg:hidden">
+            <div className="bg-white rounded-lg p-2 shadow-lg border border-orange-200">
+              <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
+              <p className="text-sm font-medium text-gray-800">
+                {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
+              </p>
+              <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                </svg>
+                {boundaries.length > 0 
+                  ? "Features only within boundary"
+                  : "No boundary assigned"
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop boundary info for field users */}
+        {user?.role === "Field" && (
+          <div className="absolute bottom-4 right-4 z-[1000] hidden lg:block">
             <div className="bg-white rounded-lg p-3 shadow-lg border border-orange-200">
               <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
               <p className="text-sm font-medium text-gray-800">
@@ -633,9 +699,17 @@ export default function MapView() {
         
         </div>
         
-        {/* Legend Panel */}
-        <div className="w-80 p-4 bg-gray-50">
+        {/* Legend Panel - Responsive */}
+        <div className="hidden lg:flex w-80 p-4 bg-gray-50 flex-col">
           <MapLegend />
+        </div>
+
+        {/* Mobile Legend Panel - Collapsible */}
+        <div className="lg:hidden h-[40vh] bg-gray-50 border-t border-gray-200 overflow-y-auto">
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-3">Map Legend</h3>
+            <MapLegend />
+          </div>
         </div>
       </div>
       

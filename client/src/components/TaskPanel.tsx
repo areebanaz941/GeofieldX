@@ -81,41 +81,41 @@ export default function TaskPanel({
 
   return (
     <div
-      className={`bg-white border-t border-neutral-200 z-10 transform transition-all duration-300 ease-in-out overflow-hidden ${
-        expanded ? "h-1/3" : "h-12"
-      }`}
+      className={`bg-white border-t border-neutral-200 z-10 transform transition-all duration-300 ease-in-out overflow-hidden 
+        ${expanded ? "h-1/3 lg:h-1/3" : "h-12"}
+        fixed lg:relative bottom-0 lg:bottom-auto left-0 lg:left-auto w-full lg:w-auto`}
     >
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-neutral-200 px-2 lg:px-4 py-2">
         <div className="flex items-center">
-          <h2 className="text-base font-medium">Tasks & Assignments</h2>
-          <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full">
+          <h2 className="text-sm lg:text-base font-medium">Tasks & Assignments</h2>
+          <span className="ml-1 lg:ml-2 px-1.5 lg:px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full">
             {tasks.length}
           </span>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 lg:space-x-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={onExpandToggle}
-            className="text-neutral-500 hover:text-neutral-700"
+            className="text-neutral-500 hover:text-neutral-700 h-8 w-8 lg:h-10 lg:w-10"
           >
-            <i className={`ri-arrow-${expanded ? "down" : "up"}-s-line text-lg`}></i>
+            <i className={`ri-arrow-${expanded ? "down" : "up"}-s-line text-base lg:text-lg`}></i>
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="text-neutral-500 hover:text-neutral-700"
+            className="text-neutral-500 hover:text-neutral-700 h-8 w-8 lg:h-10 lg:w-10"
             onClick={() => window.location.reload()}
           >
-            <i className="ri-refresh-line"></i>
+            <i className="ri-refresh-line text-base lg:text-lg"></i>
           </Button>
 
         </div>
       </div>
 
       {expanded && (
-        <div className="p-4 h-full overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="p-2 lg:p-4 h-full overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-4">
             {sortedTasks.length > 0 ? (
               sortedTasks.map((task) => (
                 <Card

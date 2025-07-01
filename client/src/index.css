@@ -41,6 +41,55 @@ body {
   }
 }
 
+/* Mobile map container improvements */
+.ol-viewport {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: none;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* Improve touch interactions for mobile */
+.ol-control {
+  touch-action: manipulation;
+}
+
+.ol-zoom {
+  top: 0.5em;
+  left: 0.5em;
+}
+
+@media (max-width: 768px) {
+  .ol-zoom {
+    top: 4.5em;
+    left: 0.5em;
+  }
+  
+  .ol-zoom button {
+    width: 1.8em;
+    height: 1.8em;
+    font-size: 1.2em;
+  }
+}
+
+/* Ensure proper viewport for mobile devices */
+@media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .map-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 /* RTL Support for Arabic */
 html[dir="rtl"] {
   direction: rtl;

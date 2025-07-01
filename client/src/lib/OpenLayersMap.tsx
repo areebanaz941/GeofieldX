@@ -1073,7 +1073,12 @@ const OpenLayersMap = ({
     <div className={className}>
       <div
         ref={mapContainerRef}
-        className="w-full h-full"
+        className="w-full h-full touch-pan-y touch-pinch-zoom"
+        style={{ 
+          minHeight: '300px',
+          touchAction: 'pan-x pan-y pinch-zoom',
+          userSelect: 'none'
+        }}
         id="map"
       />
     </div>
