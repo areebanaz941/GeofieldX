@@ -31,21 +31,28 @@ export default function AppHeader() {
   const toggleSidebar = () => {
     const sidebar = document.getElementById("side-nav");
     if (sidebar) {
+      // Toggle the sidebar visibility
       sidebar.classList.toggle("hidden");
       
       if (!sidebar.classList.contains("hidden")) {
+        // Show sidebar - add mobile styles and overlay
+        sidebar.classList.add("block");
+        
         // Add overlay for mobile
         const overlay = document.createElement("div");
         overlay.className = "fixed inset-0 bg-black bg-opacity-30 z-40 md:hidden";
         overlay.id = "mobile-nav-overlay";
         document.body.appendChild(overlay);
         
+        // Close sidebar when overlay is clicked
         overlay.addEventListener("click", () => {
           sidebar.classList.add("hidden");
+          sidebar.classList.remove("block");
           document.body.removeChild(overlay);
         });
       } else {
-        // Remove overlay if exists
+        // Hide sidebar - remove mobile styles and overlay
+        sidebar.classList.remove("block");
         const overlay = document.getElementById("mobile-nav-overlay");
         if (overlay) {
           document.body.removeChild(overlay);

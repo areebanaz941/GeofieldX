@@ -41,6 +41,29 @@ body {
   }
 }
 
+/* Mobile sidebar styles */
+@media (max-width: 767px) {
+  #side-nav {
+    /* Override hidden class for mobile when needed */
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  #side-nav:not(.hidden) {
+    transform: translateX(0);
+  }
+  
+  #side-nav.block {
+    display: block !important;
+    transform: translateX(0);
+  }
+}
+
 /* Mobile map container improvements */
 .ol-viewport {
   -webkit-user-select: none;

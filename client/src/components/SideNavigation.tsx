@@ -129,8 +129,27 @@ export default function SideNavigation() {
     },
   ];
 
+  // Handle navigation item click for mobile
+  const handleNavClick = (path: string) => {
+    setLocation(path);
+    
+    // Close mobile sidebar after navigation
+    const sidebar = document.getElementById("side-nav");
+    const overlay = document.getElementById("mobile-nav-overlay");
+    
+    if (sidebar && window.innerWidth < 768) { // md breakpoint
+      sidebar.classList.add("hidden");
+      if (overlay) {
+        document.body.removeChild(overlay);
+      }
+    }
+  };
+
   return (
-    <div id="side-nav" className="hidden md:block w-64 bg-white border-r border-neutral-200 flex-shrink-0 z-30">
+    <div 
+      id="side-nav" 
+      className="hidden md:block fixed md:relative top-0 left-0 h-full w-64 bg-white border-r border-neutral-200 flex-shrink-0 z-50 md:z-30 transform transition-transform duration-300 ease-in-out"
+    >
       <div className="flex flex-col h-full">
         <div className="p-4 mb-2">
           <div className="bg-primary-50 rounded-lg p-3">
@@ -155,7 +174,7 @@ export default function SideNavigation() {
                 "w-full justify-start",
                 isActive(item.path) && "bg-primary-50 text-primary-700"
               )}
-              onClick={() => setLocation(item.path)}
+              onClick={() => handleNavClick(item.path)}
             >
               <i className={`${item.icon} text-lg mr-3`}></i>
               <span>{item.name}</span>
@@ -188,7 +207,7 @@ export default function SideNavigation() {
                     key={type}
                     variant="ghost"
                     className="w-full justify-start text-left p-2 h-auto hover:bg-gray-50"
-                    onClick={() => setLocation(`/features/${type.toLowerCase()}`)}
+                    onClick={() => handleNavClick(`/features/${type.toLowerCase()}`)}
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center space-x-2">
@@ -240,7 +259,7 @@ export default function SideNavigation() {
           <Button
             variant="ghost"
             className="w-full justify-start"
-            onClick={() => setLocation("/settings")}
+            onClick={() => handleNavClick("/settings")}
           >
             <i className="ri-settings-3-line mr-2"></i>
             <span className="text-sm">Settings</span>
@@ -248,7 +267,7 @@ export default function SideNavigation() {
           <Button
             variant="ghost"
             className="w-full justify-start mt-2"
-            onClick={() => setLocation("/help")}
+            onClick={() => handleNavClick("/help")}
           >
             <i className="ri-question-line mr-2"></i>
             <span className="text-sm">Help & Support</span>
