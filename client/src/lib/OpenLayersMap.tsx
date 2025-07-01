@@ -751,16 +751,21 @@ const OpenLayersMap = ({
     source.clear();
 
     console.log('🗂️ Processing shapefiles for display:', shapefiles.length);
+    console.log('🗂️ Raw shapefiles data:', shapefiles);
 
     shapefiles.forEach(shapefile => {
       console.log(`📍 Processing shapefile "${shapefile.name}"`);
+      console.log(`📍 Shapefile object:`, shapefile);
       
       if (!shapefile.features || !Array.isArray(shapefile.features)) {
         console.warn(`⚠️ Shapefile "${shapefile.name}" has no features array`);
+        console.log(`⚠️ Features value:`, shapefile.features);
+        console.log(`⚠️ Features type:`, typeof shapefile.features);
         return;
       }
 
       console.log(`✨ Shapefile "${shapefile.name}" has ${shapefile.features.length} features`);
+      console.log(`✨ First feature sample:`, shapefile.features[0]);
 
       // Process features in batches for performance with large datasets
       const batchSize = 500;

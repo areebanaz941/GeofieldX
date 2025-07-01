@@ -391,11 +391,15 @@ export default function MapView() {
   const zoomToRecentShapefile = () => {
     console.log('🔍 Attempting to zoom to recent shapefile...');
     console.log('📊 Available shapefiles:', shapefiles);
+    console.log('📊 Shapefiles count:', shapefiles?.length);
     
     if (shapefiles && shapefiles.length > 0) {
       // Get the most recent shapefile (last in array)
       const recentShapefile = shapefiles[shapefiles.length - 1];
       console.log('📍 Recent shapefile:', recentShapefile);
+      console.log('📍 Shapefile features type:', typeof recentShapefile.features);
+      console.log('📍 Shapefile features length:', recentShapefile.features?.length);
+      console.log('📍 First few features:', recentShapefile.features?.slice(0, 3));
       
       if (recentShapefile.features && recentShapefile.features.length > 0) {
         console.log('🗂️ Shapefile has', recentShapefile.features.length, 'features');
