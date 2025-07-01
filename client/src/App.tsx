@@ -3,6 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { I18nextProvider } from "react-i18next";
+import i18n from "./i18n";
 import NotFound from "@/pages/not-found";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -20,10 +22,11 @@ import { SupervisorRoutes } from "./components/SupervisorRoutes";
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
           <Switch>
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
@@ -83,9 +86,10 @@ function App() {
             </Route>
             <Route component={NotFound} />
           </Switch>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </I18nextProvider>
   );
 }
 

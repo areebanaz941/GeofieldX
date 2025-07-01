@@ -49,3 +49,5 @@ export function LanguageSwitcher() {
     </DropdownMenu>
   );
 }
+
+export default LanguageSwitcher;

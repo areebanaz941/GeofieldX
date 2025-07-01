@@ -29,10 +29,10 @@ export default function TaskPanel({
   });
 
   // Get user name by id
-  const getUserName = (userId?: number) => {
-    if (!userId) return "Unassigned";
-    const user = users.find((u) => u.id === userId);
-    return user ? user.name : "Unknown";
+  const getUserName = (userId?: any) => {
+    if (!userId) return t('taskPanel.unassigned');
+    const user = users.find((u: any) => u._id === userId);
+    return user ? user.name : t('common.unknown');
   };
 
   // Get initials from name
@@ -61,7 +61,7 @@ export default function TaskPanel({
   };
 
   // Format due date
-  const formatDueDate = (date: string) => {
+  const formatDueDate = (date: string | Date) => {
     if (!date) return "";
     
     const dueDate = new Date(date);
@@ -69,11 +69,11 @@ export default function TaskPanel({
     const diffMs = dueDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return "Overdue";
-    if (diffDays === 0) return "Due today";
-    if (diffDays === 1) return "Due tomorrow";
-    if (diffDays < 7) return `Due in ${diffDays} days`;
-    return `Due ${dueDate.toLocaleDateString()}`;
+    if (diffDays < 0) return t('taskPanel.overdue');
+    if (diffDays === 0) return t('taskPanel.dueToday');
+    if (diffDays === 1) return t('taskPanel.dueTomorrow');
+    if (diffDays < 7) return t('taskPanel.dueInDays', { days: diffDays });
+    return t('taskPanel.dueDate', { date: dueDate.toLocaleDateString() });
   };
 
   // Sort tasks by updated date (newest first)
@@ -89,7 +89,7 @@ export default function TaskPanel({
     >
       <div className="flex items-center justify-between border-b border-neutral-200 px-2 lg:px-4 py-2">
         <div className="flex items-center">
-          <h2 className="text-sm lg:text-base font-medium">Tasks & Assignments</h2>
+          <h2 className="text-sm lg:text-base font-medium">{t('mapView.tasksAndAssignments')}</h2>
           <span className="ml-1 lg:ml-2 px-1.5 lg:px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full">
             {tasks.length}
           </span>
