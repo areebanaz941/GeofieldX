@@ -139,6 +139,7 @@ const OpenLayersMap = ({
   onFeatureClick,
   onBoundaryClick,
   onTeamClick,
+  onShapefileClick,
   onMapClick,
   onMapDoubleClick,
   onPolygonCreated,
@@ -938,7 +939,7 @@ const OpenLayersMap = ({
     if (!pointSelectionMode && !lineDrawingMode && !selectionMode && !drawingMode) {
       selectInteractionRef.current = new Select({
         condition: click,
-        layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current].filter(Boolean)
+        layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current, shapefilesLayerRef.current].filter(Boolean)
       });
 
       selectInteractionRef.current.on('select', (event) => {
@@ -949,6 +950,7 @@ const OpenLayersMap = ({
           const teamData = feature.get('teamData');
           const boundaryData = feature.get('boundaryData');
           const taskData = feature.get('taskData');
+          const shapefileData = feature.get('shapefileData');
 
           if (featureData && onFeatureClick) {
             onFeatureClick(featureData);
@@ -956,6 +958,8 @@ const OpenLayersMap = ({
             onTeamClick(teamData);
           } else if (boundaryData && onBoundaryClick) {
             onBoundaryClick(boundaryData);
+          } else if (shapefileData && onShapefileClick) {
+            onShapefileClick(shapefileData);
           }
         }
       });

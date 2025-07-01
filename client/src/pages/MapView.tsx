@@ -358,6 +358,21 @@ export default function MapView() {
     });
   };
 
+  const handleShapefileClick = (shapefileData: any) => {
+    console.log('Shapefile clicked:', shapefileData);
+    
+    // Show shapefile information in a toast
+    toast({
+      title: "Shapefile Feature",
+      description: `${shapefileData.parentShapefile?.name || 'Shapefile'}: ${shapefileData.properties?.name || 'Feature'}`,
+    });
+
+    // Optionally zoom to the shapefile feature
+    if (shapefileData.parentShapefile) {
+      console.log('Shapefile details:', shapefileData.parentShapefile);
+    }
+  };
+
   // Handle feature selection from dialog
   const handleFeatureSelect = (featureType: string, drawingType: 'point' | 'line' | 'polygon') => {
     console.log('🟢 Feature selected:', featureType, 'drawing type:', drawingType);
@@ -425,6 +440,7 @@ export default function MapView() {
           onFeatureClick={handleFeatureClick}
           onBoundaryClick={handleBoundaryClick}
           onTeamClick={handleTeamClick}
+          onShapefileClick={handleShapefileClick}
           onMapClick={handleMapClick}
           onPolygonCreated={handlePolygonCreated}
           onLineCreated={handleLineCreated}
