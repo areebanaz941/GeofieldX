@@ -420,6 +420,7 @@ export default function MapView() {
           boundaries={boundaries}
           tasks={tasks}
           allTeams={teams}
+          shapefiles={shapefiles}
           activeFilters={activeFilters}
           onFeatureClick={handleFeatureClick}
           onBoundaryClick={handleBoundaryClick}

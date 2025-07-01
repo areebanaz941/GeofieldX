@@ -107,10 +107,12 @@ interface MapProps {
   boundaries?: IBoundary[];
   tasks?: ITask[];
   allTeams?: any[];
+  shapefiles?: any[];
   activeFilters?: string[];
   onFeatureClick?: (feature: IFeature) => void;
   onBoundaryClick?: (boundary: IBoundary) => void;
   onTeamClick?: (team: IUser) => void;
+  onShapefileClick?: (shapefile: any) => void;
   onMapClick?: (latlng: { lat: number; lng: number }) => void;
   onMapDoubleClick?: () => void;
   onPolygonCreated?: (polygon: { name: string; coordinates: number[][][] }) => void;
@@ -132,6 +134,7 @@ const OpenLayersMap = ({
   boundaries = [],
   tasks = [],
   allTeams = [],
+  shapefiles = [],
   activeFilters = ['All'],
   onFeatureClick,
   onBoundaryClick,
@@ -715,6 +718,60 @@ const OpenLayersMap = ({
       }
     });
   }, [features, activeFilters]);
+
+  // Update shapefiles on the map
+  useEffect(() => {
+    if (!shapefilesLayerRef.current) return;
+
+    const source = shapefilesLayerRef.current.getSource();
+    if (!source) return;
+
+    source.clear();
+
+    shapefiles.forEach(shapefile => {
+      if (!shapefile.features || !Array.isArray(shapefile.features)) return;
+
+      shapefile.features.forEach((feature: any) => {
+        if (!feature.geometry) return;
+
+        try {
+          const geometry = typeof feature.geometry === 'string'
+            ? JSON.parse(feature.geometry)
+            : feature.geometry;
+
+          let olFeature: Feature | null = null;
+
+          if (geometry.type === 'Point') {
+            const [lng, lat] = geometry.coordinates;
+            olFeature = new Feature({
+              geometry: new Point(fromLonLat([lng, lat])),
+              shapefileData: { ...feature, parentShapefile: shapefile }
+            });
+          } else if (geometry.type === 'LineString') {
+            const coords = geometry.coordinates.map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
+            olFeature = new Feature({
+              geometry: new LineString(coords),
+              shapefileData: { ...feature, parentShapefile: shapefile }
+            });
+          } else if (geometry.type === 'Polygon') {
+            const coords = geometry.coordinates.map((ring: number[][]) =>
+              ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
+            );
+            olFeature = new Feature({
+              geometry: new Polygon(coords),
+              shapefileData: { ...feature, parentShapefile: shapefile }
+            });
+          }
+
+          if (olFeature) {
+            source.addFeature(olFeature);
+          }
+        } catch (error) {
+          console.error('Error rendering shapefile feature geometry:', error);
+        }
+      });
+    });
+  }, [shapefiles]);
 
   // Update team markers on the map
   useEffect(() => {
