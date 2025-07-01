@@ -107,7 +107,7 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
       uploadFormData.append('userId', userId);
       
       if (userRole === 'Supervisor' && formData.assignedTeamId) {
-        uploadFormData.append('assignedTeamId', formData.assignedTeamId);
+        uploadFormData.append('assignedTo', formData.assignedTeamId);
       }
 
       const response = await fetch('/api/shapefiles/upload', {
