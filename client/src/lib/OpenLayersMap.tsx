@@ -475,14 +475,19 @@ const OpenLayersMap = ({
 
     // Add event listener for zoom-to-location functionality
     const handleZoomToLocation = (event: any) => {
+      console.log('🎯 Map received zoom event:', event.detail);
       const { lat, lng, zoom } = event.detail;
       if (mapRef.current) {
+        console.log('🗺️ Animating map to:', [lng, lat], 'zoom:', zoom);
         const view = mapRef.current.getView();
         view.animate({
           center: fromLonLat([lng, lat]),
           zoom: zoom || 15,
           duration: 1000
         });
+        console.log('✅ Map animation started');
+      } else {
+        console.error('❌ Map reference not available');
       }
     };
 

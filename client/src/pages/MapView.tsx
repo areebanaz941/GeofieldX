@@ -389,11 +389,16 @@ export default function MapView() {
 
   // Function to zoom to the most recent shapefile
   const zoomToRecentShapefile = () => {
+    console.log('🔍 Attempting to zoom to recent shapefile...');
+    console.log('📊 Available shapefiles:', shapefiles);
+    
     if (shapefiles && shapefiles.length > 0) {
       // Get the most recent shapefile (last in array)
       const recentShapefile = shapefiles[shapefiles.length - 1];
+      console.log('📍 Recent shapefile:', recentShapefile);
       
       if (recentShapefile.features && recentShapefile.features.length > 0) {
+        console.log('🗂️ Shapefile has', recentShapefile.features.length, 'features');
         // Calculate bounds from all features in the shapefile
         let minLat = Infinity, maxLat = -Infinity;
         let minLng = Infinity, maxLng = -Infinity;
@@ -436,24 +441,47 @@ export default function MapView() {
         const centerLat = (minLat + maxLat) / 2;
         const centerLng = (minLng + maxLng) / 2;
         
-        // Update the map center to show the shapefile
-        console.log(`Zooming to shapefile "${recentShapefile.name}" at [${centerLat}, ${centerLng}]`);
-        
-        // Create a custom event to trigger map zoom
-        const zoomEvent = new CustomEvent('zoomToLocation', {
-          detail: {
-            lat: centerLat,
-            lng: centerLng,
-            zoom: 15
-          }
-        });
-        window.dispatchEvent(zoomEvent);
-        
+        // Validate calculated bounds
+        if (isFinite(centerLat) && isFinite(centerLng) && !isNaN(centerLat) && !isNaN(centerLng)) {
+          console.log(`🎯 Zooming to shapefile "${recentShapefile.name}" at [${centerLat}, ${centerLng}]`);
+          
+          // Create a custom event to trigger map zoom
+          const zoomEvent = new CustomEvent('zoomToLocation', {
+            detail: {
+              lat: centerLat,
+              lng: centerLng,
+              zoom: 15
+            }
+          });
+          window.dispatchEvent(zoomEvent);
+          
+          toast({
+            title: "Navigating to Shapefile",
+            description: `Showing "${recentShapefile.name}" on the map`,
+          });
+        } else {
+          console.error('❌ Invalid coordinates calculated:', { centerLat, centerLng, minLat, maxLat, minLng, maxLng });
+          toast({
+            title: "Navigation Error",
+            description: "Unable to calculate shapefile location",
+            variant: "destructive"
+          });
+        }
+      } else {
+        console.warn('⚠️ Shapefile has no features to display');
         toast({
-          title: "Navigating to Shapefile",
-          description: `Showing "${recentShapefile.name}" on the map`,
+          title: "No Features",
+          description: `Shapefile "${recentShapefile.name}" contains no displayable features`,
+          variant: "destructive"
         });
       }
+    } else {
+      console.warn('⚠️ No shapefiles available');
+      toast({
+        title: "No Shapefiles",
+        description: "No shapefiles have been uploaded yet",
+        variant: "destructive"
+      });
     }
   };
 
