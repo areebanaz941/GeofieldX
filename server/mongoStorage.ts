@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
 import { IStorage } from "./storage";
 import {
-  User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence, TaskSubmission,
-  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, ITaskSubmission,
-  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence, InsertTaskSubmission
+  User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence, TaskSubmission, Shapefile,
+  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, ITaskSubmission, IShapefile,
+  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence, InsertTaskSubmission, InsertShapefile
 } from "@shared/schema";
 
 /**
@@ -569,6 +569,110 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error("Error updating submission status:", error);
       throw error;
+    }
+  }
+
+  // Shapefile operations
+  async createShapefile(shapefileData: InsertShapefile): Promise<IShapefile> {
+    try {
+      const shapefile = new Shapefile({
+        ...shapefileData,
+        uploadedBy: new Types.ObjectId(shapefileData.uploadedBy),
+        assignedTo: shapefileData.assignedTo ? new Types.ObjectId(shapefileData.assignedTo) : undefined,
+        teamId: shapefileData.teamId ? new Types.ObjectId(shapefileData.teamId) : undefined,
+      });
+      await shapefile.save();
+      return shapefile;
+    } catch (error) {
+      console.error("Error creating shapefile:", error);
+      throw error;
+    }
+  }
+
+  async getShapefile(id: string): Promise<IShapefile | undefined> {
+    try {
+      const shapefile = await Shapefile.findById(id)
+        .populate('uploadedBy', 'name username')
+        .populate('assignedTo', 'name')
+        .populate('teamId', 'name');
+      return shapefile || undefined;
+    } catch (error) {
+      console.error("Error getting shapefile:", error);
+      return undefined;
+    }
+  }
+
+  async getAllShapefiles(): Promise<IShapefile[]> {
+    try {
+      return await Shapefile.find()
+        .populate('uploadedBy', 'name username')
+        .populate('assignedTo', 'name')
+        .populate('teamId', 'name')
+        .sort({ createdAt: -1 });
+    } catch (error) {
+      console.error("Error getting all shapefiles:", error);
+      return [];
+    }
+  }
+
+  async getShapefilesByTeam(teamId: string): Promise<IShapefile[]> {
+    try {
+      return await Shapefile.find({
+        $or: [
+          { assignedTo: new Types.ObjectId(teamId) },
+          { teamId: new Types.ObjectId(teamId) }
+        ],
+        isVisible: true
+      })
+        .populate('uploadedBy', 'name username')
+        .populate('assignedTo', 'name')
+        .populate('teamId', 'name')
+        .sort({ createdAt: -1 });
+    } catch (error) {
+      console.error("Error getting shapefiles by team:", error);
+      return [];
+    }
+  }
+
+  async getShapefilesByUser(userId: string): Promise<IShapefile[]> {
+    try {
+      return await Shapefile.find({
+        uploadedBy: new Types.ObjectId(userId),
+        isVisible: true
+      })
+        .populate('uploadedBy', 'name username')
+        .populate('assignedTo', 'name')
+        .populate('teamId', 'name')
+        .sort({ createdAt: -1 });
+    } catch (error) {
+      console.error("Error getting shapefiles by user:", error);
+      return [];
+    }
+  }
+
+  async updateShapefileVisibility(id: string, isVisible: boolean): Promise<IShapefile> {
+    try {
+      const shapefile = await Shapefile.findById(id);
+      if (!shapefile) {
+        throw new Error(`Shapefile with ID ${id} not found`);
+      }
+
+      shapefile.isVisible = isVisible;
+      await shapefile.save();
+      return shapefile;
+    } catch (error) {
+      console.error("Error updating shapefile visibility:", error);
+      throw error;
+    }
+  }
+
+  async deleteShapefile(id: string): Promise<boolean> {
+    try {
+      const result = await Shapefile.findByIdAndDelete(id);
+      return !!result;
+    } catch (error) {
+      console.error("Error deleting shapefile:", error);
+      return false;
     }
   }
 }

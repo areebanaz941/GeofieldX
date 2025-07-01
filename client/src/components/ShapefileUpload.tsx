@@ -33,7 +33,7 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
   const { toast } = useToast();
 
   // Get teams for assignment dropdown (supervisors only)
-  const { data: teams } = useQuery({
+  const { data: teams } = useQuery<any[]>({
     queryKey: ['/api/teams'],
     enabled: userRole === 'Supervisor',
   });
@@ -287,7 +287,7 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
               </div>
 
               {/* Team Assignment (Supervisors only) */}
-              {userRole === 'Supervisor' && teams && (
+              {userRole === 'Supervisor' && (
                 <div className="space-y-2">
                   <Label htmlFor="assignedTo">Assign to Team (Optional)</Label>
                   <Select
@@ -299,7 +299,7 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Assignment</SelectItem>
-                      {teams.map((team: any) => (
+                      {Array.isArray(teams) && teams.map((team: any) => (
                         <SelectItem key={team._id} value={team._id}>
                           {team.name}
                         </SelectItem>

@@ -107,6 +107,29 @@ const featureImageUpload = multer({
   },
 });
 
+// Configure multer for shapefile uploads
+const uploadImages = multer({
+  storage: storage_multer,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit for shapefiles
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept ZIP files for shapefiles and individual SHP components
+    const allowedTypes = /zip|shp|shx|dbf|prj|cpg/;
+    const allowedMimes = /application\/zip|application\/x-zip-compressed|application\/octet-stream/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimetype = allowedMimes.test(file.mimetype) || file.mimetype === 'application/x-esri-shape';
+
+    if (mimetype || extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only shapefile formats are allowed (ZIP, SHP, SHX, DBF, PRJ, CPG)"));
+    }
+  },
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
@@ -1698,6 +1721,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to bulk update task status" });
     }
   });
+
+  // Shapefile upload routes
+  app.post(
+    "/api/shapefiles/upload",
+    isAuthenticated,
+    uploadImages.single('shapefile'),
+    async (req: any, res: Response) => {
+      try {
+        const { name, shapefileType, description, assignedTo, uploadedBy } = req.body;
+        const userId = req.user.id;
+
+        if (!req.file) {
+          return res.status(400).json({ message: "Shapefile is required" });
+        }
+
+        if (!name || !shapefileType) {
+          return res.status(400).json({ message: "Name and type are required" });
+        }
+
+        // Parse uploaded shapefile using shapefile library
+        const shapefile = require('shapefile');
+        const features: any[] = [];
+
+        try {
+          await shapefile.open(req.file.path)
+            .then((source: any) => source.read()
+              .then(function read(result: any): any {
+                if (result.done) return;
+                if (result.value) {
+                  features.push({
+                    type: "Feature",
+                    geometry: result.value.geometry,
+                    properties: result.value.properties || {}
+                  });
+                }
+                return source.read().then(read);
+              })
+            );
+        } catch (parseError) {
+          console.error('Error parsing shapefile:', parseError);
+          return res.status(400).json({ message: "Invalid shapefile format" });
+        }
+
+        if (features.length === 0) {
+          return res.status(400).json({ message: "No features found in shapefile" });
+        }
+
+        const shapefileData = {
+          name,
+          originalFilename: req.file.originalname,
+          shapefileType,
+          description: description || '',
+          features,
+          uploadedBy: uploadedBy || userId,
+          assignedTo: assignedTo || undefined,
+          teamId: assignedTo || undefined, // Use assignedTo as teamId for now
+          filePath: req.file.path,
+          isVisible: true,
+        };
+
+        const newShapefile = await storage.createShapefile(shapefileData);
+        res.status(201).json(newShapefile);
+      } catch (error) {
+        console.error("Shapefile upload error:", error);
+        res.status(500).json({ message: "Failed to upload shapefile" });
+      }
+    },
+  );
+
+  // Get all shapefiles (supervisors) or assigned shapefiles (field teams)
+  app.get("/api/shapefiles", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      let shapefiles;
+
+      if (user.role === 'Supervisor') {
+        // Supervisors see all shapefiles
+        shapefiles = await storage.getAllShapefiles();
+      } else {
+        // Field teams see only assigned shapefiles or their own uploads
+        const userShapefiles = await storage.getShapefilesByUser(user.id);
+        const teamShapefiles = user.teamName ? 
+          await storage.getShapefilesByTeam(user.teamName) : [];
+        
+        // Combine and deduplicate
+        const allShapefiles = [...userShapefiles, ...teamShapefiles];
+        shapefiles = allShapefiles.filter((shapefile, index, self) =>
+          index === self.findIndex(s => s._id.toString() === shapefile._id.toString())
+        );
+      }
+
+      res.json(shapefiles);
+    } catch (error) {
+      console.error("Get shapefiles error:", error);
+      res.status(500).json({ message: "Failed to fetch shapefiles" });
+    }
+  });
+
+  // Get specific shapefile
+  app.get("/api/shapefiles/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const shapefileId = req.params.id;
+      const shapefile = await storage.getShapefile(shapefileId);
+
+      if (!shapefile) {
+        return res.status(404).json({ message: "Shapefile not found" });
+      }
+
+      res.json(shapefile);
+    } catch (error) {
+      console.error("Get shapefile error:", error);
+      res.status(500).json({ message: "Failed to fetch shapefile" });
+    }
+  });
+
+  // Update shapefile visibility
+  app.put(
+    "/api/shapefiles/:id/visibility",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const shapefileId = req.params.id;
+        const { isVisible } = req.body;
+
+        if (typeof isVisible !== 'boolean') {
+          return res.status(400).json({ message: "isVisible must be a boolean" });
+        }
+
+        const updatedShapefile = await storage.updateShapefileVisibility(shapefileId, isVisible);
+        res.json(updatedShapefile);
+      } catch (error) {
+        console.error("Update shapefile visibility error:", error);
+        res.status(500).json({ message: "Failed to update shapefile visibility" });
+      }
+    },
+  );
+
+  // Delete shapefile (supervisors only)
+  app.delete(
+    "/api/shapefiles/:id",
+    isSupervisor,
+    async (req: Request, res: Response) => {
+      try {
+        const shapefileId = req.params.id;
+        const deleted = await storage.deleteShapefile(shapefileId);
+
+        if (!deleted) {
+          return res.status(404).json({ message: "Shapefile not found" });
+        }
+
+        res.json({ message: "Shapefile deleted successfully" });
+      } catch (error) {
+        console.error("Delete shapefile error:", error);
+        res.status(500).json({ message: "Failed to delete shapefile" });
+      }
+    },
+  );
 
   return httpServer;
 }
