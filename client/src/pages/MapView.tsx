@@ -17,6 +17,7 @@ import AdvancedSearchModal from "@/components/AdvancedSearchModal";
 import FeatureAssignmentModal from "@/components/FeatureAssignmentModal";
 import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import FeatureSelectionDialog from "@/components/FeatureSelectionDialog";
+import { ShapefileUpload } from "@/components/ShapefileUpload";
 
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
 import { EditFeatureModal } from "@/components/EditFeatureModal";
@@ -424,8 +425,22 @@ export default function MapView() {
           clearDrawnPolygon={clearPolygon}
           className="w-full h-full"
         />
-        
 
+        {/* Shapefile Upload Button - Top Right */}
+        <div className="absolute top-4 right-4 z-[1000]">
+          <ShapefileUpload
+            userRole={user?.role as 'Supervisor' | 'Field' || 'Field'}
+            userId={user?._id?.toString() || ''}
+            onUploadSuccess={() => {
+              // Refetch shapefiles when upload succeeds
+              queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
+              toast({
+                title: "Upload Complete",
+                description: "Shapefile has been uploaded successfully",
+              });
+            }}
+          />
+        </div>
         
         {/* Single Drawing Button - For All Users */}
         <div className="absolute bottom-4 left-4 z-[1000]">

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Upload, FileUp, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import JSZip from 'jszip';
-import shapefile from 'shapefile';
 
 const SHAPEFILE_TYPES = ["Administrative", "Infrastructure", "Survey", "Planning", "Other"] as const;
 
@@ -19,118 +17,80 @@ interface ShapefileUploadProps {
   onUploadSuccess: () => void;
 }
 
+interface FormData {
+  name: string;
+  type: typeof SHAPEFILE_TYPES[number];
+  description: string;
+  assignedTeamId?: string;
+}
+
 export function ShapefileUpload({ userRole, userId, onUploadSuccess }: ShapefileUploadProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [shapefileData, setShapefileData] = useState<any>(null);
-  const [formData, setFormData] = useState({
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [formData, setFormData] = useState<FormData>({
     name: '',
-    shapefileType: 'Other' as typeof SHAPEFILE_TYPES[number],
+    type: 'Infrastructure',
     description: '',
-    assignedTo: '',
+    assignedTeamId: undefined
   });
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const { toast } = useToast();
 
-  // Get teams for assignment dropdown (supervisors only)
-  const { data: teams } = useQuery<any[]>({
+  // Fetch teams for supervisor role
+  const { data: teams = [] } = useQuery({
     queryKey: ['/api/teams'],
-    enabled: userRole === 'Supervisor',
+    enabled: userRole === 'Supervisor'
   });
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith('.zip')) {
       toast({
         title: "Invalid File Type",
-        description: "Please upload a ZIP file containing SHP data",
+        description: "Please upload a ZIP file containing shapefile data",
         variant: "destructive",
       });
       return;
     }
 
-    setIsUploading(true);
-    
-    try {
-      // Extract ZIP file
-      const zip = new JSZip();
-      const zipData = await zip.loadAsync(file);
-      
-      // Find required shapefile components
-      const shpFile = Object.keys(zipData.files).find(name => name.toLowerCase().endsWith('.shp'));
-      const dbfFile = Object.keys(zipData.files).find(name => name.toLowerCase().endsWith('.dbf'));
-      
-      if (!shpFile || !dbfFile) {
-        toast({
-          title: "Invalid Shapefile",
-          description: "ZIP must contain both .shp and .dbf files",
-          variant: "destructive",
-        });
-        setIsUploading(false);
-        return;
-      }
-
-      // Extract SHP and DBF data
-      const shpBuffer = await zipData.files[shpFile].async('arraybuffer');
-      const dbfBuffer = await zipData.files[dbfFile].async('arraybuffer');
-
-      // Parse shapefile data
-      const features: any[] = [];
-      await shapefile.open(shpBuffer, dbfBuffer)
-        .then(source => source.read()
-          .then(function read(result): any {
-            if (result.done) return;
-            if (result.value) {
-              features.push({
-                type: "Feature",
-                geometry: result.value.geometry,
-                properties: result.value.properties || {}
-              });
-            }
-            return source.read().then(read);
-          })
-        );
-
-      if (features.length === 0) {
-        toast({
-          title: "Empty Shapefile",
-          description: "No features found in the shapefile",
-          variant: "destructive",
-        });
-        setIsUploading(false);
-        return;
-      }
-
-      setShapefileData({ features, originalFile: file });
-      setFormData(prev => ({
-        ...prev,
-        name: file.name.replace('.zip', '').replace(/[_-]/g, ' ')
-      }));
-
+    if (file.size > 50 * 1024 * 1024) { // 50MB limit
       toast({
-        title: "Shapefile Loaded",
-        description: `Successfully loaded ${features.length} features`,
-      });
-
-    } catch (error) {
-      console.error('Error parsing shapefile:', error);
-      toast({
-        title: "Upload Failed",
-        description: "Failed to parse shapefile. Please check the file format.",
+        title: "File Too Large",
+        description: "Please upload a file smaller than 50MB",
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
+      return;
     }
+
+    setSelectedFile(file);
+    setFormData(prev => ({
+      ...prev,
+      name: file.name.replace('.zip', '').replace(/[_-]/g, ' ')
+    }));
+
+    toast({
+      title: "File Selected",
+      description: `Selected ${file.name}. Fill out the form to upload.`,
+    });
   };
 
   const handleUpload = async () => {
-    if (!shapefileData || !formData.name.trim()) {
+    if (!selectedFile) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a shapefile to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.name.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please provide a name and upload a shapefile",
+        description: "Please provide a name for the shapefile",
         variant: "destructive",
       });
       return;
@@ -139,51 +99,45 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
     setIsUploading(true);
 
     try {
-      // Create FormData for file upload
       const uploadFormData = new FormData();
-      uploadFormData.append('shapefile', shapefileData.originalFile);
-      uploadFormData.append('name', formData.name);
-      uploadFormData.append('shapefileType', formData.shapefileType);
-      uploadFormData.append('description', formData.description);
-      uploadFormData.append('uploadedBy', userId);
+      uploadFormData.append('shapefile', selectedFile);
+      uploadFormData.append('name', formData.name.trim());
+      uploadFormData.append('type', formData.type);
+      uploadFormData.append('description', formData.description.trim());
+      uploadFormData.append('userId', userId);
       
-      if (userRole === 'Supervisor' && formData.assignedTo) {
-        uploadFormData.append('assignedTo', formData.assignedTo);
+      if (userRole === 'Supervisor' && formData.assignedTeamId) {
+        uploadFormData.append('assignedTeamId', formData.assignedTeamId);
       }
 
-      // Upload shapefile
       const response = await fetch('/api/shapefiles/upload', {
         method: 'POST',
         body: uploadFormData,
+        credentials: 'include'
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
         throw new Error(errorData.message || 'Upload failed');
       }
 
       const result = await response.json();
-
+      
       toast({
         title: "Upload Successful",
-        description: `Shapefile "${formData.name}" uploaded successfully`,
+        description: `Shapefile "${formData.name}" uploaded with ${result.featureCount || 0} features`,
       });
 
-      // Reset form and close dialog
+      // Reset form
+      setSelectedFile(null);
       setFormData({
         name: '',
-        shapefileType: 'Other',
+        type: 'Infrastructure',
         description: '',
-        assignedTo: '',
+        assignedTeamId: undefined
       });
-      setShapefileData(null);
-      setIsOpen(false);
+      setOpen(false);
       onUploadSuccess();
-
-      // Clear file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -197,168 +151,143 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
     }
   };
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setShapefileData(null);
-    setFormData({
-      name: '',
-      shapefileType: 'Other',
-      description: '',
-      assignedTo: '',
-    });
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="absolute top-4 right-4 z-10 bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+          variant="default"
           size="sm"
+          className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
         >
           <Upload className="w-4 h-4 mr-2" />
-          Import SHP
+          Upload Shapefile
         </Button>
       </DialogTrigger>
+      
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Import Shapefile</DialogTitle>
+          <DialogTitle>Upload Shapefile</DialogTitle>
         </DialogHeader>
+        
         <div className="space-y-4">
           {/* File Upload */}
-          <div className="space-y-2">
-            <Label htmlFor="shapefile">Shapefile (ZIP format)</Label>
-            <div className="relative">
-              <Input
-                id="shapefile"
+          <div>
+            <Label htmlFor="shapefile-upload">Shapefile (ZIP format)</Label>
+            <div className="mt-2">
+              <input
+                id="shapefile-upload"
                 type="file"
                 accept=".zip"
                 onChange={handleFileSelect}
-                ref={fileInputRef}
-                disabled={isUploading}
-                className="cursor-pointer"
+                className="hidden"
               />
-              {isUploading && !shapefileData && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+              <Label
+                htmlFor="shapefile-upload"
+                className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors"
+              >
+                <div className="text-center">
+                  <FileUp className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-600">
+                    {selectedFile ? selectedFile.name : 'Click to select ZIP file'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Max 50MB, ZIP format containing SHP files
+                  </p>
                 </div>
-              )}
+              </Label>
             </div>
-            <p className="text-xs text-gray-500">
-              Upload a ZIP file containing .shp, .dbf, and optional .shx, .prj files
-            </p>
           </div>
 
-          {/* Form fields - only show when shapefile is loaded */}
-          {shapefileData && (
-            <>
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Layer Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter layer name"
-                  disabled={isUploading}
-                />
-              </div>
+          {/* Name Field */}
+          <div>
+            <Label htmlFor="name">Name *</Label>
+            <Input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter shapefile name"
+              required
+            />
+          </div>
 
-              {/* Type */}
-              <div className="space-y-2">
-                <Label htmlFor="shapefileType">Type</Label>
-                <Select
-                  value={formData.shapefileType}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, shapefileType: value as any }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SHAPEFILE_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Type Selection */}
+          <div>
+            <Label htmlFor="type">Type</Label>
+            <Select
+              value={formData.type}
+              onValueChange={(value: typeof SHAPEFILE_TYPES[number]) => 
+                setFormData(prev => ({ ...prev, type: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SHAPEFILE_TYPES.map(type => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              {/* Team Assignment (Supervisors only) */}
-              {userRole === 'Supervisor' && (
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assign to Team (Optional)</Label>
-                  <Select
-                    value={formData.assignedTo}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, assignedTo: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No Assignment</SelectItem>
-                      {Array.isArray(teams) && teams.map((team: any) => (
-                        <SelectItem key={team._id} value={team._id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter description"
-                  rows={3}
-                  disabled={isUploading}
-                />
-              </div>
-
-              {/* Features info */}
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-700">
-                  <strong>Features loaded:</strong> {shapefileData.features.length}
-                </p>
-                {shapefileData.features.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Geometry type: {shapefileData.features[0].geometry.type}
-                  </p>
-                )}
-              </div>
-            </>
+          {/* Team Assignment (Supervisor Only) */}
+          {userRole === 'Supervisor' && (
+            <div>
+              <Label htmlFor="assignedTeam">Assign to Team (Optional)</Label>
+              <Select
+                value={formData.assignedTeamId || ''}
+                onValueChange={(value) => 
+                  setFormData(prev => ({ ...prev, assignedTeamId: value || undefined }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No team assignment</SelectItem>
+                  {teams.map((team: any) => (
+                    <SelectItem key={team._id} value={team._id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-between pt-4">
-            <Button variant="outline" onClick={handleClose} disabled={isUploading}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleUpload} 
-              disabled={!shapefileData || !formData.name.trim() || isUploading}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <FileUp className="w-4 h-4 mr-2" />
-                  Upload Shapefile
-                </>
-              )}
-            </Button>
+          {/* Description */}
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Optional description of the shapefile"
+              rows={3}
+            />
           </div>
+
+          {/* Upload Button */}
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || !formData.name.trim() || isUploading}
+            className="w-full"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Shapefile
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
