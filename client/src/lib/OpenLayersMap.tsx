@@ -762,72 +762,111 @@ const OpenLayersMap = ({
 
       console.log(`✨ Shapefile "${shapefile.name}" has ${shapefile.features.length} features`);
 
-      shapefile.features.forEach((feature: any, index: number) => {
-        if (!feature.geometry) {
-          console.warn(`⚠️ Feature ${index} in "${shapefile.name}" has no geometry`);
-          return;
-        }
+      // Process features in batches for performance with large datasets
+      const batchSize = 500;
+      let addedFeatures = 0;
+      
+      for (let batchStart = 0; batchStart < shapefile.features.length; batchStart += batchSize) {
+        const batchEnd = Math.min(batchStart + batchSize, shapefile.features.length);
+        const batch = shapefile.features.slice(batchStart, batchEnd);
+        
+        batch.forEach((feature: any, batchIndex: number) => {
+          const index = batchStart + batchIndex;
+          
+          if (!feature.geometry) {
+            return;
+          }
 
-        try {
-          const geometry = typeof feature.geometry === 'string'
-            ? JSON.parse(feature.geometry)
-            : feature.geometry;
+          try {
+            const geometry = typeof feature.geometry === 'string'
+              ? JSON.parse(feature.geometry)
+              : feature.geometry;
 
-          console.log(`🔍 Processing feature ${index} with geometry type: ${geometry.type}`);
+            let olFeature: Feature | null = null;
 
-          let olFeature: Feature | null = null;
-
-          if (geometry.type === 'Point') {
-            const [lng, lat] = geometry.coordinates;
-            olFeature = new Feature({
-              geometry: new Point(fromLonLat([lng, lat])),
-              shapefileData: { ...feature, parentShapefile: shapefile }
-            });
-            console.log(`📌 Created Point feature at [${lat}, ${lng}]`);
-          } else if (geometry.type === 'LineString') {
-            const coords = geometry.coordinates.map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
-            olFeature = new Feature({
-              geometry: new LineString(coords),
-              shapefileData: { ...feature, parentShapefile: shapefile }
-            });
-            console.log(`📏 Created LineString feature with ${coords.length} points`);
-          } else if (geometry.type === 'Polygon') {
-            const coords = geometry.coordinates.map((ring: number[][]) =>
-              ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
-            );
-            olFeature = new Feature({
-              geometry: new Polygon(coords),
-              shapefileData: { ...feature, parentShapefile: shapefile }
-            });
-            console.log(`🔲 Created Polygon feature with ${coords[0]?.length || 0} vertices`);
-          } else if (geometry.type === 'MultiPolygon') {
-            // For now, convert MultiPolygon to multiple Polygon features
-            geometry.coordinates.forEach((polygonCoords: number[][][], polyIndex: number) => {
-              const coords = polygonCoords.map((ring: number[][]) =>
-                ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
-              );
-              const polyFeature = new Feature({
-                geometry: new Polygon(coords),
-                shapefileData: { ...feature, parentShapefile: shapefile, multiIndex: polyIndex }
+            if (geometry.type === 'Point') {
+              const [lng, lat] = geometry.coordinates;
+              if (isFinite(lng) && isFinite(lat)) {
+                olFeature = new Feature({
+                  geometry: new Point(fromLonLat([lng, lat])),
+                  shapefileData: { ...feature, parentShapefile: shapefile }
+                });
+              }
+            } else if (geometry.type === 'LineString') {
+              const coords = geometry.coordinates
+                .filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
+                .map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
+              if (coords.length >= 2) {
+                olFeature = new Feature({
+                  geometry: new LineString(coords),
+                  shapefileData: { ...feature, parentShapefile: shapefile }
+                });
+              }
+            } else if (geometry.type === 'Polygon') {
+              const coords = geometry.coordinates.map((ring: number[][]) =>
+                ring.filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
+                   .map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
+              ).filter((ring: number[][]) => ring.length >= 4);
+              
+              if (coords.length > 0) {
+                olFeature = new Feature({
+                  geometry: new Polygon(coords),
+                  shapefileData: { ...feature, parentShapefile: shapefile }
+                });
+              }
+            } else if (geometry.type === 'MultiPolygon') {
+              // Handle MultiPolygon geometries properly
+              geometry.coordinates.forEach((polygonCoords: number[][][], polyIndex: number) => {
+                const coords = polygonCoords.map((ring: number[][]) =>
+                  ring.filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
+                     .map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
+                ).filter((ring: number[][]) => ring.length >= 4);
+                
+                if (coords.length > 0) {
+                  const polyFeature = new Feature({
+                    geometry: new Polygon(coords),
+                    shapefileData: { ...feature, parentShapefile: shapefile, multiIndex: polyIndex }
+                  });
+                  source.addFeature(polyFeature);
+                  addedFeatures++;
+                }
               });
-              source.addFeature(polyFeature);
-              console.log(`🔳 Added MultiPolygon part ${polyIndex} as Polygon`);
-            });
-            // Skip the regular feature addition since we added multiple
-            olFeature = null;
-          } else {
-            console.warn(`⚠️ Unsupported geometry type: ${geometry.type}`);
-            olFeature = null;
-          }
+              olFeature = null; // Already added above
+            } else if (geometry.type === 'MultiLineString') {
+              // Handle MultiLineString geometries
+              geometry.coordinates.forEach((lineCoords: number[][], lineIndex: number) => {
+                const coords = lineCoords
+                  .filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
+                  .map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
+                
+                if (coords.length >= 2) {
+                  const lineFeature = new Feature({
+                    geometry: new LineString(coords),
+                    shapefileData: { ...feature, parentShapefile: shapefile, multiIndex: lineIndex }
+                  });
+                  source.addFeature(lineFeature);
+                  addedFeatures++;
+                }
+              });
+              olFeature = null; // Already added above
+            }
 
-          if (olFeature) {
-            source.addFeature(olFeature);
-            console.log(`✅ Added feature ${index} to map`);
+            if (olFeature) {
+              source.addFeature(olFeature);
+              addedFeatures++;
+            }
+          } catch (error) {
+            console.error(`❌ Error rendering shapefile feature ${index}:`, error);
           }
-        } catch (error) {
-          console.error(`❌ Error rendering shapefile feature ${index}:`, error);
+        });
+        
+        // Log progress for large datasets
+        if (shapefile.features.length > 1000) {
+          console.log(`📊 Processed batch ${Math.floor(batchStart/batchSize) + 1}/${Math.ceil(shapefile.features.length/batchSize)} (${batchEnd}/${shapefile.features.length} features)`);
         }
-      });
+      }
+      
+      console.log(`✅ Successfully added ${addedFeatures} features from "${shapefile.name}" to map`);
     });
   }, [shapefiles]);
 
