@@ -6,7 +6,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import OSM from 'ol/source/OSM';
 import { Feature } from 'ol';
-import { Point, Polygon, LineString } from 'ol/geom';
+import { Point, Polygon, LineString, MultiPolygon } from 'ol/geom';
 import { Style, Fill, Stroke, Circle, Text, Icon } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { Draw, Modify, Select } from 'ol/interaction';
@@ -750,16 +750,30 @@ const OpenLayersMap = ({
 
     source.clear();
 
-    shapefiles.forEach(shapefile => {
-      if (!shapefile.features || !Array.isArray(shapefile.features)) return;
+    console.log('🗂️ Processing shapefiles for display:', shapefiles.length);
 
-      shapefile.features.forEach((feature: any) => {
-        if (!feature.geometry) return;
+    shapefiles.forEach(shapefile => {
+      console.log(`📍 Processing shapefile "${shapefile.name}"`);
+      
+      if (!shapefile.features || !Array.isArray(shapefile.features)) {
+        console.warn(`⚠️ Shapefile "${shapefile.name}" has no features array`);
+        return;
+      }
+
+      console.log(`✨ Shapefile "${shapefile.name}" has ${shapefile.features.length} features`);
+
+      shapefile.features.forEach((feature: any, index: number) => {
+        if (!feature.geometry) {
+          console.warn(`⚠️ Feature ${index} in "${shapefile.name}" has no geometry`);
+          return;
+        }
 
         try {
           const geometry = typeof feature.geometry === 'string'
             ? JSON.parse(feature.geometry)
             : feature.geometry;
+
+          console.log(`🔍 Processing feature ${index} with geometry type: ${geometry.type}`);
 
           let olFeature: Feature | null = null;
 
@@ -769,12 +783,14 @@ const OpenLayersMap = ({
               geometry: new Point(fromLonLat([lng, lat])),
               shapefileData: { ...feature, parentShapefile: shapefile }
             });
+            console.log(`📌 Created Point feature at [${lat}, ${lng}]`);
           } else if (geometry.type === 'LineString') {
             const coords = geometry.coordinates.map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
             olFeature = new Feature({
               geometry: new LineString(coords),
               shapefileData: { ...feature, parentShapefile: shapefile }
             });
+            console.log(`📏 Created LineString feature with ${coords.length} points`);
           } else if (geometry.type === 'Polygon') {
             const coords = geometry.coordinates.map((ring: number[][]) =>
               ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
@@ -783,13 +799,33 @@ const OpenLayersMap = ({
               geometry: new Polygon(coords),
               shapefileData: { ...feature, parentShapefile: shapefile }
             });
+            console.log(`🔲 Created Polygon feature with ${coords[0]?.length || 0} vertices`);
+          } else if (geometry.type === 'MultiPolygon') {
+            // For now, convert MultiPolygon to multiple Polygon features
+            geometry.coordinates.forEach((polygonCoords: number[][][], polyIndex: number) => {
+              const coords = polygonCoords.map((ring: number[][]) =>
+                ring.map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
+              );
+              const polyFeature = new Feature({
+                geometry: new Polygon(coords),
+                shapefileData: { ...feature, parentShapefile: shapefile, multiIndex: polyIndex }
+              });
+              source.addFeature(polyFeature);
+              console.log(`🔳 Added MultiPolygon part ${polyIndex} as Polygon`);
+            });
+            // Skip the regular feature addition since we added multiple
+            olFeature = null;
+          } else {
+            console.warn(`⚠️ Unsupported geometry type: ${geometry.type}`);
+            olFeature = null;
           }
 
           if (olFeature) {
             source.addFeature(olFeature);
+            console.log(`✅ Added feature ${index} to map`);
           }
         } catch (error) {
-          console.error('Error rendering shapefile feature geometry:', error);
+          console.error(`❌ Error rendering shapefile feature ${index}:`, error);
         }
       });
     });
