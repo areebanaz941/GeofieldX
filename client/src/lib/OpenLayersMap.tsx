@@ -473,7 +473,23 @@ const OpenLayersMap = ({
 
     mapRef.current = map;
 
+    // Add event listener for zoom-to-location functionality
+    const handleZoomToLocation = (event: any) => {
+      const { lat, lng, zoom } = event.detail;
+      if (mapRef.current) {
+        const view = mapRef.current.getView();
+        view.animate({
+          center: fromLonLat([lng, lat]),
+          zoom: zoom || 15,
+          duration: 1000
+        });
+      }
+    };
+
+    window.addEventListener('zoomToLocation', handleZoomToLocation);
+
     return () => {
+      window.removeEventListener('zoomToLocation', handleZoomToLocation);
       if (mapRef.current) {
         mapRef.current.setTarget(undefined);
         mapRef.current = null;

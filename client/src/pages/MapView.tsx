@@ -126,6 +126,20 @@ export default function MapView() {
     },
   });
 
+  // Keep track of previous shapefiles count to detect new uploads
+  const [previousShapefileCount, setPreviousShapefileCount] = useState(0);
+
+  // Auto-zoom to new shapefile when uploaded
+  useEffect(() => {
+    if (shapefiles.length > previousShapefileCount && previousShapefileCount > 0) {
+      // New shapefile was added, zoom to it
+      setTimeout(() => {
+        zoomToRecentShapefile();
+      }, 1000); // Small delay to ensure map is ready
+    }
+    setPreviousShapefileCount(shapefiles.length);
+  }, [shapefiles]);
+
   // Update user location
   const updateLocationMutation = useMutation({
     mutationFn: ({ lat, lng }: { lat: number; lng: number }) => 
@@ -373,6 +387,76 @@ export default function MapView() {
     }
   };
 
+  // Function to zoom to the most recent shapefile
+  const zoomToRecentShapefile = () => {
+    if (shapefiles && shapefiles.length > 0) {
+      // Get the most recent shapefile (last in array)
+      const recentShapefile = shapefiles[shapefiles.length - 1];
+      
+      if (recentShapefile.features && recentShapefile.features.length > 0) {
+        // Calculate bounds from all features in the shapefile
+        let minLat = Infinity, maxLat = -Infinity;
+        let minLng = Infinity, maxLng = -Infinity;
+        
+        recentShapefile.features.forEach((feature: any) => {
+          if (feature.geometry) {
+            const geometry = typeof feature.geometry === 'string' 
+              ? JSON.parse(feature.geometry) 
+              : feature.geometry;
+              
+            if (geometry.type === 'Point') {
+              const [lng, lat] = geometry.coordinates;
+              minLat = Math.min(minLat, lat);
+              maxLat = Math.max(maxLat, lat);
+              minLng = Math.min(minLng, lng);
+              maxLng = Math.max(maxLng, lng);
+            } else if (geometry.type === 'LineString') {
+              geometry.coordinates.forEach(([lng, lat]: number[]) => {
+                minLat = Math.min(minLat, lat);
+                maxLat = Math.max(maxLat, lat);
+                minLng = Math.min(minLng, lng);
+                maxLng = Math.max(maxLng, lng);
+              });
+            } else if (geometry.type === 'Polygon') {
+              geometry.coordinates[0].forEach(([lng, lat]: number[]) => {
+                minLat = Math.min(minLat, lat);
+                maxLat = Math.max(maxLat, lat);
+                minLng = Math.min(minLng, lng);
+                maxLng = Math.max(maxLng, lng);
+              });
+            }
+          }
+        });
+        
+        // Add padding to the bounds
+        const latPadding = (maxLat - minLat) * 0.1;
+        const lngPadding = (maxLng - minLng) * 0.1;
+        
+        // Calculate center and appropriate zoom level
+        const centerLat = (minLat + maxLat) / 2;
+        const centerLng = (minLng + maxLng) / 2;
+        
+        // Update the map center to show the shapefile
+        console.log(`Zooming to shapefile "${recentShapefile.name}" at [${centerLat}, ${centerLng}]`);
+        
+        // Create a custom event to trigger map zoom
+        const zoomEvent = new CustomEvent('zoomToLocation', {
+          detail: {
+            lat: centerLat,
+            lng: centerLng,
+            zoom: 15
+          }
+        });
+        window.dispatchEvent(zoomEvent);
+        
+        toast({
+          title: "Navigating to Shapefile",
+          description: `Showing "${recentShapefile.name}" on the map`,
+        });
+      }
+    }
+  };
+
   // Handle feature selection from dialog
   const handleFeatureSelect = (featureType: string, drawingType: 'point' | 'line' | 'polygon') => {
     console.log('🟢 Feature selected:', featureType, 'drawing type:', drawingType);
@@ -429,6 +513,17 @@ export default function MapView() {
       <div className="flex h-full">
         {/* Map Container */}
         <div className="relative flex-1 z-0">
+          {/* Show Recent Shapefile Button */}
+          {shapefiles && shapefiles.length > 0 && (
+            <div className="absolute top-4 left-4 z-10">
+              <button
+                onClick={zoomToRecentShapefile}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
+              >
+                📍 Show Recent Shapefile
+              </button>
+            </div>
+          )}
           <OpenLayersMap
           features={features}
           teams={fieldUsers}
