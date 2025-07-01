@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import useAuth from "@/hooks/useAuth";
 import AppHeader from "./AppHeader";
 import SideNavigation from "./SideNavigation";
@@ -14,8 +15,10 @@ export function AuthenticatedRoutes({ children }: { children: React.ReactNode })
     }
   }, [user, isLoading, setLocation]);
 
+  const { t } = useTranslation();
+
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex h-screen items-center justify-center">{t('common.loading')}</div>;
   }
 
   if (!user) {

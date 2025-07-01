@@ -1,15 +1,16 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Task, User } from "@shared/schema";
+import { ITask, IUser } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getFieldUsers } from "@/lib/api";
 
 interface TaskPanelProps {
-  tasks: Task[];
-  selectedTask: Task | null;
-  onTaskSelect: (task: Task) => void;
+  tasks: ITask[];
+  selectedTask: ITask | null;
+  onTaskSelect: (task: ITask) => void;
   expanded: boolean;
   onExpandToggle: () => void;
 }
@@ -21,6 +22,7 @@ export default function TaskPanel({
   expanded,
   onExpandToggle,
 }: TaskPanelProps) {
+  const { t } = useTranslation();
   const { data: users = [] } = useQuery({
     queryKey: ["/api/users/field"],
     queryFn: getFieldUsers,

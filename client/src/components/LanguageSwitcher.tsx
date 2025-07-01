@@ -8,38 +8,42 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Globe } from 'lucide-react';
 
-export default function LanguageSwitcher() {
+export function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
 
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-    // Set document direction for RTL languages
-    document.dir = lng === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = lng;
+  const changeLanguage = (language: string) => {
+    i18n.changeLanguage(language);
+    // Update document direction for RTL support
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = language;
   };
-
-  const currentLanguage = i18n.language;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="ghost" size="sm" className="flex items-center gap-2">
           <Globe className="h-4 w-4" />
-          {currentLanguage === 'ar' ? 'العربية' : 'English'}
+          <span className="hidden sm:inline">
+            {i18n.language === 'ar' ? 'العربية' : 'English'}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           onClick={() => changeLanguage('en')}
-          className={currentLanguage === 'en' ? 'bg-gray-100' : ''}
+          className={i18n.language === 'en' ? 'bg-accent' : ''}
         >
-          English
+          <span className="flex items-center gap-2">
+            🇺🇸 {t('language.english')}
+          </span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => changeLanguage('ar')}
-          className={currentLanguage === 'ar' ? 'bg-gray-100' : ''}
+          className={i18n.language === 'ar' ? 'bg-accent' : ''}
         >
-          العربية
+          <span className="flex items-center gap-2">
+            🇸🇦 {t('language.arabic')}
+          </span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

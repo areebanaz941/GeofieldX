@@ -185,5 +185,81 @@
     "english": "English",
     "arabic": "العربية",
     "selectLanguage": "Select Language"
+  },
+  "mapView": {
+    "title": "Map View",
+    "createFeature": "Create Feature",
+    "selectFeatureType": "Select Feature Type",
+    "tower": "Tower",
+    "manhole": "Manhole",
+    "fiberCable": "Fiber Cable",
+    "parcel": "Parcel",
+    "featureCreated": "Feature created successfully",
+    "featureCreationError": "Failed to create feature",
+    "uploadShapefile": "Upload Shapefile",
+    "shapefileUploaded": "Shapefile uploaded successfully",
+    "shapefileUploadError": "Failed to upload shapefile",
+    "legend": "Legend",
+    "assignedBoundary": "Assigned Boundary",
+    "noAssignment": "No Assignment",
+    "restrictionWarning": "Features can only be created within this boundary area",
+    "noRestrictionWarning": "No boundary assigned to your team",
+    "zoomToShapefile": "📍 Shapefile",
+    "tasksAndAssignments": "Tasks & Assignments"
+  },
+  "featureTypes": {
+    "Tower": "Tower",
+    "Manhole": "Manhole", 
+    "FiberCable": "Fiber Cable",
+    "Parcel": "Parcel"
+  },
+  "featureStatus": {
+    "unassigned": "Unassigned",
+    "assigned": "Assigned",
+    "completed": "Completed",
+    "delayed": "Delayed"
+  },
+  "fieldDashboard": {
+    "teamName": "Team Name",
+    "teamMembers": "Team Members",
+    "assignedTasks": "Assigned Tasks",
+    "assignedBoundaries": "Assigned Boundaries",
+    "areaFeaturesOverview": "Area Features Overview",
+    "category": "Category",
+    "status": "Status"
+  },
+  "supervisorDashboard": {
+    "features": "Features",
+    "viewFeature": "View {{type}}",
+    "featuresCount": "{{count}} Features"
+  },
+  "taskPanel": {
+    "title": "Tasks & Assignments",
+    "updated": "Updated",
+    "due": "Due",
+    "overdue": "Overdue",
+    "dueToday": "Due today",
+    "dueTomorrow": "Due tomorrow",
+    "dueInDays": "Due in {{days}} days",
+    "dueDate": "Due {{date}}",
+    "unassigned": "Unassigned"
+  },
+  "shapefileUpload": {
+    "title": "Upload Shapefile",
+    "selectTeam": "Select Team",
+    "assignToTeam": "Assign to Team",
+    "noTeamSelected": "No team selected",
+    "dragDropFiles": "Drag and drop ZIP files here",
+    "orClickToSelect": "or click to select files",
+    "supportedFormats": "Supported formats: ZIP files containing shapefiles",
+    "maxFileSize": "Maximum file size: 50MB",
+    "uploading": "Uploading...",
+    "processingShapefile": "Processing shapefile...",
+    "uploadComplete": "Upload Complete",
+    "uploadError": "Upload Error",
+    "fileTypeError": "Please select a ZIP file",
+    "fileSizeError": "File size must be less than 50MB",
+    "uploadSuccess": "Shapefile uploaded successfully",
+    "uploadFailed": "Failed to upload shapefile"
   }
 }
