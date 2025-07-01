@@ -1,6 +1,6 @@
 import {
-  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, ITaskSubmission,
-  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence, InsertTaskSubmission
+  IUser, ITeam, ITask, IFeature, IBoundary, ITaskUpdate, ITaskEvidence, ITaskSubmission, IShapefile,
+  InsertUser, InsertTeam, InsertTask, InsertFeature, InsertBoundary, InsertTaskUpdate, InsertTaskEvidence, InsertTaskSubmission, InsertShapefile
 } from "@shared/schema";
 import { Types } from "mongoose";
 
@@ -64,6 +64,15 @@ export interface IStorage {
   getTaskSubmissions(taskId: string): Promise<ITaskSubmission[]>;
   getTaskSubmissionsByTeam(teamId: string): Promise<ITaskSubmission[]>;
   updateSubmissionStatus(submissionId: string, status: string, reviewedBy: string, reviewComments?: string): Promise<ITaskSubmission>;
+  
+  // Shapefile operations
+  createShapefile(shapefileData: InsertShapefile): Promise<IShapefile>;
+  getShapefile(id: string): Promise<IShapefile | undefined>;
+  getAllShapefiles(): Promise<IShapefile[]>;
+  getShapefilesByTeam(teamId: string): Promise<IShapefile[]>;
+  getShapefilesByUser(userId: string): Promise<IShapefile[]>;
+  updateShapefileVisibility(id: string, isVisible: boolean): Promise<IShapefile>;
+  deleteShapefile(id: string): Promise<boolean>;
 }
 
 // In-memory storage implementation as a fallback

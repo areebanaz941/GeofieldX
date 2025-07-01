@@ -89,6 +89,7 @@ export const TASK_STATUSES = [
 ] as const;
 export const TASK_PRIORITIES = ["Low", "Medium", "High", "Urgent"] as const;
 export const TEAM_STATUSES = ["Pending", "Approved", "Rejected"] as const;
+export const SHAPEFILE_TYPES = ["Administrative", "Infrastructure", "Survey", "Planning", "Other"] as const;
 
 // TypeScript types for enums
 export type FeatureState = (typeof FEATURE_STATES)[number];
@@ -100,6 +101,7 @@ export type UserRole = (typeof USER_ROLES)[number];
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 export type TeamStatus = (typeof TEAM_STATUSES)[number];
+export type ShapefileType = (typeof SHAPEFILE_TYPES)[number];
 
 // GeoJSON interface
 interface GeoJSONPoint {
@@ -852,6 +854,122 @@ export const insertFeatureTemplateSchema = z.object({
 });
 
 export type InsertFeatureTemplate = z.infer<typeof insertFeatureTemplateSchema>;
+
+// Shapefile Schema for imported SHP files
+export interface IShapefile extends Document {
+  _id: Types.ObjectId;
+  name: string;
+  originalFilename: string;
+  shapefileType: ShapefileType;
+  description?: string;
+  features: {
+    type: string;
+    geometry: GeoJSONGeometry;
+    properties: Record<string, any>;
+  }[];
+  uploadedBy: Types.ObjectId;
+  assignedTo?: Types.ObjectId; // Team assignment
+  teamId?: Types.ObjectId;
+  filePath: string;
+  isVisible: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const shapefileSchema = new Schema<IShapefile>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    originalFilename: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    shapefileType: {
+      type: String,
+      enum: SHAPEFILE_TYPES,
+      default: "Other",
+      required: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    features: [{
+      type: {
+        type: String,
+        default: "Feature",
+      },
+      geometry: {
+        type: {
+          type: String,
+          enum: ["Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"],
+          required: true,
+        },
+        coordinates: {
+          type: Schema.Types.Mixed,
+          required: true,
+        },
+      },
+      properties: {
+        type: Schema.Types.Mixed,
+        default: {},
+      },
+    }],
+    uploadedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    assignedTo: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
+    },
+    teamId: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
+    },
+    filePath: {
+      type: String,
+      required: true,
+    },
+    isVisible: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+export const Shapefile = mongoose.model<IShapefile>('Shapefile', shapefileSchema);
+
+// Insert schema for shapefiles
+export const insertShapefileSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  originalFilename: z.string().min(1, "Filename is required"),
+  shapefileType: z.enum(SHAPEFILE_TYPES),
+  description: z.string().optional(),
+  features: z.array(z.object({
+    type: z.string().default("Feature"),
+    geometry: z.object({
+      type: z.enum(["Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"]),
+      coordinates: z.any(),
+    }),
+    properties: z.record(z.any()).default({}),
+  })),
+  uploadedBy: z.string(),
+  assignedTo: z.string().optional(),
+  teamId: z.string().optional(),
+  filePath: z.string(),
+  isVisible: z.boolean().default(true),
+});
+
+export type InsertShapefile = z.infer<typeof insertShapefileSchema>;
 
 // Utility function to convert ObjectId to string for frontend
 export const toObjectId = (id: string): Types.ObjectId =>
