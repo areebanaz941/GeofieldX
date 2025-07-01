@@ -41,7 +41,7 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
   const { data: teams = [] } = useQuery({
     queryKey: ['/api/teams'],
     enabled: userRole === 'Supervisor'
-  });
+  }) as { data: Array<{ _id: string; name: string }> };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -102,7 +102,7 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
       const uploadFormData = new FormData();
       uploadFormData.append('shapefile', selectedFile);
       uploadFormData.append('name', formData.name.trim());
-      uploadFormData.append('type', formData.type);
+      uploadFormData.append('shapefileType', formData.type);
       uploadFormData.append('description', formData.description.trim());
       uploadFormData.append('userId', userId);
       
@@ -238,17 +238,17 @@ export function ShapefileUpload({ userRole, userId, onUploadSuccess }: Shapefile
             <div>
               <Label htmlFor="assignedTeam">Assign to Team (Optional)</Label>
               <Select
-                value={formData.assignedTeamId || ''}
+                value={formData.assignedTeamId || 'none'}
                 onValueChange={(value) => 
-                  setFormData(prev => ({ ...prev, assignedTeamId: value || undefined }))
+                  setFormData(prev => ({ ...prev, assignedTeamId: value === 'none' ? undefined : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a team (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No team assignment</SelectItem>
-                  {teams.map((team: any) => (
+                  <SelectItem value="none">No team assignment</SelectItem>
+                  {(teams as any[]).map((team: any) => (
                     <SelectItem key={team._id} value={team._id}>
                       {team.name}
                     </SelectItem>

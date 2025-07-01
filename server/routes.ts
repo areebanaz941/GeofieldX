@@ -1730,7 +1730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: any, res: Response) => {
       try {
         const { name, shapefileType, description, assignedTo, uploadedBy } = req.body;
-        const userId = req.user.id;
+        const userId = req.user._id || req.user.id;
 
         if (!req.file) {
           return res.status(400).json({ message: "Shapefile is required" });
