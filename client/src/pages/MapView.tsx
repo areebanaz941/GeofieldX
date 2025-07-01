@@ -116,6 +116,16 @@ export default function MapView() {
     enabled: user?.role === "Supervisor",
   });
 
+  // Fetch shapefiles to display on map
+  const { data: shapefiles = [] } = useQuery({
+    queryKey: ["/api/shapefiles"],
+    queryFn: async () => {
+      const response = await fetch("/api/shapefiles");
+      if (!response.ok) throw new Error("Failed to fetch shapefiles");
+      return response.json();
+    },
+  });
+
   // Update user location
   const updateLocationMutation = useMutation({
     mutationFn: ({ lat, lng }: { lat: number; lng: number }) => 

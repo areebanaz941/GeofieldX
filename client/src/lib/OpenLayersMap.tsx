@@ -154,6 +154,7 @@ const OpenLayersMap = ({
   const teamsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const boundariesLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const tasksLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const shapefilesLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectedLocationLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectedLocationSourceRef = useRef<VectorSource | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
@@ -169,6 +170,7 @@ const OpenLayersMap = ({
     const teamsSource = new VectorSource();
     const boundariesSource = new VectorSource();
     const tasksSource = new VectorSource();
+    const shapefilesSource = new VectorSource();
     const selectedLocationSource = new VectorSource();
     selectedLocationSourceRef.current = selectedLocationSource;
 
@@ -383,6 +385,25 @@ const OpenLayersMap = ({
       })
     });
 
+    // Create shapefile layer for uploaded shapefiles
+    shapefilesLayerRef.current = new VectorLayer({
+      source: shapefilesSource,
+      style: new Style({
+        fill: new Fill({
+          color: 'rgba(255, 0, 0, 0.2)' // Semi-transparent red fill
+        }),
+        stroke: new Stroke({
+          color: '#FF0000',
+          width: 2
+        }),
+        image: new Circle({
+          radius: 6,
+          fill: new Fill({ color: '#FF0000' }),
+          stroke: new Stroke({ color: '#ffffff', width: 1 })
+        })
+      })
+    });
+
     // Create map
     const map = new Map({
       target: mapContainerRef.current,
@@ -394,6 +415,7 @@ const OpenLayersMap = ({
         featuresLayerRef.current,
         teamsLayerRef.current,
         tasksLayerRef.current,
+        shapefilesLayerRef.current,
         selectedLocationLayerRef.current
       ],
       view: new View({
