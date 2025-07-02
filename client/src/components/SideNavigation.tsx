@@ -139,7 +139,9 @@ export default function SideNavigation() {
     
     if (sidebar && window.innerWidth < 768) { // md breakpoint
       sidebar.classList.add("hidden");
-      if (overlay) {
+      sidebar.classList.remove("block");
+      
+      if (overlay && overlay.parentNode) {
         document.body.removeChild(overlay);
       }
     }
@@ -148,7 +150,7 @@ export default function SideNavigation() {
   return (
     <div 
       id="side-nav" 
-      className="hidden md:block fixed md:relative top-0 left-0 h-full w-64 bg-white border-r border-neutral-200 flex-shrink-0 z-50 md:z-30 transform transition-transform duration-300 ease-in-out"
+      className="hidden md:block fixed md:relative top-0 left-0 h-full w-64 bg-white border-r border-neutral-200 flex-shrink-0 z-50 md:z-30"
     >
       <div className="flex flex-col h-full">
         <div className="p-4 mb-2">

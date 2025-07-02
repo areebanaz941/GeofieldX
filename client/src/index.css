@@ -62,6 +62,11 @@ body {
     display: block !important;
     transform: translateX(0);
   }
+  
+  /* Ensure sidebar is hidden by default on mobile */
+  #side-nav.hidden {
+    transform: translateX(-100%) !important;
+  }
 }
 
 /* Mobile map container improvements */

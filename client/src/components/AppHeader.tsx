@@ -38,6 +38,12 @@ export default function AppHeader() {
         // Show sidebar - add mobile styles and overlay
         sidebar.classList.add("block");
         
+        // Remove any existing overlay first
+        const existingOverlay = document.getElementById("mobile-nav-overlay");
+        if (existingOverlay && existingOverlay.parentNode) {
+          document.body.removeChild(existingOverlay);
+        }
+        
         // Add overlay for mobile
         const overlay = document.createElement("div");
         overlay.className = "fixed inset-0 bg-black bg-opacity-30 z-40 md:hidden";
@@ -48,13 +54,15 @@ export default function AppHeader() {
         overlay.addEventListener("click", () => {
           sidebar.classList.add("hidden");
           sidebar.classList.remove("block");
-          document.body.removeChild(overlay);
+          if (overlay.parentNode) {
+            document.body.removeChild(overlay);
+          }
         });
       } else {
         // Hide sidebar - remove mobile styles and overlay
         sidebar.classList.remove("block");
         const overlay = document.getElementById("mobile-nav-overlay");
-        if (overlay) {
+        if (overlay && overlay.parentNode) {
           document.body.removeChild(overlay);
         }
       }
