@@ -733,10 +733,9 @@ function setupGracefulShutdown(server: any, storage: IStorage) {
 
     // Start the server
     const port = parseInt(process.env.PORT || "5000", 10);
-    const host = process.env.HOST || "localhost";
 
-    server.listen(port, host, () => {
-      log(`🚀 GeoFieldX server running on http://${host}:${port}`);
+    server.listen(port, "0.0.0.0", () => {
+  log(`🚀 GeoFieldX server running on port ${port}`);
       log(`📊 Environment: ${app.get("env") || "development"}`);
       log(`💾 Storage: ${storage.constructor.name}`);
 
