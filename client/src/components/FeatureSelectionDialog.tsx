@@ -119,7 +119,7 @@ const FeatureSelectionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center">Select Feature Type</DialogTitle>
+          <DialogTitle className="text-center">Features</DialogTitle>
           <DialogDescription className="text-center">
             Choose the type of feature you want to create
           </DialogDescription>

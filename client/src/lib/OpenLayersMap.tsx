@@ -11,6 +11,7 @@ import { Style, Fill, Stroke, Circle, Text, Icon } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { Draw, Modify, Select } from 'ol/interaction';
 import { click } from 'ol/events/condition';
+import GeoJSON from 'ol/format/GeoJSON';
 import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
 import { getFeatureIcon } from '../components/FeatureIcons';
 import 'ol/ol.css';
@@ -428,6 +429,9 @@ const OpenLayersMap = ({
       })
     });
 
+    // Expose the map instance globally for ShapefileLayer to use
+    window.olMap = map;
+
     // Add click interaction for legacy selection mode only
     if (onMapClick) {
       map.on('click', (event) => {
@@ -471,24 +475,52 @@ const OpenLayersMap = ({
       }
     });
 
-    mapRef.current = map;
-
     // Add event listener for zoom-to-location functionality
     const handleZoomToLocation = (event: any) => {
       console.log('🎯 Map received zoom event:', event.detail);
-      const { lat, lng, zoom } = event.detail;
-      if (mapRef.current) {
-        console.log('🗺️ Animating map to:', [lng, lat], 'zoom:', zoom);
-        const view = mapRef.current.getView();
-        view.animate({
-          center: fromLonLat([lng, lat]),
-          zoom: zoom || 15,
-          duration: 1000
-        });
-        console.log('✅ Map animation started');
-      } else {
+      const { lat, lng, zoom, extent, padding } = event.detail;
+      
+      if (!mapRef.current) {
         console.error('❌ Map reference not available');
+        return;
       }
+      
+      const view = mapRef.current.getView();
+      
+      // If an extent is provided, fit the view to it
+      if (extent) {
+        try {
+          // Convert extent coordinates to map projection
+          const extentCoords = [
+            extent[0], extent[1], // min lon, min lat
+            extent[2], extent[3]  // max lon, max lat
+          ];
+          
+          // Create transformed extent in web mercator
+          const transformedExtent = [
+            fromLonLat([extentCoords[0], extentCoords[1]]),
+            fromLonLat([extentCoords[2], extentCoords[3]])
+          ].flat();
+          
+          view.fit(transformedExtent, {
+            padding: padding ? [50, 50, 50, 50] : undefined,
+            duration: 1000
+          });
+          console.log('✅ Map zoomed to extent:', extent);
+          return;
+        } catch (error) {
+          console.error('❌ Error zooming to extent:', error);
+          // Fall back to center/zoom
+        }
+      }
+      
+      // Otherwise, animate to the center and zoom
+      view.animate({
+        center: fromLonLat([lng, lat]),
+        zoom: zoom || 15,
+        duration: 1000
+      });
+      console.log('✅ Map animated to:', [lng, lat], 'zoom:', zoom);
     };
 
     window.addEventListener('zoomToLocation', handleZoomToLocation);
@@ -497,6 +529,7 @@ const OpenLayersMap = ({
       window.removeEventListener('zoomToLocation', handleZoomToLocation);
       if (mapRef.current) {
         mapRef.current.setTarget(undefined);
+        window.olMap = null; // Clear the global reference
         mapRef.current = null;
       }
     };
@@ -741,140 +774,6 @@ const OpenLayersMap = ({
     });
   }, [features, activeFilters]);
 
-  // Update shapefiles on the map
-  useEffect(() => {
-    if (!shapefilesLayerRef.current) return;
-
-    const source = shapefilesLayerRef.current.getSource();
-    if (!source) return;
-
-    source.clear();
-
-    console.log('🗂️ Processing shapefiles for display:', shapefiles.length);
-    console.log('🗂️ Raw shapefiles data:', shapefiles);
-
-    shapefiles.forEach(shapefile => {
-      console.log(`📍 Processing shapefile "${shapefile.name}"`);
-      console.log(`📍 Shapefile object:`, shapefile);
-      
-      if (!shapefile.features || !Array.isArray(shapefile.features)) {
-        console.warn(`⚠️ Shapefile "${shapefile.name}" has no features array`);
-        console.log(`⚠️ Features value:`, shapefile.features);
-        console.log(`⚠️ Features type:`, typeof shapefile.features);
-        return;
-      }
-
-      console.log(`✨ Shapefile "${shapefile.name}" has ${shapefile.features.length} features`);
-      console.log(`✨ First feature sample:`, shapefile.features[0]);
-
-      // Process features in batches for performance with large datasets
-      const batchSize = 500;
-      let addedFeatures = 0;
-      
-      for (let batchStart = 0; batchStart < shapefile.features.length; batchStart += batchSize) {
-        const batchEnd = Math.min(batchStart + batchSize, shapefile.features.length);
-        const batch = shapefile.features.slice(batchStart, batchEnd);
-        
-        batch.forEach((feature: any, batchIndex: number) => {
-          const index = batchStart + batchIndex;
-          
-          if (!feature.geometry) {
-            return;
-          }
-
-          try {
-            const geometry = typeof feature.geometry === 'string'
-              ? JSON.parse(feature.geometry)
-              : feature.geometry;
-
-            let olFeature: Feature | null = null;
-
-            if (geometry.type === 'Point') {
-              const [lng, lat] = geometry.coordinates;
-              if (isFinite(lng) && isFinite(lat)) {
-                olFeature = new Feature({
-                  geometry: new Point(fromLonLat([lng, lat])),
-                  shapefileData: { ...feature, parentShapefile: shapefile }
-                });
-              }
-            } else if (geometry.type === 'LineString') {
-              const coords = geometry.coordinates
-                .filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
-                .map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
-              if (coords.length >= 2) {
-                olFeature = new Feature({
-                  geometry: new LineString(coords),
-                  shapefileData: { ...feature, parentShapefile: shapefile }
-                });
-              }
-            } else if (geometry.type === 'Polygon') {
-              const coords = geometry.coordinates.map((ring: number[][]) =>
-                ring.filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
-                   .map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
-              ).filter((ring: number[][]) => ring.length >= 4);
-              
-              if (coords.length > 0) {
-                olFeature = new Feature({
-                  geometry: new Polygon(coords),
-                  shapefileData: { ...feature, parentShapefile: shapefile }
-                });
-              }
-            } else if (geometry.type === 'MultiPolygon') {
-              // Handle MultiPolygon geometries properly
-              geometry.coordinates.forEach((polygonCoords: number[][][], polyIndex: number) => {
-                const coords = polygonCoords.map((ring: number[][]) =>
-                  ring.filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
-                     .map(([lng, lat]: number[]) => fromLonLat([lng, lat]))
-                ).filter((ring: number[][]) => ring.length >= 4);
-                
-                if (coords.length > 0) {
-                  const polyFeature = new Feature({
-                    geometry: new Polygon(coords),
-                    shapefileData: { ...feature, parentShapefile: shapefile, multiIndex: polyIndex }
-                  });
-                  source.addFeature(polyFeature);
-                  addedFeatures++;
-                }
-              });
-              olFeature = null; // Already added above
-            } else if (geometry.type === 'MultiLineString') {
-              // Handle MultiLineString geometries
-              geometry.coordinates.forEach((lineCoords: number[][], lineIndex: number) => {
-                const coords = lineCoords
-                  .filter(([lng, lat]: number[]) => isFinite(lng) && isFinite(lat))
-                  .map(([lng, lat]: number[]) => fromLonLat([lng, lat]));
-                
-                if (coords.length >= 2) {
-                  const lineFeature = new Feature({
-                    geometry: new LineString(coords),
-                    shapefileData: { ...feature, parentShapefile: shapefile, multiIndex: lineIndex }
-                  });
-                  source.addFeature(lineFeature);
-                  addedFeatures++;
-                }
-              });
-              olFeature = null; // Already added above
-            }
-
-            if (olFeature) {
-              source.addFeature(olFeature);
-              addedFeatures++;
-            }
-          } catch (error) {
-            console.error(`❌ Error rendering shapefile feature ${index}:`, error);
-          }
-        });
-        
-        // Log progress for large datasets
-        if (shapefile.features.length > 1000) {
-          console.log(`📊 Processed batch ${Math.floor(batchStart/batchSize) + 1}/${Math.ceil(shapefile.features.length/batchSize)} (${batchEnd}/${shapefile.features.length} features)`);
-        }
-      }
-      
-      console.log(`✅ Successfully added ${addedFeatures} features from "${shapefile.name}" to map`);
-    });
-  }, [shapefiles]);
-
   // Update team markers on the map
   useEffect(() => {
     if (!teamsLayerRef.current) return;
@@ -996,6 +895,40 @@ const OpenLayersMap = ({
     });
   }, [tasks]);
 
+  // Update shapefiles on the map - Simplified version since ShapefileLayer will handle this
+  useEffect(() => {
+    if (!shapefilesLayerRef.current) return;
+
+    const source = shapefilesLayerRef.current.getSource();
+    if (!source) return;
+
+    // Clear existing shapefile features
+    source.clear();
+
+    // If shapefiles are empty, just return
+    if (!shapefiles || shapefiles.length === 0) return;
+
+    console.log(`Using the shapefile layer to render ${shapefiles.length} shapefiles`);
+    
+    // Set up a style function for shapefiles (simplified version)
+    const shapefileStyle = new Style({
+      fill: new Fill({
+        color: 'rgba(255, 0, 0, 0.1)'
+      }),
+      stroke: new Stroke({
+        color: '#FF0000',
+        width: 2
+      }),
+      image: new Circle({
+        radius: 5,
+        fill: new Fill({ color: '#FF0000' }),
+        stroke: new Stroke({ color: '#FFFFFF', width: 1 })
+      })
+    });
+    
+    shapefilesLayerRef.current.setStyle(shapefileStyle);
+  }, [shapefiles]);
+
   const panTo = useCallback((lat: number, lng: number, zoom?: number) => {
     if (mapRef.current) {
       const view = mapRef.current.getView();
@@ -1021,8 +954,6 @@ const OpenLayersMap = ({
       console.error('Geolocation is not supported by this browser');
     }
   }, [panTo]);
-
-
 
   // Effect to manage select interaction based on selection modes
   useEffect(() => {

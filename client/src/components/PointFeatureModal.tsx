@@ -282,7 +282,7 @@ export default function PointFeatureModal({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select feature type" />
+                        <SelectValue placeholder="Features" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

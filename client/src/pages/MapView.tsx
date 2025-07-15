@@ -18,6 +18,7 @@ import FeatureAssignmentModal from "@/components/FeatureAssignmentModal";
 import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import FeatureSelectionDialog from "@/components/FeatureSelectionDialog";
 import { ShapefileUpload } from "@/components/ShapefileUpload";
+import { ShapefileLayer, Shapefile } from "@/components/ShapefileLayer";
 
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
 import { EditFeatureModal } from "@/components/EditFeatureModal";
@@ -26,6 +27,25 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation, createParcel } from "@/lib/api";
 import { IFeature, ITask, IUser, IBoundary } from "../../../shared/schema";
+
+// GeoJSON related interfaces
+interface GeoJSONGeometry {
+  type: string;
+  coordinates: any;
+}
+
+interface GeoJSONFeature {
+  type: string;
+  geometry: GeoJSONGeometry;
+  properties?: Record<string, any>;
+}
+
+interface GeoJSONFeatureCollection {
+  type: string;
+  features: GeoJSONFeature[];
+}
+
+type GeoJSONData = GeoJSONFeatureCollection | GeoJSONFeature[];
 
 export default function MapView() {
   const { user } = useAuth();
@@ -58,13 +78,13 @@ export default function MapView() {
   const [editFeatureModalOpen, setEditFeatureModalOpen] = useState(false);
   const [featureToEdit, setFeatureToEdit] = useState<IFeature | null>(null);
   
+  // Local shapefiles state for frontend-only processing
+  const [localShapefiles, setLocalShapefiles] = useState<Shapefile[]>([]);
+  
   // Feature selection dialog state
   const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
   const [selectedFeatureType, setSelectedFeatureType] = useState<string>('');
   const [supervisorPolygonModalOpen, setSupervisorPolygonModalOpen] = useState(false);
-  
-  // Feature creation workflow state (moved to sidebar)
-  // const [featureCreationWorkflowOpen, setFeatureCreationWorkflowOpen] = useState(false);
   
   // Fetch data
   const { data: features = [] } = useQuery({
@@ -115,30 +135,6 @@ export default function MapView() {
     queryKey: ["/api/feature-templates"],
     enabled: user?.role === "Supervisor",
   });
-
-  // Fetch shapefiles to display on map
-  const { data: shapefiles = [] } = useQuery({
-    queryKey: ["/api/shapefiles"],
-    queryFn: async () => {
-      const response = await fetch("/api/shapefiles");
-      if (!response.ok) throw new Error("Failed to fetch shapefiles");
-      return response.json();
-    },
-  });
-
-  // Keep track of previous shapefiles count to detect new uploads
-  const [previousShapefileCount, setPreviousShapefileCount] = useState(0);
-
-  // Auto-zoom to new shapefile when uploaded
-  useEffect(() => {
-    if (shapefiles.length > previousShapefileCount && previousShapefileCount > 0) {
-      // New shapefile was added, zoom to it
-      setTimeout(() => {
-        zoomToRecentShapefile();
-      }, 1000); // Small delay to ensure map is ready
-    }
-    setPreviousShapefileCount(shapefiles.length);
-  }, [shapefiles]);
 
   // Update user location
   const updateLocationMutation = useMutation({
@@ -201,6 +197,300 @@ export default function MapView() {
       return () => clearInterval(intervalId);
     }
   }, [user]);
+
+  // Helper function to detect if coordinates are in projected vs geographic coordinate system
+  const detectCoordinateSystem = (coordinates: number[]): 'geographic' | 'projected' | 'unknown' => {
+    if (!coordinates || coordinates.length < 2) return 'unknown';
+    
+    const [x, y] = coordinates;
+    
+    // Check if coordinates are in valid geographic range
+    if (x >= -180 && x <= 180 && y >= -90 && y <= 90) {
+      return 'geographic';
+    }
+    
+    // Check if coordinates look like common projected systems
+    // UTM coordinates are typically 6-7 digits for easting, 7-8 digits for northing
+    // State Plane coordinates vary but are typically large numbers
+    if ((Math.abs(x) > 180 || Math.abs(y) > 90) && 
+        (Math.abs(x) < 10000000 && Math.abs(y) < 20000000)) {
+      return 'projected';
+    }
+    
+    return 'unknown';
+  };
+
+  // Helper function to validate and potentially convert coordinates
+  const validateAndProcessCoordinates = (coordinates: number[]): { isValid: boolean; coords?: number[]; type: string } => {
+    const coordType = detectCoordinateSystem(coordinates);
+    
+    switch (coordType) {
+      case 'geographic':
+        return { isValid: true, coords: coordinates, type: 'geographic' };
+      
+      case 'projected':
+        // For projected coordinates, we'll need to inform the user
+        // In a real-world scenario, you'd need the projection definition to convert properly
+        console.warn('⚠️ Projected coordinates detected. Cannot zoom without projection information.');
+        return { isValid: false, type: 'projected' };
+      
+      default:
+        console.warn('⚠️ Unknown coordinate system detected.');
+        return { isValid: false, type: 'unknown' };
+    }
+  };
+
+  // Helper function to calculate appropriate zoom level based on extent size
+  const calculateAppropriateZoom = (extent: number[]) => {
+    const [minLon, minLat, maxLon, maxLat] = extent;
+    const width = maxLon - minLon;
+    const height = maxLat - minLat;
+    
+    // Rough heuristic - adjust as needed for your map
+    if (width > 5 || height > 5) return 8;  // Country/region level
+    if (width > 1 || height > 1) return 10; // Large city level
+    if (width > 0.1 || height > 0.1) return 13; // City level
+    if (width > 0.01 || height > 0.01) return 15; // Neighborhood level
+    return 17; // Street level
+  };
+
+  // Function to zoom to a specific shapefile with coordinate validation
+  const zoomToShapefile = (shapefile: Shapefile) => {
+    console.log('🔍 Zooming to specific shapefile:', shapefile.name);
+    
+    if (!shapefile || !shapefile.features) {
+      console.warn('⚠️ Invalid shapefile data');
+      toast({
+        title: "Navigation Error",
+        description: "Invalid shapefile data",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Extract features
+    let geojsonData: GeoJSONData;
+    let processableFeatures: GeoJSONFeature[] = [];
+    
+    try {
+      const rawFeatures = typeof shapefile.features === 'string'
+        ? JSON.parse(shapefile.features)
+        : shapefile.features;
+      
+      // Check if it's a GeoJSON FeatureCollection
+      if (rawFeatures && typeof rawFeatures === 'object' && 'type' in rawFeatures && 
+          rawFeatures.type === 'FeatureCollection' && 'features' in rawFeatures && 
+          Array.isArray(rawFeatures.features)) {
+        
+        geojsonData = rawFeatures as GeoJSONFeatureCollection;
+        processableFeatures = geojsonData.features;
+      } 
+      // Check if it's an array of features
+      else if (Array.isArray(rawFeatures)) {
+        geojsonData = rawFeatures as GeoJSONFeature[];
+        processableFeatures = geojsonData;
+      } 
+      else {
+        throw new Error("Invalid GeoJSON data format");
+      }
+      
+      if (processableFeatures.length === 0) {
+        console.warn('⚠️ Shapefile has no features to display');
+        toast({
+          title: "Empty Shapefile",
+          description: `Shapefile "${shapefile.name}" contains no displayable features`,
+          variant: "destructive"
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error parsing shapefile features:', error);
+      toast({
+        title: "Invalid Shapefile Data",
+        description: "Could not parse shapefile data",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Calculate bounds with coordinate system validation
+    let minLon = Infinity, maxLon = -Infinity;
+    let minLat = Infinity, maxLat = -Infinity;
+    let validCoordinatesFound = false;
+    let coordinateSystemType = '';
+    let hasProjectedCoords = false;
+    
+    // Function to process a single coordinate pair with validation
+    const processCoordinate = (coord: number[]) => {
+      if (!Array.isArray(coord) || coord.length < 2) return;
+      
+      const [lng, lat] = coord;
+      if (!isFinite(lng) || !isFinite(lat)) return;
+      
+      // Validate coordinate system
+      const validation = validateAndProcessCoordinates([lng, lat]);
+      
+      if (!validation.isValid) {
+        if (validation.type === 'projected') {
+          hasProjectedCoords = true;
+          coordinateSystemType = 'projected';
+        }
+        return;
+      }
+      
+      const [validLng, validLat] = validation.coords!;
+      coordinateSystemType = validation.type;
+      
+      minLon = Math.min(minLon, validLng);
+      maxLon = Math.max(maxLon, validLng);
+      minLat = Math.min(minLat, validLat);
+      maxLat = Math.max(maxLat, validLat);
+      validCoordinatesFound = true;
+    };
+    
+    // Function to recursively process coordinate arrays
+    const processCoordinates = (coords: any) => {
+      if (!Array.isArray(coords)) return;
+      
+      // Check if this is a coordinate pair or nested array
+      if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+        processCoordinate(coords);
+      } else {
+        // Process nested arrays
+        coords.forEach(subCoord => processCoordinates(subCoord));
+      }
+    };
+    
+    // Process all features
+    processableFeatures.forEach(feature => {
+      if (!feature || !feature.geometry) return;
+      
+      try {
+        const geometry = typeof feature.geometry === 'string'
+          ? JSON.parse(feature.geometry)
+          : feature.geometry;
+        
+        if (geometry && geometry.coordinates) {
+          processCoordinates(geometry.coordinates);
+        }
+      } catch (error) {
+        console.error('Error processing feature geometry:', error);
+      }
+    });
+    
+    // Handle projected coordinate system
+    if (hasProjectedCoords && !validCoordinatesFound) {
+      console.error('❌ Shapefile contains projected coordinates');
+      toast({
+        title: "Coordinate System Issue",
+        description: `Shapefile "${shapefile.name}" uses projected coordinates. Geographic coordinate conversion is needed for map display. Please provide the shapefile in geographic coordinates (WGS84) or include projection information.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate bounds
+    if (!validCoordinatesFound || !isFinite(minLon) || !isFinite(maxLon) || !isFinite(minLat) || !isFinite(maxLat)) {
+      console.error('❌ Invalid coordinates calculated:', { minLon, maxLon, minLat, maxLat });
+      toast({
+        title: "Navigation Error",
+        description: "Unable to calculate valid shapefile location. The coordinate system may be unsupported.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Additional validation for reasonable coordinate ranges
+    if (minLon < -180 || maxLon > 180 || minLat < -90 || maxLat > 90) {
+      console.error('❌ Coordinates outside valid geographic range:', { minLon, maxLon, minLat, maxLat });
+      toast({
+        title: "Coordinate Range Error",
+        description: "Shapefile coordinates are outside valid geographic range. Please check the coordinate system.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Add padding (10%)
+    const lonPadding = (maxLon - minLon) * 0.1;
+    const latPadding = (maxLat - minLat) * 0.1;
+    
+    // Calculate padded extent
+    const extent = [
+      minLon - lonPadding,
+      minLat - latPadding,
+      maxLon + lonPadding,
+      maxLat + latPadding
+    ];
+    
+    // Calculate center
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLon + maxLon) / 2;
+    
+    console.log(`🎯 Zooming to shapefile "${shapefile.name}" (${coordinateSystemType} coordinates)`);
+    console.log(`📊 Geographic extent: [${extent.join(', ')}]`);
+    console.log(`📍 Center: [${centerLat}, ${centerLng}]`);
+    
+    // Create a custom event to trigger map zoom
+    const zoomEvent = new CustomEvent('zoomToLocation', {
+      detail: {
+        lat: centerLat,
+        lng: centerLng,
+        zoom: calculateAppropriateZoom(extent),
+        extent: extent,
+        padding: true
+      }
+    });
+    
+    window.dispatchEvent(zoomEvent);
+    console.log('✅ Zoom event dispatched');
+    
+    toast({
+      title: "Navigating to Shapefile",
+      description: `Showing "${shapefile.name}" on the map (${coordinateSystemType} coordinates)`,
+    });
+  };
+
+  // Function to zoom to the most recent shapefile
+  const zoomToRecentShapefile = () => {
+    console.log('🔍 Attempting to zoom to recent shapefile...');
+    
+    if (!localShapefiles || localShapefiles.length === 0) {
+      console.warn('⚠️ No shapefiles available');
+      toast({
+        title: "No Shapefiles",
+        description: "No shapefiles have been uploaded yet",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get the most recent shapefile
+    const recentShapefile = localShapefiles[localShapefiles.length - 1];
+    zoomToShapefile(recentShapefile);
+  };
+
+  // Handle shapefile processing from the upload component
+  const handleShapefileProcessed = (shapefile: Shapefile) => {
+    console.log('💾 Processing shapefile:', shapefile.name, 'with', shapefile.featureCount, 'features');
+    
+    setLocalShapefiles(prev => {
+      const newShapefiles = [...prev, shapefile];
+      console.log('📂 Updated localShapefiles:', newShapefiles.map(s => s.name));
+      return newShapefiles;
+    });
+    
+    // Zoom to the new shapefile directly instead of relying on state
+    setTimeout(() => {
+      console.log('⏱️ Timeout expired, zooming to shapefile');
+      zoomToShapefile(shapefile);
+    }, 300);
+    
+    toast({
+      title: "Shapefile Added",
+      description: `"${shapefile.name}" with ${shapefile.featureCount || 0} features`,
+    });
+  };
 
   // Check if a point is within assigned boundaries for field users
   const isPointInAssignedBoundary = (latlng: { lat: number; lng: number }) => {
@@ -341,10 +631,6 @@ export default function MapView() {
     });
   };
 
-  const handleMapDoubleClick = () => {
-    // Legacy handler - now handled by handleLineCreated
-  };
-
   const handleFeatureClick = (feature: any) => {
     // Show feature details popup for all users
     setClickedFeature(feature);
@@ -380,113 +666,6 @@ export default function MapView() {
       title: "Shapefile Feature",
       description: `${shapefileData.parentShapefile?.name || 'Shapefile'}: ${shapefileData.properties?.name || 'Feature'}`,
     });
-
-    // Optionally zoom to the shapefile feature
-    if (shapefileData.parentShapefile) {
-      console.log('Shapefile details:', shapefileData.parentShapefile);
-    }
-  };
-
-  // Function to zoom to the most recent shapefile
-  const zoomToRecentShapefile = () => {
-    console.log('🔍 Attempting to zoom to recent shapefile...');
-    console.log('📊 Available shapefiles:', shapefiles);
-    console.log('📊 Shapefiles count:', shapefiles?.length);
-    
-    if (shapefiles && shapefiles.length > 0) {
-      // Get the most recent shapefile (last in array)
-      const recentShapefile = shapefiles[shapefiles.length - 1];
-      console.log('📍 Recent shapefile:', recentShapefile);
-      console.log('📍 Shapefile features type:', typeof recentShapefile.features);
-      console.log('📍 Shapefile features length:', recentShapefile.features?.length);
-      console.log('📍 First few features:', recentShapefile.features?.slice(0, 3));
-      
-      if (recentShapefile.features && recentShapefile.features.length > 0) {
-        console.log('🗂️ Shapefile has', recentShapefile.features.length, 'features');
-        // Calculate bounds from all features in the shapefile
-        let minLat = Infinity, maxLat = -Infinity;
-        let minLng = Infinity, maxLng = -Infinity;
-        
-        recentShapefile.features.forEach((feature: any) => {
-          if (feature.geometry) {
-            const geometry = typeof feature.geometry === 'string' 
-              ? JSON.parse(feature.geometry) 
-              : feature.geometry;
-              
-            if (geometry.type === 'Point') {
-              const [lng, lat] = geometry.coordinates;
-              minLat = Math.min(minLat, lat);
-              maxLat = Math.max(maxLat, lat);
-              minLng = Math.min(minLng, lng);
-              maxLng = Math.max(maxLng, lng);
-            } else if (geometry.type === 'LineString') {
-              geometry.coordinates.forEach(([lng, lat]: number[]) => {
-                minLat = Math.min(minLat, lat);
-                maxLat = Math.max(maxLat, lat);
-                minLng = Math.min(minLng, lng);
-                maxLng = Math.max(maxLng, lng);
-              });
-            } else if (geometry.type === 'Polygon') {
-              geometry.coordinates[0].forEach(([lng, lat]: number[]) => {
-                minLat = Math.min(minLat, lat);
-                maxLat = Math.max(maxLat, lat);
-                minLng = Math.min(minLng, lng);
-                maxLng = Math.max(maxLng, lng);
-              });
-            }
-          }
-        });
-        
-        // Add padding to the bounds
-        const latPadding = (maxLat - minLat) * 0.1;
-        const lngPadding = (maxLng - minLng) * 0.1;
-        
-        // Calculate center and appropriate zoom level
-        const centerLat = (minLat + maxLat) / 2;
-        const centerLng = (minLng + maxLng) / 2;
-        
-        // Validate calculated bounds
-        if (isFinite(centerLat) && isFinite(centerLng) && !isNaN(centerLat) && !isNaN(centerLng)) {
-          console.log(`🎯 Zooming to shapefile "${recentShapefile.name}" at [${centerLat}, ${centerLng}]`);
-          
-          // Create a custom event to trigger map zoom
-          const zoomEvent = new CustomEvent('zoomToLocation', {
-            detail: {
-              lat: centerLat,
-              lng: centerLng,
-              zoom: 15
-            }
-          });
-          window.dispatchEvent(zoomEvent);
-          
-          toast({
-            title: "Navigating to Shapefile",
-            description: `Showing "${recentShapefile.name}" on the map`,
-          });
-        } else {
-          console.error('❌ Invalid coordinates calculated:', { centerLat, centerLng, minLat, maxLat, minLng, maxLng });
-          toast({
-            title: "Navigation Error",
-            description: "Unable to calculate shapefile location",
-            variant: "destructive"
-          });
-        }
-      } else {
-        console.warn('⚠️ Shapefile has no features to display');
-        toast({
-          title: "No Features",
-          description: `Shapefile "${recentShapefile.name}" contains no displayable features`,
-          variant: "destructive"
-        });
-      }
-    } else {
-      console.warn('⚠️ No shapefiles available');
-      toast({
-        title: "No Shapefiles",
-        description: "No shapefiles have been uploaded yet",
-        variant: "destructive"
-      });
-    }
   };
 
   // Handle feature selection from dialog
@@ -548,7 +727,7 @@ export default function MapView() {
           {/* Mobile Controls Bar - Top */}
           <div className="absolute top-2 left-2 right-2 z-[1000] lg:hidden flex flex-wrap gap-2 justify-between">
             {/* Show Recent Shapefile Button */}
-            {shapefiles && shapefiles.length > 0 && (
+            {localShapefiles.length > 0 && (
               <button
                 onClick={zoomToRecentShapefile}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-lg flex items-center gap-1 text-xs font-medium transition-colors"
@@ -559,24 +738,14 @@ export default function MapView() {
             
             {/* Shapefile Upload - Mobile */}
             <div className="ml-auto">
-              <ShapefileUpload
-                userRole={user?.role as 'Supervisor' | 'Field' || 'Field'}
-                userId={user?._id?.toString() || ''}
-                onUploadSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
-                  toast({
-                    title: "Upload Complete",
-                    description: "Shapefile has been uploaded successfully",
-                  });
-                }}
-              />
+              <ShapefileUpload onShapefileProcessed={handleShapefileProcessed} />
             </div>
           </div>
 
           {/* Desktop Controls */}
           <div className="hidden lg:block">
             {/* Show Recent Shapefile Button - Desktop */}
-            {shapefiles && shapefiles.length > 0 && (
+            {localShapefiles.length > 0 && (
               <div className="absolute top-4 left-4 z-10">
                 <button
                   onClick={zoomToRecentShapefile}
@@ -589,114 +758,109 @@ export default function MapView() {
             
             {/* Shapefile Upload Button - Desktop Top Right */}
             <div className="absolute top-4 right-4 z-[1000]">
-              <ShapefileUpload
-                userRole={user?.role as 'Supervisor' | 'Field' || 'Field'}
-                userId={user?._id?.toString() || ''}
-                onUploadSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
-                  toast({
-                    title: "Upload Complete",
-                    description: "Shapefile has been uploaded successfully",
-                  });
-                }}
-              />
+              <ShapefileUpload onShapefileProcessed={handleShapefileProcessed} />
             </div>
           </div>
 
           <OpenLayersMap
-          features={features}
-          teams={fieldUsers}
-          boundaries={boundaries}
-          tasks={tasks}
-          allTeams={teams}
-          shapefiles={shapefiles}
-          activeFilters={activeFilters}
-          onFeatureClick={handleFeatureClick}
-          onBoundaryClick={handleBoundaryClick}
-          onTeamClick={handleTeamClick}
-          onShapefileClick={handleShapefileClick}
-          onMapClick={handleMapClick}
-          onPolygonCreated={handlePolygonCreated}
-          onLineCreated={handleLineCreated}
-          selectionMode={selectionMode}
-          drawingMode={drawingMode}
-          pointSelectionMode={pointSelectionMode}
-          lineDrawingMode={lineDrawingMode}
-          linePoints={linePoints}
-          clearDrawnPolygon={clearPolygon}
-          className="w-full h-full"
-        />
+            features={features}
+            teams={fieldUsers}
+            boundaries={boundaries}
+            tasks={tasks}
+            allTeams={teams}
+            activeFilters={activeFilters}
+            onFeatureClick={handleFeatureClick}
+            onBoundaryClick={handleBoundaryClick}
+            onTeamClick={handleTeamClick}
+            onShapefileClick={handleShapefileClick}
+            onMapClick={handleMapClick}
+            onPolygonCreated={handlePolygonCreated}
+            onLineCreated={handleLineCreated}
+            selectionMode={selectionMode}
+            drawingMode={drawingMode}
+            pointSelectionMode={pointSelectionMode}
+            lineDrawingMode={lineDrawingMode}
+            linePoints={linePoints}
+            clearDrawnPolygon={clearPolygon}
+            className="w-full h-full"
+          />
+          
+          {/* Add ShapefileLayer component */}
+          <ShapefileLayer 
+            shapefiles={localShapefiles} 
+            onFeatureClick={handleShapefileClick} 
+          />
         
-        {/* Mobile Drawing Button - Bottom Center */}
-        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-[1000] lg:hidden">
-          <Button
-            onClick={() => setFeatureSelectionOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-200"
-            title="Create Feature"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
-            </svg>
-          </Button>
-        </div>
-        
-        {/* Desktop Drawing Button - For All Users */}
-        <div className="absolute bottom-4 left-4 z-[1000] hidden lg:block">
-          <Button
-            onClick={() => setFeatureSelectionOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg transition-all duration-200"
-            title="Create Feature"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
-            </svg>
-          </Button>
-        </div>
-
-        {/* Show boundary info for field users - Mobile */}
-        {user?.role === "Field" && (
-          <div className="absolute bottom-20 left-2 right-2 z-[1000] lg:hidden">
-            <div className="bg-white rounded-lg p-2 shadow-lg border border-orange-200">
-              <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
-              <p className="text-sm font-medium text-gray-800">
-                {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
-              </p>
-              <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                </svg>
-                {boundaries.length > 0 
-                  ? "Features only within boundary"
-                  : "No boundary assigned"
-                }
-              </p>
-            </div>
+          {/* Mobile Drawing Button - Bottom Center */}
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-[1000] lg:hidden">
+            <Button
+              onClick={() => setFeatureSelectionOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-200"
+              title="Create Feature"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+              </svg>
+            </Button>
           </div>
-        )}
-
-        {/* Desktop boundary info for field users */}
-        {user?.role === "Field" && (
-          <div className="absolute bottom-4 right-4 z-[1000] hidden lg:block">
-            <div className="bg-white rounded-lg p-3 shadow-lg border border-orange-200">
-              <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
-              <p className="text-sm font-medium text-gray-800">
-                {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
-              </p>
-              <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                </svg>
-                {boundaries.length > 0 
-                  ? "Features can only be created within this boundary area"
-                  : "No boundary assigned to your team"
-                }
-              </p>
-            </div>
+          
+          {/* Desktop Drawing Button - For All Users */}
+          <div className="absolute bottom-4 left-4 z-[1000] hidden lg:block">
+            <Button
+              onClick={() => setFeatureSelectionOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg transition-all duration-200"
+              title="Create Feature"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+              </svg>
+            </Button>
           </div>
-        )}
-        
+
+          {/* Show boundary info for field users - Mobile */}
+          {user?.role === "Field" && (
+            <div className="absolute bottom-20 left-2 right-2 z-[1000] lg:hidden">
+              <div className="bg-white rounded-lg p-2 shadow-lg border border-orange-200">
+                <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
+                <p className="text-sm font-medium text-gray-800">
+                  {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
+                </p>
+                <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                  </svg>
+                  {boundaries.length > 0 
+                    ? "Features only within boundary"
+                    : "No boundary assigned"
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Desktop boundary info for field users */}
+          {user?.role === "Field" && (
+            <div className="absolute bottom-4 right-4 z-[1000] hidden lg:block">
+              <div className="bg-white rounded-lg p-3 shadow-lg border border-orange-200">
+                <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
+                <p className="text-sm font-medium text-gray-800">
+                  {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
+                </p>
+                <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                  </svg>
+                  {boundaries.length > 0 
+                    ? "Features can only be created within this boundary area"
+                    : "No boundary assigned to your team"
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+          
         </div>
         
         {/* Legend Panel - Responsive */}
@@ -805,7 +969,7 @@ export default function MapView() {
         onOpenChange={setFeatureSelectionOpen}
         onFeatureSelect={handleFeatureSelect}
         userRole={user?.role || ''}
-        featureTemplates={featureTemplates}
+        featureTemplates={featureTemplates as any[] || []}
       />
       
       {advancedSearchModalOpen && (
@@ -869,6 +1033,7 @@ export default function MapView() {
             }
           }}
           preFilledPoints={linePoints}
+          // @ts-ignore - Property exists in implementation but not in type definition
           assignedBoundaryId={user?.role === "Field" && boundaries.length > 0 ? boundaries[0]._id.toString() : undefined}
         />
       )}
@@ -896,7 +1061,6 @@ export default function MapView() {
         }}
         feature={featureToEdit}
       />
-
     </>
   );
 }
