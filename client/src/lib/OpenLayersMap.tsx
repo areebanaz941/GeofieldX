@@ -16,7 +16,7 @@ import Geolocation from 'ol/Geolocation';
 import Control from 'ol/control/Control'; // Import Control class
 import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
 import { getFeatureIcon } from '../components/FeatureIcons';
-import { getStatusColor } from '../components/Featureicon';
+import { getStatusColor } from '../components/FeatureIcon';
 import { Shapefile } from '@/components/ShapefileLayer';
 import 'ol/ol.css';
 
