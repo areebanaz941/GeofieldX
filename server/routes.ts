@@ -133,20 +133,22 @@ const uploadImages = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Session setup
+  // Session setup with proper production configuration
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || "geowhats-secret-key",
+      secret: process.env.SESSION_SECRET || "geowhats-secret-key-production-2024",
       resave: false,
       saveUninitialized: false,
       store: new MemoryStore({
         checkPeriod: 86400000, // prune expired entries every 24h
       }),
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+        secure: process.env.NODE_ENV === "production" && !process.env.DISABLE_SECURE_COOKIES,
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: process.env.NODE_ENV === "production" ? 'lax' : false,
       },
+      name: 'geofieldx.session',
     }),
   );
 
