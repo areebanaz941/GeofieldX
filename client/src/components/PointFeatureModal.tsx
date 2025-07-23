@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,9 +18,10 @@ const formSchema = z.object({
   feaType: z.enum(["Tower", "Manhole", "Pole", "Cabinet", "Equipment", "Utility"]),
   specificType: z.string().min(1, "Specific type is required"),
   feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
-  feaStatus: z.enum(["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"]),
+  feaStatus: z.enum(["Assigned", "UnAssigned", "Completed", "Delayed"]),
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
+  assignedTo: z.string().optional(),
   remarks: z.string().optional(),
   images: z.array(z.string()).optional(),
 });
@@ -44,10 +46,17 @@ export default function PointFeatureModal({
   assignedBoundaryId,
 }: PointFeatureModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [specificTypeOptions, setSpecificTypeOptions] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+
+  // Fetch users for assignment dropdown (only for supervisors)
+  const { data: users } = useQuery({
+    queryKey: ["/api/users"],
+    enabled: user?.role === "Supervisor", // Only fetch if user is supervisor
+  });
 
   // Handle image selection
   const handleImageSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,9 +140,10 @@ export default function PointFeatureModal({
       feaType: "Tower",
       specificType: "",
       feaState: "Plan",
-      feaStatus: "New",
+      feaStatus: "UnAssigned",
       maintenance: "None",
       maintenanceDate: "",
+      assignedTo: "",
       remarks: "",
       images: [],
     },
@@ -240,6 +250,7 @@ export default function PointFeatureModal({
         feaStatus: values.feaStatus,
         maintenance: values.maintenance,
         maintenanceDate: values.maintenanceDate || undefined,
+        assignedTo: values.assignedTo || undefined,
         remarks: values.remarks || undefined,
         images: uploadedImagePaths,
         boundaryId: assignedBoundaryId, // Include boundary ID for field users
@@ -282,7 +293,7 @@ export default function PointFeatureModal({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Features" />
+                        <SelectValue placeholder="Select feature type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -419,7 +430,7 @@ export default function PointFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"].map((status) => (
+                      {["Assigned", "UnAssigned", "Completed", "Delayed"].map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
                         </SelectItem>
@@ -430,6 +441,40 @@ export default function PointFeatureModal({
                 </FormItem>
               )}
             />
+
+            {/* Assigned To Field - Only for Supervisors */}
+            {user?.role === "Supervisor" && (
+              <FormField
+                control={form.control}
+                name="assignedTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned To</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select person to assign" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No Assignment</SelectItem>
+                        {users && Array.isArray(users) ? 
+                          users.map((userData: any) => (
+                            <SelectItem key={userData._id} value={userData._id}>
+                              {`${userData.name} (${userData.username})`}
+                            </SelectItem>
+                          )) : null
+                        }
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

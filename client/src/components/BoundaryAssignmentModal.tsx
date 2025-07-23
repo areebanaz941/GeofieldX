@@ -20,12 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getAllTeams, assignBoundaryToTeam } from "@/lib/api";
-import { Boundary } from "@shared/schema";
+import type { IBoundary } from "@shared/schema";
 
 interface BoundaryAssignmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  boundary: Boundary | null;
+  boundary: IBoundary | null;
 }
 
 export default function BoundaryAssignmentModal({
@@ -41,6 +41,11 @@ export default function BoundaryAssignmentModal({
     queryKey: ["/api/teams"],
     queryFn: getAllTeams,
   });
+
+  // Debug log for teams data
+  console.log("Teams fetched for assignment:", teams);
+  console.log("Teams length:", teams?.length);
+  console.log("Approved teams:", teams?.filter((team: any) => team.status?.toLowerCase() === "approved"));
 
   const assignMutation = useMutation({
     mutationFn: ({ boundaryId, teamId }: { boundaryId: string; teamId: string }) =>
@@ -110,18 +115,37 @@ export default function BoundaryAssignmentModal({
                 <SelectValue placeholder="Choose a team..." />
               </SelectTrigger>
               <SelectContent>
-                {teams
-                  .filter((team: any) => team.status === "approved")
-                  .map((team: any) => (
-                    <SelectItem key={team._id.toString()} value={team._id.toString()}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{team.name}</span>
-                        <Badge variant="secondary" className="ml-2">
-                          {team.type}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
+                {teams && teams.length > 0 ? (
+                  teams
+                    .filter((team: any) => team.status?.toLowerCase() === "approved")
+                    .map((team: any) => (
+                      <SelectItem key={team._id.toString()} value={team._id.toString()}>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{team.name}</span>
+                            {team.city && (
+                              <span className="text-xs text-gray-500">{team.city}</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1 ml-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {team.type || 'Field'}
+                            </Badge>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${team.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-700' : ''}`}
+                            >
+                              {team.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))
+                ) : (
+                  <SelectItem value="no-teams" disabled>
+                    No active teams available
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

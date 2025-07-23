@@ -11,7 +11,7 @@ const getStatusColor = (status: string): string => {
     case 'assigned':
       return '#3B82F6'; // blue
     case 'unassigned':
-      return '#000000'; // black
+      return '#fffb0a8c'; // YELLOW
     case 'complete':
       return '#10B981'; // green
     case 'delayed':

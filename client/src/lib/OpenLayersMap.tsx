@@ -6,14 +6,18 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import OSM from 'ol/source/OSM';
 import { Feature } from 'ol';
-import { Point, Polygon, LineString, MultiPolygon } from 'ol/geom';
+import { Point, Polygon, LineString, MultiPolygon, Circle as CircleGeometry } from 'ol/geom';
 import { Style, Fill, Stroke, Circle, Text, Icon } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { Draw, Modify, Select } from 'ol/interaction';
 import { click } from 'ol/events/condition';
 import GeoJSON from 'ol/format/GeoJSON';
+import Geolocation from 'ol/Geolocation';
+import Control from 'ol/control/Control'; // Import Control class
 import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
 import { getFeatureIcon } from '../components/FeatureIcons';
+import { getStatusColor } from '../components/Featureicon';
+import { Shapefile } from '@/components/ShapefileLayer';
 import 'ol/ol.css';
 
 // Import custom icons (keeping as fallback)
@@ -22,7 +26,21 @@ import manholeIcon from '@assets/manhole-removebg-preview_1750282584509.png';
 import fibercableIcon from '@assets/fibercable-removebg-preview_1750282584507.png';
 import parcelIcon from '@assets/land-removebg-preview_1750282584509.png';
 
-// Define status colors matching our SVG system
+// Map various status names to our standardized status types
+const mapToStandardStatus = (status: string): string => {
+  const normalizedStatus = status.toLowerCase();
+  if (normalizedStatus === 'complete' || normalizedStatus === 'completed' || normalizedStatus === 'review_accepted') {
+    return 'complete';
+  } else if (normalizedStatus === 'assigned' || normalizedStatus === 'in progress' || normalizedStatus === 'submit-review' || normalizedStatus === 'review_inprogress' || normalizedStatus === 'inprogress') {
+    return 'assigned';
+  } else if (normalizedStatus === 'in-complete' || normalizedStatus === 'review_reject' || normalizedStatus === 'delayed') {
+    return 'delayed';
+  } else {
+    return 'unassigned';
+  }
+};
+
+// Define status colors matching our SVG system (kept for backward compatibility)
 const statusColors = {
   'Unassigned': '#000000', // black
   'Assigned': '#3B82F6',   // blue
@@ -37,55 +55,283 @@ const statusColors = {
   'delayed': '#EF4444'      // red
 };
 
-// Helper function to convert SVG to data URI
-const createSVGIcon = (featureType: string, status: string, size: number = 24): string => {
-  const getStatusColor = (status: string): string => {
-    if (status === 'Complete' || status === 'Completed' || status === 'Review_Accepted') {
-      return '#10B981'; // green
-    } else if (status === 'Assigned' || status === 'In Progress' || status === 'Submit-Review' || status === 'Review_inprogress') {
-      return '#3B82F6'; // blue
-    } else if (status === 'In-Complete' || status === 'Review_Reject' || status === 'delayed') {
-      return '#EF4444'; // red
-    } else {
-      return '#000000'; // black (unassigned)
-    }
-  };
+// Enhanced Location Control with white icon background and black symbol
+class LocationControl extends Control {
+  private map: Map;
+  private button: HTMLButtonElement;
+  private locationLayer: VectorLayer<VectorSource>;
+  private accuracyLayer: VectorLayer<VectorSource>;
 
-  const color = getStatusColor(status);
+  constructor(
+    map: Map, 
+    locationLayer: VectorLayer<VectorSource>, 
+    accuracyLayer: VectorLayer<VectorSource>
+  ) {
+    const button = document.createElement('button');
+    const element = document.createElement('div');
+    
+    super({
+      element: element,
+    });
+
+    this.map = map;
+    this.button = button;
+    this.locationLayer = locationLayer;
+    this.accuracyLayer = accuracyLayer;
+
+    // Style the container
+    element.className = 'ol-unselectable ol-control';
+    element.style.cssText = `
+      top: 105px;
+      left: 8px;
+      position: absolute;
+      pointer-events: auto;
+    `;
+
+    // Create standard location icon
+    const locationSVG = this.createLocationIcon();
+    
+    // Style the button to match OpenLayers zoom controls - no background since icon has white background
+    button.innerHTML = locationSVG;
+    
+    button.style.cssText = `
+      background-color: transparent;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      height: 1.375em;
+      width: 1.375em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.14em;
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      pointer-events: auto;
+      user-select: none;
+    `;
+
+    button.title = 'Show your location';
+    button.type = 'button';
+
+    // Add hover effects - just opacity since icon manages its own background
+    button.addEventListener('mouseenter', () => {
+      button.style.opacity = '0.8';
+    });
+
+    button.addEventListener('mouseleave', () => {
+      button.style.opacity = '1';
+    });
+
+    // Add click handler with console logging
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('🎯 Location button clicked!');
+      this.handleLocationClick();
+    });
+    
+    element.appendChild(button);
+    console.log('📍 Location control created and button attached');
+  }
+
+  private createLocationIcon(isLoading: boolean = false): string {
+    if (isLoading) {
+      // Loading spinner - simple rotating circle
+      return `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" stroke="white" stroke-width="2" fill="none" opacity="0.3"/>
+          <path d="M12 3C16.97 3 21 7.03 21 12" stroke="white" stroke-width="2" stroke-linecap="round">
+            <animateTransform attributeName="transform" type="rotate" dur="1s" repeatCount="indefinite" values="0 12 12;360 12 12"/>
+          </path>
+        </svg>
+      `;
+    }
+    
+    // Standard current location icon (like Google Maps)
+    return `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer circle -->
+        <circle cx="12" cy="12" r="8" stroke="white" stroke-width="1.5" fill="none"/>
+        <!-- Center dot -->
+        <circle cx="12" cy="12" r="2.5" fill="white"/>
+        <!-- Radiating lines -->
+        <line x1="12" y1="2" x2="12" y2="5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="19" x2="12" y2="22" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="2" y1="12" x2="5" y2="12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="19" y1="12" x2="22" y2="12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    `;
+  }
+
+  private handleLocationClick() {
+    console.log('🎯 Handling location click...');
+    
+    // Update button to show loading state - just change icon
+    this.button.innerHTML = this.createLocationIcon(true);
+    this.button.title = 'Getting location...';
+
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+      console.error('❌ Geolocation not supported');
+      window.dispatchEvent(new CustomEvent('locationError', {
+        detail: { 
+          message: 'Geolocation not supported',
+          instructions: 'Your browser does not support location services.'
+        }
+      }));
+      this.resetButton();
+      return;
+    }
+
+    console.log('🎯 Requesting current position...');
+    
+    // Request location with navigator.geolocation directly
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log('✅ Location found:', position.coords);
+        const { latitude, longitude } = position.coords;
+        
+        // Convert to map projection and animate to location
+        const coords = fromLonLat([longitude, latitude]);
+        this.map.getView().animate({
+          center: coords,
+          zoom: Math.max(this.map.getView().getZoom() || 15, 16),
+          duration: 1000
+        });
+
+        // Add location marker using the layer reference
+        const locationSource = this.locationLayer.getSource();
+        if (locationSource) {
+          // Clear existing location markers
+          locationSource.clear();
+          
+          // Add new location marker
+          const locationFeature = new Feature({
+            geometry: new Point(coords),
+            name: 'user-location'
+          });
+          locationSource.addFeature(locationFeature);
+          console.log('📍 Added location marker to map');
+        }
+
+        // Add accuracy circle if accuracy is available
+        if (position.coords.accuracy) {
+          const accuracySource = this.accuracyLayer.getSource();
+          if (accuracySource) {
+            accuracySource.clear();
+            
+            // Create accuracy circle using Circle geometry
+            const accuracyFeature = new Feature({
+              geometry: new CircleGeometry(coords, position.coords.accuracy),
+              name: 'location-accuracy'
+            });
+            accuracySource.addFeature(accuracyFeature);
+            console.log('📍 Added accuracy circle to map');
+          }
+        }
+
+        // Dispatch success event
+        window.dispatchEvent(new CustomEvent('locationSuccess', {
+          detail: { 
+            message: 'Location found successfully!',
+            latitude: latitude.toFixed(6),
+            longitude: longitude.toFixed(6)
+          }
+        }));
+
+        // Reset button
+        this.resetButton();
+      },
+      (error) => {
+        console.error('❌ Location error:', error);
+        
+        let errorMessage = 'Unable to get your location';
+        let instructions = '';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied';
+            instructions = 'Please enable location permissions in your browser settings and try again.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable';
+            instructions = 'Please check your GPS or internet connection.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out';
+            instructions = 'Please try again.';
+            break;
+          default:
+            errorMessage = 'An unknown error occurred';
+            instructions = 'Please try again.';
+            break;
+        }
+        
+        // Dispatch error event
+        window.dispatchEvent(new CustomEvent('locationError', {
+          detail: { 
+            message: errorMessage,
+            instructions: instructions
+          }
+        }));
+
+        // Reset button
+        this.resetButton();
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000
+      }
+    );
+  }
+
+  private resetButton() {
+    this.button.innerHTML = this.createLocationIcon();
+    this.button.title = 'Show your location';
+    console.log('🔄 Button reset to normal state');
+  }
+}
+
+// Helper function to convert SVG to data URI - UPDATED with enhanced status mapping
+const createSVGIcon = (featureType: string, status: string, size: number = 24): string => {
+  const standardStatus = mapToStandardStatus(status);
+  const color = getStatusColor(standardStatus);
   let svgContent = '';
 
   switch (featureType) {
     case 'Tower':
-      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L8 6V10L10 12V22H14V12L16 10V6L12 2Z" fill="${color}" stroke="${color}" stroke-width="1"/>
-        <circle cx="12" cy="4" r="1" fill="${color}"/>
-        <path d="M6 18H18M8 20H16" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 2L12 7L17 2V4L12 9L7 4V2Z"/>
+        <path d="M6 10H18V12H16V20H8V12H6V10Z"/>
+        <path d="M10 14H14V16H10V14Z"/>
+        <path d="M11 18H13V19H11V18Z"/>
       </svg>`;
       break;
     case 'Manhole':
       svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="8" fill="${color}" stroke="${color}" stroke-width="2"/>
-        <circle cx="12" cy="12" r="6" fill="none" stroke="white" stroke-width="1"/>
-        <circle cx="12" cy="12" r="3" fill="none" stroke="white" stroke-width="1"/>
-        <path d="M8 8L16 16M16 8L8 16" stroke="white" stroke-width="1" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="10" fill="none" stroke="${color}" stroke-width="2"/>
+        <circle cx="12" cy="12" r="6" fill="none" stroke="${color}" stroke-width="1"/>
+        <rect x="10" y="10" width="4" height="4" fill="${color}"/>
+        <path d="M12 2V6M12 18V22M22 12H18M6 12H2" stroke="${color}" stroke-width="1"/>
       </svg>`;
       break;
     case 'FiberCable':
       svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2 12C2 12 6 8 12 8C18 8 22 12 22 12C22 12 18 16 12 16C6 16 2 12 2 12Z" stroke="${color}" stroke-width="2" fill="none"/>
-        <path d="M4 12H8M16 12H20" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        <path d="M3 12C3 7.03 7.03 3 12 3S21 7.03 21 12 16.97 21 12 21" fill="none" stroke="${color}" stroke-width="2"/>
+        <path d="M8 12C8 9.79 9.79 8 12 8S16 9.79 16 12 14.21 16 12 16" fill="none" stroke="${color}" stroke-width="2"/>
         <circle cx="12" cy="12" r="2" fill="${color}"/>
+        <path d="M2 18L6 14M18 6L22 2" stroke="${color}" stroke-width="1"/>
       </svg>`;
       break;
     case 'Parcel':
     default:
       svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="${color}" stroke-width="2"/>
-        <path d="M3 9H21M9 3V21" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
-        <circle cx="6" cy="6" r="1" fill="${color}"/>
-        <circle cx="15" cy="6" r="1" fill="${color}"/>
-        <circle cx="6" cy="15" r="1" fill="${color}"/>
-        <circle cx="15" cy="15" r="1" fill="${color}"/>
+        <path d="M3 3H21V21H3V3Z" fill="none" stroke="${color}" stroke-width="2"/>
+        <path d="M8 8H16V16H8V8Z" fill="${color}" fill-opacity="0.3"/>
+        <path d="M6 6L10 10M18 6L14 10M6 18L10 14M18 18L14 14" stroke="${color}" stroke-width="1"/>
       </svg>`;
       break;
   }
@@ -108,7 +354,7 @@ interface MapProps {
   boundaries?: IBoundary[];
   tasks?: ITask[];
   allTeams?: any[];
-  shapefiles?: any[];
+  shapefiles?: Shapefile[];
   activeFilters?: string[];
   onFeatureClick?: (feature: IFeature) => void;
   onBoundaryClick?: (boundary: IBoundary) => void;
@@ -166,6 +412,15 @@ const OpenLayersMap = ({
   const drawLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectInteractionRef = useRef<Select | null>(null);
 
+  // OpenLayers Geolocation references
+  const geolocationRef = useRef<Geolocation | null>(null);
+  const locationLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const accuracyLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const locationControlRef = useRef<LocationControl | null>(null);
+
+  // State for triggering shapefile re-processing on zoom changes
+  const [shapefileUpdateTrigger, setShapefileUpdateTrigger] = useState(0);
+
   // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -179,6 +434,10 @@ const OpenLayersMap = ({
     const selectedLocationSource = new VectorSource();
     selectedLocationSourceRef.current = selectedLocationSource;
 
+    // Create location-specific sources
+    const locationSource = new VectorSource();
+    const accuracySource = new VectorSource();
+
     // Create vector layers
     featuresLayerRef.current = new VectorLayer({
       source: featuresSource,
@@ -191,10 +450,10 @@ const OpenLayersMap = ({
         const baseScale = Math.max(0.05, Math.min(0.4, (zoom - 8) / 20));
         const iconSize = Math.max(16, Math.min(32, zoom * 2));
         
-        // Determine feature status for color coding
-        const featureStatus = featureData?.feaState || featureData?.status || 'Unassigned';
+        // FIXED: Changed feaState to feaStatus for proper color determination
+        const featureStatus = featureData?.feaStatus || featureData?.status || 'Unassigned';
         
-        // Create SVG icon with status-based color
+        // Create SVG icon with status-based color using enhanced system
         const svgIconSrc = createSVGIcon(featureType, featureStatus, iconSize);
         
         // Handle different geometry types
@@ -204,7 +463,8 @@ const OpenLayersMap = ({
         if (geometryType === 'LineString' || featureType === 'FiberCable') {
           // For line features (fiber cables), use stroke styling with status-based colors
           const lineWidth = Math.max(2, Math.min(6, zoom / 3));
-          const statusColor = statusColors[featureStatus as keyof typeof statusColors] || '#000000';
+          const standardStatus = mapToStandardStatus(featureStatus);
+          const statusColor = getStatusColor(standardStatus);
           
           return new Style({
             stroke: new Stroke({
@@ -362,7 +622,9 @@ const OpenLayersMap = ({
       style: (feature) => {
         const taskData = feature.get('taskData');
         const status = taskData?.status || 'Unassigned';
-        const color = statusColors[status as keyof typeof statusColors] || '#9E9E9E';
+        // ENHANCED: Use improved status mapping system
+        const standardStatus = mapToStandardStatus(status);
+        const color = getStatusColor(standardStatus);
         
         return new Style({
           image: new Circle({
@@ -390,24 +652,135 @@ const OpenLayersMap = ({
       })
     });
 
-    // Create shapefile layer for uploaded shapefiles
+    // Create shapefile layer for uploaded shapefiles with enhanced styling
     shapefilesLayerRef.current = new VectorLayer({
       source: shapefilesSource,
+      style: function(feature) {
+        const geometry = feature.getGeometry()?.getType();
+        const properties = feature.getProperties();
+        const shapefileData = properties.shapefileData || {};
+        
+        // Use bright, distinctive colors for better visibility
+        const fillColor = 'rgba(255, 105, 180, 0.4)';  // Hot pink with transparency
+        const strokeColor = '#FF1493';                   // Deep pink
+        
+        // Get feature name from properties if available
+        let featureName = '';
+        if (shapefileData.properties) {
+          // Try common property names for feature naming
+          const nameProps = ['name', 'NAME', 'Name', 'title', 'TITLE', 'id', 'ID', 'label', 'LABEL'];
+          for (const prop of nameProps) {
+            if (shapefileData.properties[prop]) {
+              featureName = String(shapefileData.properties[prop]);
+              break;
+            }
+          }
+        }
+        
+        // Apply style based on geometry type
+        switch(geometry) {
+          case 'Point':
+            return new Style({
+              image: new Circle({
+                radius: 8,
+                fill: new Fill({ color: strokeColor }),
+                stroke: new Stroke({ color: '#fff', width: 2 })
+              }),
+              text: featureName ? new Text({
+                text: featureName,
+                offsetY: 25,
+                fill: new Fill({ color: '#000' }),
+                stroke: new Stroke({ color: '#fff', width: 3 }),
+                font: 'bold 12px Arial'
+              }) : undefined
+            });
+            
+          case 'LineString':
+          case 'MultiLineString':
+            return new Style({
+              stroke: new Stroke({
+                color: strokeColor,
+                width: 4
+              }),
+              text: featureName ? new Text({
+                text: featureName,
+                placement: 'line',
+                fill: new Fill({ color: '#000' }),
+                stroke: new Stroke({ color: '#fff', width: 3 }),
+                font: 'bold 12px Arial'
+              }) : undefined
+            });
+            
+          case 'Polygon':
+          case 'MultiPolygon':
+          default:
+            return new Style({
+              fill: new Fill({
+                color: fillColor
+              }),
+              stroke: new Stroke({
+                color: strokeColor,
+                width: 3
+              }),
+              text: featureName ? new Text({
+                text: featureName,
+                fill: new Fill({ color: '#000' }),
+                stroke: new Stroke({ color: '#fff', width: 3 }),
+                font: 'bold 12px Arial',
+                textAlign: 'center',
+                textBaseline: 'middle'
+              }) : undefined
+            });
+        }
+      },
+      zIndex: 600 // Ensure it's above other layers but below selections
+    });
+
+    // Create location layers for user position with identifiable names
+    accuracyLayerRef.current = new VectorLayer({
+      source: accuracySource,
       style: new Style({
         fill: new Fill({
-          color: 'rgba(255, 0, 0, 0.2)' // Semi-transparent red fill
+          color: 'rgba(76, 175, 80, 0.1)' // Light green for accuracy circle
         }),
         stroke: new Stroke({
-          color: '#FF0000',
+          color: '#4CAF50',
           width: 2
-        }),
-        image: new Circle({
-          radius: 6,
-          fill: new Fill({ color: '#FF0000' }),
-          stroke: new Stroke({ color: '#ffffff', width: 1 })
         })
-      })
+      }),
+      zIndex: 700
     });
+    accuracyLayerRef.current.set('name', 'location-accuracy');
+
+    // Helper function to create location marker icon
+    const createLocationMarkerIcon = (): string => {
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+        <svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
+          <!-- Marker background -->
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12z" fill="#4CAF50"/>
+          <!-- White border -->
+          <path d="M12 2C6.486 2 2 6.486 2 12c0 7.5 10 17 10 17s10-9.5 10-17c0-5.514-4.486-10-10-10z" fill="#4CAF50" stroke="white" stroke-width="2"/>
+          <!-- Center dot -->
+          <circle cx="12" cy="12" r="4" fill="white"/>
+          <circle cx="12" cy="12" r="2" fill="#4CAF50"/>
+        </svg>
+      `)}`;
+    };
+
+    locationLayerRef.current = new VectorLayer({
+      source: locationSource,
+      style: new Style({
+        image: new Icon({
+          src: createLocationMarkerIcon(),
+          scale: 1,
+          anchor: [0.5, 1],
+          anchorXUnits: 'fraction',
+          anchorYUnits: 'fraction'
+        })
+      }),
+      zIndex: 800 // Highest priority for user location
+    });
+    locationLayerRef.current.set('name', 'user-location');
 
     // Create map
     const map = new Map({
@@ -421,13 +794,61 @@ const OpenLayersMap = ({
         teamsLayerRef.current,
         tasksLayerRef.current,
         shapefilesLayerRef.current,
-        selectedLocationLayerRef.current
+        selectedLocationLayerRef.current,
+        accuracyLayerRef.current, // Accuracy circle
+        locationLayerRef.current  // User location marker
       ],
       view: new View({
         center: fromLonLat(center),
         zoom: zoom
       })
     });
+
+    // Set up OpenLayers Geolocation for user location marker display
+    const geolocation = new Geolocation({
+      projection: map.getView().getProjection(),
+      trackingOptions: {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    });
+
+    geolocationRef.current = geolocation;
+
+    // Handle position changes for displaying user location marker
+    geolocation.on('change:position', () => {
+      const coordinates = geolocation.getPosition();
+      if (coordinates && locationSource) {
+        locationSource.clear();
+        
+        // Add location marker
+        const locationFeature = new Feature({
+          geometry: new Point(coordinates)
+        });
+        locationSource.addFeature(locationFeature);
+
+        console.log('📍 User location updated:', toLonLat(coordinates));
+      }
+    });
+
+    // Handle accuracy changes (show accuracy circle)
+    geolocation.on('change:accuracyGeometry', () => {
+      const accuracyGeometry = geolocation.getAccuracyGeometry();
+      if (accuracyGeometry && accuracySource) {
+        accuracySource.clear();
+        
+        const accuracyFeature = new Feature({
+          geometry: accuracyGeometry
+        });
+        accuracySource.addFeature(accuracyFeature);
+      }
+    });
+
+    // Create and add enhanced location control with white icon and black symbol
+    const locationControl = new LocationControl(map, locationLayerRef.current, accuracyLayerRef.current);
+    locationControlRef.current = locationControl;
+    map.addControl(locationControl);
 
     // Expose the map instance globally for ShapefileLayer to use
     window.olMap = map;
@@ -527,11 +948,49 @@ const OpenLayersMap = ({
 
     return () => {
       window.removeEventListener('zoomToLocation', handleZoomToLocation);
+      
+      // Clean up geolocation
+      if (geolocationRef.current) {
+        geolocationRef.current.setTracking(false);
+        geolocationRef.current = null;
+      }
+      
+      // Clean up location control
+      if (locationControlRef.current && mapRef.current) {
+        mapRef.current.removeControl(locationControlRef.current);
+        locationControlRef.current = null;
+      }
+      
       if (mapRef.current) {
         mapRef.current.setTarget(undefined);
         window.olMap = null; // Clear the global reference
         mapRef.current = null;
       }
+    };
+  }, []);
+
+  // Zoom change listener for shapefile optimization
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+    let zoomTimeout: NodeJS.Timeout;
+
+    const handleZoomEnd = () => {
+      // Debounce zoom changes to avoid too frequent updates
+      clearTimeout(zoomTimeout);
+      zoomTimeout = setTimeout(() => {
+        console.log('🔄 Zoom changed, updating shapefile features...');
+        // Trigger re-processing of shapefiles
+        setShapefileUpdateTrigger(prev => prev + 1);
+      }, 300); // Wait 300ms after zoom stops
+    };
+
+    map.getView().on('change:resolution', handleZoomEnd);
+
+    return () => {
+      clearTimeout(zoomTimeout);
+      map.getView().un('change:resolution', handleZoomEnd);
     };
   }, []);
 
@@ -895,7 +1354,7 @@ const OpenLayersMap = ({
     });
   }, [tasks]);
 
-  // Update shapefiles on the map - Simplified version since ShapefileLayer will handle this
+  // OPTIMIZED SHAPEFILE RENDERING - SHOW ALL FEATURES WITH PERFORMANCE OPTIMIZATIONS
   useEffect(() => {
     if (!shapefilesLayerRef.current) return;
 
@@ -908,26 +1367,130 @@ const OpenLayersMap = ({
     // If shapefiles are empty, just return
     if (!shapefiles || shapefiles.length === 0) return;
 
-    console.log(`Using the shapefile layer to render ${shapefiles.length} shapefiles`);
-    
-    // Set up a style function for shapefiles (simplified version)
-    const shapefileStyle = new Style({
-      fill: new Fill({
-        color: 'rgba(255, 0, 0, 0.1)'
-      }),
-      stroke: new Stroke({
-        color: '#FF0000',
-        width: 2
-      }),
-      image: new Circle({
-        radius: 5,
-        fill: new Fill({ color: '#FF0000' }),
-        stroke: new Stroke({ color: '#FFFFFF', width: 1 })
-      })
+    console.log(`🚀 Processing ${shapefiles.length} shapefiles - SHOWING ALL FEATURES`);
+
+    // Get current zoom level for geometry simplification only
+    const currentZoom = mapRef.current?.getView().getZoom() || 13;
+
+    // Process each shapefile
+    shapefiles.forEach(shapefile => {
+      try {
+        if (!shapefile.features) {
+          console.warn(`Shapefile "${shapefile.name}" has no features`);
+          return;
+        }
+
+        // Handle both GeoJSON FeatureCollection and raw features array
+        const geojson = typeof shapefile.features === 'string'
+          ? JSON.parse(shapefile.features) 
+          : shapefile.features;
+
+        // Determine if it's a FeatureCollection or array of features
+        if (geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)) {
+          const totalFeatures = geojson.features.length;
+          
+          // SHOW ALL FEATURES - No limiting
+          const featuresToProcess = geojson.features;
+          console.log(`📊 Zoom ${currentZoom.toFixed(1)}: Showing ALL ${totalFeatures} features`);
+          
+          // Create an enhanced version with metadata
+          const enhancedGeoJSON = {
+            type: 'FeatureCollection',
+            features: featuresToProcess.map((feature: any) => ({
+              ...feature,
+              properties: {
+                ...(feature.properties || {}),
+                shapefileId: shapefile._id,
+                shapefileName: shapefile.name
+              }
+            }))
+          };
+          
+          // Parse GeoJSON into OpenLayers features with light geometry simplification for performance
+          try {
+            const olFeatures = new GeoJSON().readFeatures(enhancedGeoJSON, {
+              featureProjection: 'EPSG:3857' // Web Mercator
+            });
+            
+            // Light geometry simplification based on zoom level for better performance
+            olFeatures.forEach((feature, index) => {
+              const geometry = feature.getGeometry();
+              if (geometry && (geometry.getType() === 'Polygon' || geometry.getType() === 'LineString' || geometry.getType() === 'MultiPolygon')) {
+                // Light simplification - only at very low zoom levels
+                const tolerance = currentZoom < 8 ? 50 : 
+                                currentZoom < 10 ? 25 : 
+                                currentZoom < 12 ? 10 : 5; // Minimal simplification
+                geometry.simplify(tolerance);
+              }
+              
+              feature.set('shapefileData', {
+                ...featuresToProcess[index],
+                parentShapefile: shapefile
+              });
+            });
+            
+            // Add ALL features to source
+            source.addFeatures(olFeatures);
+            console.log(`✅ Added ALL ${olFeatures.length} features from "${shapefile.name}" (light simplification: ${currentZoom < 8 ? 50 : currentZoom < 10 ? 25 : currentZoom < 12 ? 10 : 5})`);
+          } catch (error) {
+            console.error(`❌ Error parsing GeoJSON for "${shapefile.name}":`, error);
+          }
+        } else if (Array.isArray(geojson)) {
+          // Handle array of features - SHOW ALL
+          const totalFeatures = geojson.length;
+          const featuresToProcess = geojson; // Show all features
+          console.log(`📊 Zoom ${currentZoom.toFixed(1)}: Showing ALL ${totalFeatures} features`);
+          
+          // Convert to GeoJSON FeatureCollection format
+          const featureCollection = {
+            type: 'FeatureCollection',
+            features: featuresToProcess.map((feature: any) => {
+              if (!feature.properties) feature.properties = {};
+              feature.properties.shapefileId = shapefile._id;
+              feature.properties.shapefileName = shapefile.name;
+              return feature;
+            })
+          };
+          
+          // Parse as GeoJSON with light simplification
+          try {
+            const olFeatures = new GeoJSON().readFeatures(featureCollection, {
+              featureProjection: 'EPSG:3857'
+            });
+            
+            // Light geometry simplification
+            olFeatures.forEach((feature, index) => {
+              const geometry = feature.getGeometry();
+              if (geometry && (geometry.getType() === 'Polygon' || geometry.getType() === 'LineString' || geometry.getType() === 'MultiPolygon')) {
+                const tolerance = currentZoom < 8 ? 50 : 
+                                currentZoom < 10 ? 25 : 
+                                currentZoom < 12 ? 10 : 5;
+                geometry.simplify(tolerance);
+              }
+              
+              feature.set('shapefileData', {
+                ...featuresToProcess[index],
+                parentShapefile: shapefile
+              });
+            });
+            
+            // Add ALL features to source
+            source.addFeatures(olFeatures);
+            console.log(`✅ Added ALL ${olFeatures.length} features from "${shapefile.name}"`);
+          } catch (error) {
+            console.error(`❌ Error parsing feature array for "${shapefile.name}":`, error);
+          }
+        } else {
+          console.warn(`⚠️ Invalid features format in "${shapefile.name}"`);
+        }
+      } catch (error) {
+        console.error(`❌ Error processing shapefile "${shapefile.name}":`, error);
+      }
     });
-    
-    shapefilesLayerRef.current.setStyle(shapefileStyle);
-  }, [shapefiles]);
+
+    console.log(`🎯 Shapefile processing complete. Total features in source:`, source.getFeatures().length);
+    console.log(`🔥 Performance: ALL features rendered with light geometry simplification`);
+  }, [shapefiles, shapefileUpdateTrigger]); // Depend on both shapefiles and the update trigger
 
   const panTo = useCallback((lat: number, lng: number, zoom?: number) => {
     if (mapRef.current) {
@@ -938,22 +1501,6 @@ const OpenLayersMap = ({
       }
     }
   }, []);
-
-  const getUserLocation = useCallback(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          panTo(latitude, longitude, 16);
-        },
-        (error) => {
-          console.error('Error getting user location:', error);
-        }
-      );
-    } else {
-      console.error('Geolocation is not supported by this browser');
-    }
-  }, [panTo]);
 
   // Effect to manage select interaction based on selection modes
   useEffect(() => {
@@ -998,7 +1545,7 @@ const OpenLayersMap = ({
 
       map.addInteraction(selectInteractionRef.current);
     }
-  }, [pointSelectionMode, lineDrawingMode, selectionMode, drawingMode, onFeatureClick, onTeamClick, onBoundaryClick]);
+  }, [pointSelectionMode, lineDrawingMode, selectionMode, drawingMode, onFeatureClick, onTeamClick, onBoundaryClick, onShapefileClick]);
 
   return (
     <div className={className}>

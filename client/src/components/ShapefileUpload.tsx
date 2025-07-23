@@ -11,8 +11,13 @@ import {
 } from '@/components/ui/dialog';
 import { Upload, FileUp, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import JSZip from 'jszip';
-import * as shp from 'shpjs';
+
+// Use the global shp function like in the working example
+declare global {
+  interface Window {
+    shp: (buffer: ArrayBuffer) => Promise<any>;
+  }
+}
 
 interface ShapefileUploadProps {
   onShapefileProcessed: (shapefile: ShapefileData) => void;
@@ -67,6 +72,28 @@ export function ShapefileUpload({ onShapefileProcessed }: ShapefileUploadProps) 
     });
   };
 
+  const loadShpJS = async (): Promise<any> => {
+    // Check if shp.js is already loaded
+    if (window.shp) {
+      return window.shp;
+    }
+
+    // Load shp.js from CDN like in the working example
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/shpjs@latest/dist/shp.min.js';
+      script.onload = () => {
+        if (window.shp) {
+          resolve(window.shp);
+        } else {
+          reject(new Error('Failed to load shp.js'));
+        }
+      };
+      script.onerror = () => reject(new Error('Failed to load shp.js'));
+      document.head.appendChild(script);
+    });
+  };
+
   const processShapefile = async () => {
     if (!selectedFile) {
       toast({
@@ -90,101 +117,57 @@ export function ShapefileUpload({ onShapefileProcessed }: ShapefileUploadProps) 
     setProgress(10);
 
     try {
-      const arrayBuffer = await selectedFile.arrayBuffer();
+      // Load shp.js library
+      const shp = await loadShpJS();
       setProgress(30);
 
-      try {
-        const geojson = await shp.default(arrayBuffer);
-        setProgress(70);
+      // Read file as ArrayBuffer (same as working example)
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      setProgress(50);
 
-        const features =
-          geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)
-            ? geojson.features
-            : Array.isArray(geojson)
-            ? geojson
-            : [];
+      // Parse using shp.js (exactly like working example)
+      const geojson = await shp(arrayBuffer);
+      setProgress(80);
 
-        if (features.length === 0) throw new Error('No features found in shapefile');
+      console.log('🟢 Successfully parsed shapefile:', geojson);
 
-        const shapefile: ShapefileData = {
-          _id: Date.now().toString(),
-          name: name.trim(),
-          features: geojson,
-          projection: null,
-          uploadedAt: new Date(),
-          featureCount: features.length,
-        };
+      // Extract features
+      const features =
+        geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)
+          ? geojson.features
+          : Array.isArray(geojson)
+          ? geojson
+          : [];
 
-        onShapefileProcessed(shapefile);
-        setProgress(100);
-        toast({
-          title: 'Shapefile Processed',
-          description: `Processed "${name}" with ${features.length} features`,
-        });
-
-        setSelectedFile(null);
-        setName('');
-        setOpen(false);
-        return;
-      } catch (directErr) {
-        console.warn('Direct parse failed, trying fallback...');
+      if (features.length === 0) {
+        throw new Error('No features found in shapefile');
       }
-
-      // Fallback manual extraction
-      const zip = new JSZip();
-      const zipContents = await zip.loadAsync(arrayBuffer);
-      let shpFile: JSZip.JSZipObject | undefined;
-      let dbfFile: JSZip.JSZipObject | undefined;
-      let prjFile: JSZip.JSZipObject | undefined;
-
-      zipContents.forEach((relativePath, zipEntry) => {
-        const path = relativePath.toLowerCase();
-        if (path.endsWith('.shp')) shpFile = zipEntry;
-        else if (path.endsWith('.dbf')) dbfFile = zipEntry;
-        else if (path.endsWith('.prj')) prjFile = zipEntry;
-      });
-
-      if (!shpFile) throw new Error('No .shp file found in ZIP');
-
-      const shpData = await shpFile.async('arraybuffer');
-      const dbfData = dbfFile ? await dbfFile.async('arraybuffer') : null;
-      const prjData = prjFile ? await prjFile.async('string') : null;
-
-      const geometries = await shp.parseShp(shpData);
-      const properties = dbfData ? await shp.parseDbf(dbfData) : [];
-
-      const features = geometries.map((geometry: any, i: number) => ({
-        type: 'Feature',
-        geometry,
-        properties: properties[i] || {},
-      }));
-
-      const featureCollection = {
-        type: 'FeatureCollection',
-        features,
-      };
 
       const shapefile: ShapefileData = {
         _id: Date.now().toString(),
         name: name.trim(),
-        features: featureCollection,
-        projection: prjData || null,
+        features: geojson,
+        projection: null,
         uploadedAt: new Date(),
         featureCount: features.length,
       };
 
+      console.log('🟢 Created shapefile object:', shapefile);
+
       onShapefileProcessed(shapefile);
       setProgress(100);
+      
       toast({
-        title: 'Shapefile Processed (Fallback)',
+        title: 'Shapefile Processed Successfully',
         description: `Processed "${name}" with ${features.length} features`,
       });
 
       setSelectedFile(null);
       setName('');
       setOpen(false);
+
     } catch (error: any) {
-      console.error('Error processing shapefile:', error);
+      console.error('❌ Error processing shapefile:', error);
       toast({
         title: 'Processing Failed',
         description: error.message || 'Failed to process shapefile',

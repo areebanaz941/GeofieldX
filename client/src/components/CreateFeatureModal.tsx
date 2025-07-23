@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient } from "@/lib/queryClient";
 import { createFeature } from "@/lib/api";
+import useAuth from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -41,9 +42,10 @@ const formSchema = z.object({
   feaType: z.enum(["Tower", "Manhole", "FiberCable", "Parcel"]),
   specificType: z.string().min(1, "Specific type is required"),
   feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
-  feaStatus: z.enum(["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"]),
+  feaStatus: z.enum(["Assigned", "UnAssigned", "Completed", "Delayed"]),
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
+  assignedTo: z.string().optional(),
   remarks: z.string().optional(),
   color: z.string().optional(),
   geometry: z.object({
@@ -75,9 +77,16 @@ export default function CreateFeatureModal({
   drawnPolygon,
 }: CreateFeatureModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [specificTypeOptions, setSpecificTypeOptions] = useState<string[]>([]);
   const [multiplePoints, setMultiplePoints] = useState<{ lat: number; lng: number }[]>([]);
   const [collectingPoints, setCollectingPoints] = useState(false);
+
+  // Fetch users for assignment dropdown (only for supervisors)
+  const { data: users } = useQuery({
+    queryKey: ["/api/users"],
+    enabled: user?.role === "Supervisor", // Only fetch if user is supervisor
+  });
 
   // Initialize form with dynamic default based on whether polygon is drawn
   const form = useForm<FeatureFormValues>({
@@ -88,7 +97,8 @@ export default function CreateFeatureModal({
       feaType: drawnPolygon ? "Parcel" : "Tower", // Will be overridden by useEffect
       specificType: "",
       feaState: "Plan",
-      feaStatus: "New",
+      feaStatus: "UnAssigned",
+      assignedTo: "",
       maintenance: "None",
       maintenanceDate: "",
       remarks: "",
@@ -110,7 +120,8 @@ export default function CreateFeatureModal({
         feaType: drawnPolygon ? "Parcel" : "Tower", // Will be cleared below
         specificType: "",
         feaState: "Plan",
-        feaStatus: "New",
+        feaStatus: "UnAssigned",
+        assignedTo: "",
         maintenance: "None",
         maintenanceDate: "",
         remarks: "",
@@ -292,7 +303,8 @@ export default function CreateFeatureModal({
       feaType: values.feaType as "Tower" | "Manhole" | "FiberCable" | "Parcel",
       specificType: values.specificType as "Mobillink" | "Ptcl" | "2-way" | "4-way" | "10F" | "24F" | "Commercial" | "Residential",
       feaState: values.feaState as "Plan" | "Under Construction" | "As-Built" | "Abandoned",
-      feaStatus: values.feaStatus as "New" | "InProgress" | "Completed" | "In-Completed" | "Submit-Review" | "Active",
+      feaStatus: values.feaStatus as "Assigned" | "UnAssigned" | "Completed" | "Delayed",
+      ...(values.assignedTo && { assignedTo: values.assignedTo }),
       maintenance: values.maintenance as "Required" | "None",
       geometry: {
         type: values.geometry!.type,
@@ -512,7 +524,7 @@ export default function CreateFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"].map((status) => (
+                      {["Assigned", "UnAssigned", "Completed", "Delayed"].map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
                         </SelectItem>
@@ -524,6 +536,40 @@ export default function CreateFeatureModal({
               )}
             />
             
+            {/* Assigned To Field - Only for Supervisors */}
+            {user?.role === "Supervisor" && (
+              <FormField
+                control={form.control}
+                name="assignedTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned To</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select person to assign" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No Assignment</SelectItem>
+                        {users && Array.isArray(users) ? 
+                          users.map((userData: any) => (
+                            <SelectItem key={userData._id} value={userData._id}>
+                              {`${userData.name} (${userData.username})`}
+                            </SelectItem>
+                          )) : null
+                        }
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="maintenance"

@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,9 +17,10 @@ const formSchema = z.object({
   feaNo: z.string().min(1, "Feature number is required"),
   specificType: z.enum(["10F", "24F"]),
   feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
-  feaStatus: z.enum(["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"]),
+  feaStatus: z.enum(["Assigned", "UnAssigned", "Completed", "Delayed"]),
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
+  assignedTo: z.string().optional(),
   remarks: z.string().optional(),
 });
 
@@ -38,8 +40,15 @@ export default function LineFeatureModal({
   preFilledPoints = [],
 }: LineFeatureModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [multiplePoints, setMultiplePoints] = useState<{ lat: number; lng: number }[]>(preFilledPoints);
+
+  // Fetch users for assignment dropdown (only for supervisors)
+  const { data: users } = useQuery({
+    queryKey: ["/api/users"],
+    enabled: user?.role === "Supervisor", // Only fetch if user is supervisor
+  });
 
   const form = useForm<LineFeatureFormValues>({
     resolver: zodResolver(formSchema),
@@ -48,9 +57,10 @@ export default function LineFeatureModal({
       feaNo: "",
       specificType: "10F",
       feaState: "Plan",
-      feaStatus: "New",
+      feaStatus: "UnAssigned",
       maintenance: "None",
       maintenanceDate: "",
+      assignedTo: "",
       remarks: "",
     },
   });
@@ -114,6 +124,7 @@ export default function LineFeatureModal({
       feaStatus: values.feaStatus,
       maintenance: values.maintenance,
       maintenanceDate: values.maintenanceDate || undefined,
+      assignedTo: values.assignedTo || undefined,
       remarks: values.remarks || undefined,
       geometry: {
         type: "LineString" as const,
@@ -248,7 +259,7 @@ export default function LineFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"].map((status) => (
+                      {["Assigned", "UnAssigned", "Completed", "Delayed"].map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
                         </SelectItem>
@@ -259,6 +270,40 @@ export default function LineFeatureModal({
                 </FormItem>
               )}
             />
+
+            {/* Assigned To Field - Only for Supervisors */}
+            {user?.role === "Supervisor" && (
+              <FormField
+                control={form.control}
+                name="assignedTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned To</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select person to assign" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No Assignment</SelectItem>
+                        {users && Array.isArray(users) ? 
+                          users.map((userData: any) => (
+                            <SelectItem key={userData._id} value={userData._id}>
+                              {`${userData.name} (${userData.username})`}
+                            </SelectItem>
+                          )) : null
+                        }
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

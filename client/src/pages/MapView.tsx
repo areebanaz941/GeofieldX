@@ -18,7 +18,7 @@ import FeatureAssignmentModal from "@/components/FeatureAssignmentModal";
 import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import FeatureSelectionDialog from "@/components/FeatureSelectionDialog";
 import { ShapefileUpload } from "@/components/ShapefileUpload";
-import { ShapefileLayer, Shapefile } from "@/components/ShapefileLayer";
+import { Shapefile } from "@/components/ShapefileLayer";
 
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
 import { EditFeatureModal } from "@/components/EditFeatureModal";
@@ -198,6 +198,36 @@ export default function MapView() {
     }
   }, [user]);
 
+  // Location event listeners for built-in control (simplified)
+  useEffect(() => {
+    const handleLocationSuccess = (event: any) => {
+      const { message, latitude, longitude } = event.detail;
+      toast({
+        title: "Location Found! 🎯",
+        description: `${message} (${latitude}, ${longitude})`,
+      });
+    };
+
+    const handleLocationError = (event: any) => {
+      const { message } = event.detail;
+      toast({
+        title: "Location Error ❌",
+        description: message,
+        variant: "destructive",
+      });
+    };
+
+    // Add event listeners
+    window.addEventListener('locationSuccess', handleLocationSuccess);
+    window.addEventListener('locationError', handleLocationError);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('locationSuccess', handleLocationSuccess);
+      window.removeEventListener('locationError', handleLocationError);
+    };
+  }, [toast]);
+
   // Helper function to detect if coordinates are in projected vs geographic coordinate system
   const detectCoordinateSystem = (coordinates: number[]): 'geographic' | 'projected' | 'unknown' => {
     if (!coordinates || coordinates.length < 2) return 'unknown';
@@ -229,14 +259,13 @@ export default function MapView() {
         return { isValid: true, coords: coordinates, type: 'geographic' };
       
       case 'projected':
-        // For projected coordinates, we'll need to inform the user
-        // In a real-world scenario, you'd need the projection definition to convert properly
-        console.warn('⚠️ Projected coordinates detected. Cannot zoom without projection information.');
-        return { isValid: false, type: 'projected' };
+        // For testing: Allow projected coordinates but warn the user
+        console.warn('⚠️ Projected coordinates detected. Attempting to use as-is for testing.');
+        return { isValid: true, coords: coordinates, type: 'projected' };
       
       default:
-        console.warn('⚠️ Unknown coordinate system detected.');
-        return { isValid: false, type: 'unknown' };
+        console.warn('⚠️ Unknown coordinate system detected. Attempting to use as-is for testing.');
+        return { isValid: true, coords: coordinates, type: 'unknown' };
     }
   };
 
@@ -726,15 +755,18 @@ export default function MapView() {
         <div className="relative flex-1 z-0 h-[60vh] lg:h-full">
           {/* Mobile Controls Bar - Top */}
           <div className="absolute top-2 left-2 right-2 z-[1000] lg:hidden flex flex-wrap gap-2 justify-between">
-            {/* Show Recent Shapefile Button */}
-            {localShapefiles.length > 0 && (
-              <button
-                onClick={zoomToRecentShapefile}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-lg flex items-center gap-1 text-xs font-medium transition-colors"
-              >
-                📍 Shapefile
-              </button>
-            )}
+            {/* Left side controls */}
+            <div className="flex gap-2">
+              {/* Show Recent Shapefile Button */}
+              {localShapefiles.length > 0 && (
+                <button
+                  onClick={zoomToRecentShapefile}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-lg flex items-center gap-1 text-xs font-medium transition-colors"
+                >
+                  📍 Shapefile
+                </button>
+              )}
+            </div>
             
             {/* Shapefile Upload - Mobile */}
             <div className="ml-auto">
@@ -744,17 +776,18 @@ export default function MapView() {
 
           {/* Desktop Controls */}
           <div className="hidden lg:block">
-            {/* Show Recent Shapefile Button - Desktop */}
-            {localShapefiles.length > 0 && (
-              <div className="absolute top-4 left-4 z-10">
+            {/* Left side buttons - Desktop */}
+            <div className="absolute top-4 left-4 z-10 flex gap-2">
+              {/* Show Recent Shapefile Button - Desktop */}
+              {localShapefiles.length > 0 && (
                 <button
                   onClick={zoomToRecentShapefile}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
                 >
                   📍 Show Recent Shapefile
                 </button>
-              </div>
-            )}
+              )}
+            </div>
             
             {/* Shapefile Upload Button - Desktop Top Right */}
             <div className="absolute top-4 right-4 z-[1000]">
@@ -768,6 +801,7 @@ export default function MapView() {
             boundaries={boundaries}
             tasks={tasks}
             allTeams={teams}
+            shapefiles={localShapefiles}
             activeFilters={activeFilters}
             onFeatureClick={handleFeatureClick}
             onBoundaryClick={handleBoundaryClick}
@@ -785,12 +819,6 @@ export default function MapView() {
             className="w-full h-full"
           />
           
-          {/* Add ShapefileLayer component */}
-          <ShapefileLayer 
-            shapefiles={localShapefiles} 
-            onFeatureClick={handleShapefileClick} 
-          />
-        
           {/* Mobile Drawing Button - Bottom Center */}
           <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-[1000] lg:hidden">
             <Button

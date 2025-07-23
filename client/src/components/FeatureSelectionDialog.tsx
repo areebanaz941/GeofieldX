@@ -11,10 +11,10 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
 // Import feature icons
-import towerIcon from '@assets/tower-removebg-preview_1750282584510.png';
-import manholeIcon from '@assets/manhole-removebg-preview_1750282584509.png';
-import fibercableIcon from '@assets/fibercable-removebg-preview_1750282584507.png';
-import parcelIcon from '@assets/land-removebg-preview_1750282584509.png';
+import towerIcon from '../assets/tower-removebg-preview_1750282584510.svg';
+import manholeIcon from '../assets/manhole-removebg-preview_1750282584509.svg';
+import fibercableIcon from '../assets/fibercable-removebg-preview_1750282584507.svg';
+import parcelIcon from '../assets/land-removebg-preview_1750282584509.svg';
 
 interface FeatureSelectionDialogProps {
   open: boolean;
