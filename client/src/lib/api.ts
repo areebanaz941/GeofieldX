@@ -1,4 +1,4 @@
-import { apiRequest } from './queryClient';
+import { apiRequest, setAuthToken } from './queryClient';
 import type { 
   User, 
   Task, 
@@ -16,11 +16,22 @@ import type {
 // Auth API
 export async function login(username: string, password: string) {
   const res = await apiRequest('POST', '/api/login', { username, password });
-  return await res.json();
+  const data = await res.json();
+  
+  // Store JWT token if provided
+  if (data.token) {
+    setAuthToken(data.token);
+  }
+  
+  return data;
 }
 
 export async function logout() {
   const res = await apiRequest('POST', '/api/logout');
+  
+  // Clear JWT token on logout
+  setAuthToken(null);
+  
   return await res.json();
 }
 

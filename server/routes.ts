@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import express from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import session from "express-session";
 import { v4 as uuidv4 } from "uuid";
 import passport from "passport";
@@ -27,6 +28,32 @@ import { z } from "zod";
 import createMemoryStore from "memorystore";
 
 const MemoryStore = createMemoryStore(session);
+
+// JWT Configuration
+const JWT_SECRET = process.env.JWT_SECRET || "geofield-jwt-secret-key-2024";
+const JWT_EXPIRES_IN = "24h";
+
+// Helper function to generate JWT token
+function generateJWTToken(user: any) {
+  return jwt.sign(
+    { 
+      userId: user._id.toString(), 
+      username: user.username, 
+      role: user.role 
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+}
+
+// Helper function to verify JWT token
+function verifyJWTToken(token: string) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    return null;
+  }
+}
 
 // Helper function to check if a point is inside a polygon using ray casting algorithm
 function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
@@ -230,33 +257,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Enhanced middleware to check if user is authenticated with debugging
-  const isAuthenticated = (req: Request, res: Response, next: any) => {
-    console.log(`🔐 Auth check for ${req.path}: Session=${(req as any).sessionID}, Auth=${req.isAuthenticated()}, User=${(req as any).user ? (req as any).user._id : 'none'}`);
-    
+  // Hybrid authentication middleware: tries session first, then JWT
+  const isAuthenticated = async (req: Request, res: Response, next: any) => {
+    // Try session authentication first
     if (req.isAuthenticated()) {
+      console.log(`✅ Session auth success for ${req.path}: User=${(req as any).user._id}`);
       return next();
     }
     
-    // Additional debugging
-    console.log(`❌ Authentication failed for ${req.path}:`, {
-      sessionID: (req as any).sessionID,
-      session: (req as any).session,
-      isAuthenticated: req.isAuthenticated(),
-      user: (req as any).user
-    });
+    // Fallback to JWT authentication
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
     
+    if (token) {
+      const decoded = verifyJWTToken(token);
+      if (decoded && typeof decoded === 'object' && 'userId' in decoded) {
+        try {
+          const user = await storage.getUser(decoded.userId as string);
+          if (user) {
+            (req as any).user = user;
+            console.log(`✅ JWT auth success for ${req.path}: User=${user._id}`);
+            return next();
+          }
+        } catch (error) {
+          console.log(`❌ JWT user lookup failed:`, error);
+        }
+      }
+    }
+    
+    console.log(`❌ Authentication failed for ${req.path}: No valid session or JWT`);
     res.status(401).json({ message: "Not authenticated" });
   };
 
-  // Middleware to check if user is supervisor
-  const isSupervisor = (req: Request, res: Response, next: any) => {
-    if (req.isAuthenticated() && (req.user as any).role === "Supervisor") {
-      return next();
-    }
-    res
-      .status(403)
-      .json({ message: "Access denied: Supervisor role required" });
+  // Middleware to check if user is supervisor (works with hybrid auth)
+  const isSupervisor = async (req: Request, res: Response, next: any) => {
+    // First ensure user is authenticated via hybrid auth
+    await isAuthenticated(req, res, () => {
+      // Check if user has supervisor role
+      if ((req as any).user && (req as any).user.role === "Supervisor") {
+        return next();
+      }
+      res
+        .status(403)
+        .json({ message: "Access denied: Supervisor role required" });
+    });
   };
 
   // Middleware to validate ObjectId
@@ -270,9 +314,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   };
 
-  // Authentication routes
+  // Authentication routes with JWT token generation
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.json({ user: req.user });
+    const user = req.user as any;
+    const token = generateJWTToken(user);
+    
+    console.log(`🔑 Login successful for user ${user.username}, generating JWT token`);
+    
+    res.json({ 
+      user: user,
+      token: token 
+    });
   });
 
   app.post("/api/logout", (req, res) => {
@@ -284,14 +336,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/current-user", (req, res) => {
-    if (req.isAuthenticated()) {
-      const user = { ...(req.user as any) };
-      delete user.password; // Don't send password to client
-      res.json(user);
-    } else {
-      res.status(401).json({ message: "Not authenticated" });
-    }
+  app.get("/api/current-user", isAuthenticated, (req, res) => {
+    const user = { ...(req.user as any) };
+    delete user.password; // Don't send password to client
+    res.json(user);
   });
 
   // User routes
