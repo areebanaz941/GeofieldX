@@ -143,10 +143,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkPeriod: 86400000, // prune expired entries every 24h
       }),
       cookie: {
-        secure: false, // Disabled for Render debugging
-        httpOnly: false, // Temporarily disabled for debugging
+        secure: process.env.NODE_ENV === "production", // Re-enabled for proper HTTPS handling
+        httpOnly: true, // Re-enabled for security
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'none', // Changed to 'none' for cross-origin compatibility
+        sameSite: process.env.NODE_ENV === "production" ? 'strict' : false, // Strict for same-origin
       },
       name: 'geofieldx.session',
     }),
