@@ -146,11 +146,18 @@ export async function createFeature(featureData: any) {
       formData.append('images', file);
     });
     
-    // Use fetch directly for FormData uploads
+    // Use fetch directly for FormData uploads with JWT token
+    const authToken = localStorage.getItem('auth_token');
+    const headers: HeadersInit = {};
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`;
+    }
+    
     const res = await fetch('/api/features', {
       method: 'POST',
       body: formData,
-      credentials: 'include'
+      credentials: 'include',
+      headers
     });
     
     if (!res.ok) {
@@ -253,6 +260,16 @@ export async function createParcel(parcelData: { name: string; coordinates: numb
 
 export async function getAllBoundaries() {
   const res = await apiRequest('GET', '/api/boundaries');
+  return await res.json();
+}
+
+export async function getBoundary(boundaryId: string) {
+  const res = await apiRequest('GET', `/api/boundaries/${boundaryId}`);
+  return await res.json();
+}
+
+export async function deleteBoundary(boundaryId: string) {
+  const res = await apiRequest('DELETE', `/api/boundaries/${boundaryId}`);
   return await res.json();
 }
 

@@ -1,16 +1,133 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
+import { queryClient } from '@/lib/queryClient';
+import { getAllBoundaries, deleteBoundary } from '@/lib/api';
+import FeatureIcon, { FeatureType } from '@/components/FeatureIcon';
+import { Trash2, MapPin, Users } from 'lucide-react';
+
+// Boundary Management Component
+function BoundaryManagement() {
+  const { toast } = useToast();
+  const { data: boundaries = [], isLoading } = useQuery({
+    queryKey: ['/api/boundaries'],
+    queryFn: getAllBoundaries
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteBoundary,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/boundaries'] });
+      toast({
+        title: "Success",
+        description: "Boundary deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete boundary",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = (boundaryId: string, boundaryName: string) => {
+    if (confirm(`Are you sure you want to delete the boundary "${boundaryName}"?`)) {
+      deleteMutation.mutate(boundaryId);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex justify-center">
+            <div className="text-gray-500">Loading boundaries...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          Boundary Management
+        </CardTitle>
+        <CardDescription>
+          View and manage boundary assignments
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {boundaries.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No boundaries found</p>
+            <p className="text-sm mt-1">Create boundaries on the map to get started</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {boundaries.map((boundary: any) => (
+              <div key={boundary._id} className="border rounded-lg p-4 hover:bg-gray-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">{boundary.name}</h3>
+                    {boundary.description && (
+                      <p className="text-sm text-gray-600 mt-1">{boundary.description}</p>
+                    )}
+                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
+                        boundary.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {boundary.status}
+                      </span>
+                      {boundary.assignedTo && (
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          <span>Assigned to: {boundary.assignedTo.name || boundary.assignedTo.username}</span>
+                        </div>
+                      )}
+                      {boundary.geometry && (
+                        <span>Type: {boundary.geometry.type}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(boundary._id, boundary.name)}
+                      disabled={deleteMutation.isPending}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'teams' | 'boundaries'>('overview');
 
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
   const { data: features = [] } = useQuery({ queryKey: ['/api/features'] });
@@ -137,6 +254,79 @@ export default function Dashboard() {
             </Card>
           </div>
 
+          {/* Area Features Overview - Same icons as supervisor dashboard */}
+          <Card className="bg-white border-0 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
+                Area Features Overview
+              </CardTitle>
+              <CardDescription>
+                Features in your assigned boundary areas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Feature Statistics Grid - Same as supervisor dashboard */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <Card className="bg-gray-50 border-0 shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-8 h-8 mx-auto mb-2">
+                      <FeatureIcon type="Tower" status="unassigned" size={32} />
+                    </div>
+                    <div className="text-xl font-bold text-gray-800">
+                      {(features as any[]).filter((feature: any) => 
+                        feature.feaType === 'Tower' && 
+                        feature.assignedTo?.toString() === user.teamId?.toString()
+                      ).length}
+                    </div>
+                    <div className="text-xs text-gray-600">Towers</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-50 border-0 shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-8 h-8 mx-auto mb-2">
+                      <FeatureIcon type="Manhole" status="assigned" size={32} />
+                    </div>
+                    <div className="text-xl font-bold text-gray-800">
+                      {(features as any[]).filter((feature: any) => 
+                        feature.feaType === 'Manhole' && 
+                        feature.assignedTo?.toString() === user.teamId?.toString()
+                      ).length}
+                    </div>
+                    <div className="text-xs text-gray-600">Manholes</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-50 border-0 shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-8 h-8 mx-auto mb-2">
+                      <FeatureIcon type="FiberCable" status="complete" size={32} />
+                    </div>
+                    <div className="text-xl font-bold text-gray-800">
+                      {(features as any[]).filter((feature: any) => 
+                        feature.feaType === 'FiberCable' && 
+                        feature.assignedTo?.toString() === user.teamId?.toString()
+                      ).length}
+                    </div>
+                    <div className="text-xs text-gray-600">Fiber Cables</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-50 border-0 shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-8 h-8 mx-auto mb-2">
+                      <FeatureIcon type="Parcel" status="delayed" size={32} />
+                    </div>
+                    <div className="text-xl font-bold text-gray-800">
+                      {assignedBoundaries.length}
+                    </div>
+                    <div className="text-xs text-gray-600">Boundaries</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Quick Actions */}
           <Card className="bg-white border-0 shadow-md">
             <CardHeader className="pb-3">
@@ -208,6 +398,14 @@ export default function Dashboard() {
               className="whitespace-nowrap"
             >
               Features
+            </Button>
+            <Button 
+              variant={activeTab === "boundaries" ? "default" : "outline"}
+              onClick={() => setActiveTab("boundaries")}
+              size="sm"
+              className="whitespace-nowrap"
+            >
+              Boundaries
             </Button>
           </div>
         </div>
@@ -303,6 +501,12 @@ export default function Dashboard() {
           </div>
         )}
 
+        {activeTab === "boundaries" && (
+          <div className="space-y-4 md:space-y-6">
+            <BoundaryManagement />
+          </div>
+        )}
+
         {activeTab === "features" && (
           <div className="space-y-4 md:space-y-6">
             {/* Feature Statistics */}
@@ -313,13 +517,9 @@ export default function Dashboard() {
               >
                 <CardContent className="p-4 sm:p-6 text-center">
                   <div className="w-8 h-8 mx-auto mb-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-600 w-full h-full">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                      <path d="M2 17l10 5 10-5"/>
-                      <path d="M2 12l10 5 10-5"/>
-                    </svg>
+                    <FeatureIcon type="Tower" status="unassigned" size={32} />
                   </div>
-                  <div className="text-xl sm:text-2xl font-bold text-red-600">{featureStats.towers}</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-800">{featureStats.towers}</div>
                   <div className="text-xs sm:text-sm text-gray-600">{t('features.towers')}</div>
                 </CardContent>
               </Card>
@@ -330,12 +530,9 @@ export default function Dashboard() {
               >
                 <CardContent className="p-4 sm:p-6 text-center">
                   <div className="w-8 h-8 mx-auto mb-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600 w-full h-full">
-                      <circle cx="12" cy="12" r="10"/>
-                      <path d="M12 6v6l4 2"/>
-                    </svg>
+                    <FeatureIcon type="Manhole" status="assigned" size={32} />
                   </div>
-                  <div className="text-xl sm:text-2xl font-bold text-blue-600">{featureStats.manholes}</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-800">{featureStats.manholes}</div>
                   <div className="text-xs sm:text-sm text-gray-600">{t('features.manholes')}</div>
                 </CardContent>
               </Card>
@@ -346,14 +543,9 @@ export default function Dashboard() {
               >
                 <CardContent className="p-4 sm:p-6 text-center">
                   <div className="w-8 h-8 mx-auto mb-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600 w-full h-full">
-                      <path d="M8 2v4"/>
-                      <path d="M16 2v4"/>
-                      <path d="M21 6H3"/>
-                      <path d="M21 6v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6"/>
-                    </svg>
+                    <FeatureIcon type="FiberCable" status="complete" size={32} />
                   </div>
-                  <div className="text-xl sm:text-2xl font-bold text-green-600">{featureStats.fiberCables}</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-800">{featureStats.fiberCables}</div>
                   <div className="text-xs sm:text-sm text-gray-600">{t('features.fiberCables')}</div>
                 </CardContent>
               </Card>
@@ -364,12 +556,9 @@ export default function Dashboard() {
               >
                 <CardContent className="p-4 sm:p-6 text-center">
                   <div className="w-8 h-8 mx-auto mb-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-600 w-full h-full">
-                      <path d="M3 3h18v18H3z"/>
-                      <path d="M9 9h6v6H9z"/>
-                    </svg>
+                    <FeatureIcon type="Parcel" status="delayed" size={32} />
                   </div>
-                  <div className="text-xl sm:text-2xl font-bold text-purple-600">{featureStats.parcels}</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-800">{featureStats.parcels}</div>
                   <div className="text-xs sm:text-sm text-gray-600">{t('features.parcels')}</div>
                 </CardContent>
               </Card>

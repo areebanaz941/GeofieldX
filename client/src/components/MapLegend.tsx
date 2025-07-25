@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getFeatureIcon } from './FeatureIcons';
 
 const MapLegend: React.FC = () => {
   const statusItems = [
@@ -9,6 +8,53 @@ const MapLegend: React.FC = () => {
     { status: 'complete', label: 'Complete', color: '#10B981' },
     { status: 'delayed', label: 'Delayed', color: '#EF4444' }
   ];
+
+  // Create the exact same SVG icons used in the OpenLayersMap
+  const createMapIcon = (featureType: string, size: number = 16): JSX.Element => {
+    const color = '#6B7280'; // Grey color for legend
+    
+    switch (featureType) {
+      case 'Tower':
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 2L12 7L17 2V4L12 9L7 4V2Z"/>
+            <path d="M6 10H18V12H16V20H8V12H6V10Z"/>
+            <path d="M10 14H14V16H10V14Z"/>
+            <path d="M11 18H13V19H11V18Z"/>
+          </svg>
+        );
+        
+      case 'Manhole':
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" fill="none" stroke={color} strokeWidth="2"/>
+            <circle cx="12" cy="12" r="6" fill="none" stroke={color} strokeWidth="1"/>
+            <rect x="10" y="10" width="4" height="4" fill={color}/>
+            <path d="M12 2V6M12 18V22M22 12H18M6 12H2" stroke={color} strokeWidth="1"/>
+          </svg>
+        );
+        
+      case 'FiberCable':
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12C3 7.03 7.03 3 12 3S21 7.03 21 12 16.97 21 12 21" fill="none" stroke={color} strokeWidth="2"/>
+            <path d="M8 12C8 9.79 9.79 8 12 8S16 9.79 16 12 14.21 16 12 16" fill="none" stroke={color} strokeWidth="2"/>
+            <circle cx="12" cy="12" r="2" fill={color}/>
+            <path d="M2 18L6 14M18 6L22 2" stroke={color} strokeWidth="1"/>
+          </svg>
+        );
+        
+      case 'Parcel':
+      default:
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 3H21V21H3V3Z" fill="none" stroke={color} strokeWidth="2"/>
+            <path d="M8 8H16V16H8V8Z" fill={color} fillOpacity="0.3"/>
+            <path d="M6 6L10 10M18 6L14 10M6 18L10 14M18 18L14 14" stroke={color} strokeWidth="1"/>
+          </svg>
+        );
+    }
+  };
 
   const featureTypes = [
     { type: 'Tower', label: 'Communication Tower' },
@@ -46,7 +92,7 @@ const MapLegend: React.FC = () => {
             {featureTypes.map((feature) => (
               <div key={feature.type} className="flex items-center gap-2">
                 <div className="flex-shrink-0">
-                  {getFeatureIcon(feature.type, 'unassigned', 16)}
+                  {createMapIcon(feature.type, 16)}
                 </div>
                 <span className="text-sm text-gray-600">{feature.label}</span>
               </div>

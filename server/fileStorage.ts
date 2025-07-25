@@ -697,6 +697,13 @@ export class FileStorage implements IStorage {
     return Array.from(this.boundaries.values());
   }
 
+  async deleteBoundary(id: string): Promise<boolean> {
+    if (!isValidObjectId(id)) return false;
+    const result = this.boundaries.delete(id);
+    this.saveBoundaries();
+    return result;
+  }
+
   // Task updates operations
   async createTaskUpdate(insertUpdate: InsertTaskUpdate): Promise<ITaskUpdate> {
     if (

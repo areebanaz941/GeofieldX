@@ -55,7 +55,7 @@ const statusColors = {
   'delayed': '#EF4444'      // red
 };
 
-// Enhanced Location Control with white icon background and black symbol
+// Enhanced Location Control with better visibility and bottom-right positioning
 class LocationControl extends Control {
   private map: Map;
   private button: HTMLButtonElement;
@@ -79,11 +79,11 @@ class LocationControl extends Control {
     this.locationLayer = locationLayer;
     this.accuracyLayer = accuracyLayer;
 
-    // Style the container
+    // Style the container - POSITIONED ABOVE ZOOM CONTROLS
     element.className = 'ol-unselectable ol-control';
     element.style.cssText = `
-      top: 105px;
-      left: 8px;
+      bottom: 78px;
+      right: 8px;
       position: absolute;
       pointer-events: auto;
     `;
@@ -91,16 +91,16 @@ class LocationControl extends Control {
     // Create standard location icon
     const locationSVG = this.createLocationIcon();
     
-    // Style the button to match OpenLayers zoom controls - no background since icon has white background
+    // Style the button with SOLID BACKGROUND for better visibility
     button.innerHTML = locationSVG;
     
     button.style.cssText = `
-      background-color: transparent;
-      border: none;
-      border-radius: 2px;
+      background-color: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
       cursor: pointer;
-      height: 1.375em;
-      width: 1.375em;
+      height: 2.375em;
+      width: 2.375em;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -110,18 +110,24 @@ class LocationControl extends Control {
       text-align: center;
       pointer-events: auto;
       user-select: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
     `;
 
     button.title = 'Show your location';
     button.type = 'button';
 
-    // Add hover effects - just opacity since icon manages its own background
+    // Enhanced hover effects for better visibility
     button.addEventListener('mouseenter', () => {
-      button.style.opacity = '0.8';
+      button.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+      button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+      button.style.transform = 'translateY(-1px)';
     });
 
     button.addEventListener('mouseleave', () => {
-      button.style.opacity = '1';
+      button.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+      button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+      button.style.transform = 'translateY(0)';
     });
 
     // Add click handler with console logging
@@ -138,29 +144,29 @@ class LocationControl extends Control {
 
   private createLocationIcon(isLoading: boolean = false): string {
     if (isLoading) {
-      // Loading spinner - simple rotating circle
+      // Loading spinner - with darker color for better visibility
       return `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="9" stroke="white" stroke-width="2" fill="none" opacity="0.3"/>
-          <path d="M12 3C16.97 3 21 7.03 21 12" stroke="white" stroke-width="2" stroke-linecap="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" stroke="#666" stroke-width="2" fill="none" opacity="0.3"/>
+          <path d="M12 3C16.97 3 21 7.03 21 12" stroke="#2563eb" stroke-width="2" stroke-linecap="round">
             <animateTransform attributeName="transform" type="rotate" dur="1s" repeatCount="indefinite" values="0 12 12;360 12 12"/>
           </path>
         </svg>
       `;
     }
     
-    // Standard current location icon (like Google Maps)
+    // Standard current location icon with better contrast (darker colors)
     return `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- Outer circle -->
-        <circle cx="12" cy="12" r="8" stroke="white" stroke-width="1.5" fill="none"/>
+        <circle cx="12" cy="12" r="8" stroke="#374151" stroke-width="1.5" fill="none"/>
         <!-- Center dot -->
-        <circle cx="12" cy="12" r="2.5" fill="white"/>
+        <circle cx="12" cy="12" r="2.5" fill="#2563eb"/>
         <!-- Radiating lines -->
-        <line x1="12" y1="2" x2="12" y2="5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="12" y1="19" x2="12" y2="22" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="2" y1="12" x2="5" y2="12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="19" y1="12" x2="22" y2="12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="2" x2="12" y2="5" stroke="#374151" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="19" x2="12" y2="22" stroke="#374151" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="2" y1="12" x2="5" y2="12" stroke="#374151" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="19" y1="12" x2="22" y2="12" stroke="#374151" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
     `;
   }
@@ -168,9 +174,10 @@ class LocationControl extends Control {
   private handleLocationClick() {
     console.log('🎯 Handling location click...');
     
-    // Update button to show loading state - just change icon
+    // Update button to show loading state
     this.button.innerHTML = this.createLocationIcon(true);
     this.button.title = 'Getting location...';
+    this.button.style.cursor = 'wait';
 
     // Check if geolocation is supported
     if (!navigator.geolocation) {
@@ -291,6 +298,7 @@ class LocationControl extends Control {
   private resetButton() {
     this.button.innerHTML = this.createLocationIcon();
     this.button.title = 'Show your location';
+    this.button.style.cursor = 'pointer';
     console.log('🔄 Button reset to normal state');
   }
 }
@@ -804,6 +812,45 @@ const OpenLayersMap = ({
       })
     });
 
+    // Style zoom controls to bottom right position
+    const addZoomControlStyles = () => {
+      const style = document.createElement('style');
+      style.textContent = `
+        .ol-zoom {
+          top: auto !important;
+          left: auto !important;
+          bottom: 8px !important;
+          right: 8px !important;
+          position: absolute !important;
+        }
+        .ol-zoom button {
+          background-color: rgba(255, 255, 255, 0.95) !important;
+          border: 1px solid rgba(0, 0, 0, 0.2) !important;
+          border-radius: 4px !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+          transition: all 0.2s ease !important;
+          margin: 1px !important;
+          width: 2.375em !important;
+          height: 1.875em !important;
+          font-size: 1.14em !important;
+          font-weight: 700 !important;
+        }
+        .ol-zoom button:hover {
+          background-color: rgba(255, 255, 255, 1) !important;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+          transform: translateY(-1px) !important;
+        }
+        .ol-zoom button:focus {
+          outline: 2px solid #2563eb !important;
+          outline-offset: 2px !important;
+        }
+      `;
+      document.head.appendChild(style);
+    };
+
+    // Apply zoom control styles
+    addZoomControlStyles();
+
     // Set up OpenLayers Geolocation for user location marker display
     const geolocation = new Geolocation({
       projection: map.getView().getProjection(),
@@ -960,6 +1007,14 @@ const OpenLayersMap = ({
         mapRef.current.removeControl(locationControlRef.current);
         locationControlRef.current = null;
       }
+      
+      // Clean up zoom control styles
+      const existingStyles = document.querySelectorAll('style');
+      existingStyles.forEach(style => {
+        if (style.textContent && style.textContent.includes('.ol-zoom')) {
+          style.remove();
+        }
+      });
       
       if (mapRef.current) {
         mapRef.current.setTarget(undefined);

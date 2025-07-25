@@ -468,6 +468,16 @@ export class MongoStorage implements IStorage {
     }
   }
 
+  async deleteBoundary(id: string): Promise<boolean> {
+    try {
+      const result = await Boundary.findByIdAndDelete(id);
+      return !!result;
+    } catch (error) {
+      console.error("Error deleting boundary:", error);
+      return false;
+    }
+  }
+
   // Task update operations
   async createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate> {
     try {

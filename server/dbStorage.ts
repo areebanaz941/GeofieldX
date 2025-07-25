@@ -365,6 +365,13 @@ export class MongoStorage implements IStorage {
     return Boundary.find({}).populate("assignedTo").exec();
   }
 
+  async deleteBoundary(id: string): Promise<boolean> {
+    if (!isValidObjectId(id)) return false;
+
+    const result = await Boundary.findByIdAndDelete(toObjectId(id)).exec();
+    return !!result;
+  }
+
   // Task updates operations
   async createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate> {
     if (

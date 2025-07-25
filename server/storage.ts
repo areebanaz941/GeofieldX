@@ -50,6 +50,7 @@ export interface IStorage {
   updateBoundaryStatus(id: string, status: string): Promise<IBoundary>;
   assignBoundary(id: string, userId: string): Promise<IBoundary>;
   getAllBoundaries(): Promise<IBoundary[]>;
+  deleteBoundary(id: string): Promise<boolean>;
   
   // Task update operations
   createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate>;
@@ -75,349 +76,215 @@ export interface IStorage {
   deleteShapefile(id: string): Promise<boolean>;
 }
 
-// In-memory storage implementation as a fallback
+// In-memory storage implementation as a fallback (stub)
 export class MemStorage implements IStorage {
-  private users: Map<number, User> = new Map();
-  private teams: Map<number, Team> = new Map();
-  private tasks: Map<number, Task> = new Map();
-  private features: Map<number, Feature> = new Map();
-  private boundaries: Map<number, Boundary> = new Map();
-  private taskUpdates: Map<number, TaskUpdate> = new Map();
-  private taskEvidence: Map<number, TaskEvidence> = new Map();
-  
-  private userCurrentId = 1;
-  private teamCurrentId = 1;
-  private taskCurrentId = 1;
-  private featureCurrentId = 1;
-  private boundaryCurrentId = 1;
-  private taskUpdateCurrentId = 1;
-  private taskEvidenceCurrentId = 1;
-
   constructor() {
     console.log('Initializing in-memory storage');
   }
 
-  // User methods
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  // All methods throw errors since this is a stub
+  async getUser(id: string): Promise<IUser | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username.toLowerCase() === username.toLowerCase()
-    );
+  async getUserByUsername(username: string): Promise<IUser | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async createUser(insertUser: any): Promise<User> {
-    const id = this.userCurrentId++;
-    const user = {
-      id,
-      ...insertUser,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastActive: null,
-      currentLocation: null,
-    } as User;
-    
-    this.users.set(id, user);
-    return user;
+  async createUser(userData: InsertUser): Promise<IUser> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async updateUserLocation(id: number, location: { lat: number, lng: number }): Promise<User> {
-    const user = await this.getUser(id);
-    if (!user) {
-      throw new Error(`User with ID ${id} not found`);
-    }
-    
-    user.currentLocation = { 
-      type: 'Point',
-      coordinates: [location.lng, location.lat]
-    } as any;
-    user.updatedAt = new Date();
-    
-    return user;
+  async updateUserLocation(id: string, location: { lat: number, lng: number }): Promise<IUser> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async updateUserLastActive(id: number): Promise<User> {
-    const user = await this.getUser(id);
-    if (!user) {
-      throw new Error(`User with ID ${id} not found`);
-    }
-    
-    user.lastActive = new Date();
-    user.updatedAt = new Date();
-    
-    return user;
+  async updateUserLastActive(id: string): Promise<IUser> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getAllFieldUsers(): Promise<User[]> {
-    return Array.from(this.users.values()).filter(
-      (user) => user.role === 'Field'
-    );
+  async getAllFieldUsers(): Promise<IUser[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  // Team methods
-  async createTeam(insertTeam: any): Promise<Team> {
-    const id = this.teamCurrentId++;
-    const team = {
-      id,
-      ...insertTeam,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      approvedBy: null,
-    } as Team;
-    
-    this.teams.set(id, team);
-    return team;
+  async createTeam(teamData: InsertTeam): Promise<ITeam> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getTeam(id: number): Promise<Team | undefined> {
-    return this.teams.get(id);
+  async getTeam(id: string): Promise<ITeam | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getTeamByName(name: string): Promise<Team | undefined> {
-    return Array.from(this.teams.values()).find(
-      (team) => team.name.toLowerCase() === name.toLowerCase()
-    );
+  async getTeamByName(name: string): Promise<ITeam | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async updateTeamStatus(id: number, status: string, approvedBy?: number): Promise<Team> {
-    const team = await this.getTeam(id);
-    if (!team) {
-      throw new Error(`Team with ID ${id} not found`);
-    }
-    
-    team.status = status as any;
-    team.updatedAt = new Date();
-    
-    if (approvedBy) {
-      team.approvedBy = approvedBy;
-    }
-    
-    return team;
+  async updateTeamStatus(id: string, status: string, approvedBy?: string): Promise<ITeam> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getAllTeams(): Promise<Team[]> {
-    return Array.from(this.teams.values());
+  async getAllTeams(): Promise<ITeam[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getUsersByTeam(teamId: number): Promise<User[]> {
-    return Array.from(this.users.values()).filter(
-      (user) => user.teamId === teamId
-    );
+  async getUsersByTeam(teamId: string): Promise<IUser[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async assignUserToTeam(userId: number, teamId: number): Promise<User> {
-    const user = await this.getUser(userId);
-    if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
-    }
-    
-    const team = await this.getTeam(teamId);
-    if (!team) {
-      throw new Error(`Team with ID ${teamId} not found`);
-    }
-    
-    user.teamId = teamId;
-    user.updatedAt = new Date();
-    
-    return user;
+  async assignUserToTeam(userId: string, teamId: string): Promise<IUser> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  // Task methods
-  async createTask(insertTask: any): Promise<Task> {
-    const id = this.taskCurrentId++;
-    const task = {
-      id,
-      ...insertTask,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as Task;
-    
-    this.tasks.set(id, task);
-    return task;
+  async createTask(taskData: InsertTask): Promise<ITask> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getTask(id: number): Promise<Task | undefined> {
-    return this.tasks.get(id);
+  async getTask(id: string): Promise<ITask | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async updateTaskStatus(id: number, status: string, userId: number): Promise<Task> {
-    const task = await this.getTask(id);
-    if (!task) {
-      throw new Error(`Task with ID ${id} not found`);
-    }
-    
-    task.status = status as any;
-    task.updatedAt = new Date();
-    
-    return task;
+  async updateTaskStatus(id: string, status: string, userId: string): Promise<ITask> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async assignTask(id: number, assignedTo: number): Promise<Task> {
-    const task = await this.getTask(id);
-    if (!task) {
-      throw new Error(`Task with ID ${id} not found`);
-    }
-    
-    task.assignedTo = assignedTo;
-    task.status = 'Assigned' as any;
-    task.updatedAt = new Date();
-    
-    return task;
+  async assignTask(id: string, assignedTo: string): Promise<ITask> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getTasksByAssignee(userId: number): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(
-      (task) => task.assignedTo === userId
-    );
+  async deleteTask(id: string): Promise<boolean> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getTasksByCreator(userId: number): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(
-      (task) => task.createdBy === userId
-    );
+  async getTasksByAssignee(userId: string): Promise<ITask[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getAllTasks(): Promise<Task[]> {
-    return Array.from(this.tasks.values());
+  async getTasksByCreator(userId: string): Promise<ITask[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  // Feature methods
-  async createFeature(insertFeature: any): Promise<Feature> {
-    const id = this.featureCurrentId++;
-    const feature = {
-      id,
-      ...insertFeature,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastUpdated: new Date(),
-    } as Feature;
-    
-    this.features.set(id, feature);
-    return feature;
+  async getTasksByTeam(teamId: string): Promise<ITask[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getFeature(id: number): Promise<Feature | undefined> {
-    return this.features.get(id);
+  async getAllTasks(): Promise<ITask[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async updateFeature(id: number, featureUpdate: Partial<Feature>): Promise<Feature> {
-    const feature = await this.getFeature(id);
-    if (!feature) {
-      throw new Error(`Feature with ID ${id} not found`);
-    }
-    
-    const updatedFeature = { ...feature, ...featureUpdate };
-    updatedFeature.updatedAt = new Date();
-    updatedFeature.lastUpdated = new Date();
-    
-    this.features.set(id, updatedFeature as Feature);
-    return updatedFeature as Feature;
+  async createFeature(featureData: InsertFeature): Promise<IFeature> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async deleteFeature(id: number): Promise<boolean> {
-    return this.features.delete(id);
+  async getFeature(id: string): Promise<IFeature | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getFeaturesByType(type: string): Promise<Feature[]> {
-    return Array.from(this.features.values()).filter(
-      (feature) => feature.feaType === type
-    );
+  async updateFeature(id: string, feature: Partial<InsertFeature>): Promise<IFeature> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getFeaturesByStatus(status: string): Promise<Feature[]> {
-    return Array.from(this.features.values()).filter(
-      (feature) => feature.feaStatus === status
-    );
+  async deleteFeature(id: string): Promise<boolean> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getAllFeatures(): Promise<Feature[]> {
-    return Array.from(this.features.values());
+  async getFeaturesByType(type: string): Promise<IFeature[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  // Boundary methods
-  async createBoundary(insertBoundary: any): Promise<Boundary> {
-    const id = this.boundaryCurrentId++;
-    const boundary = {
-      id,
-      ...insertBoundary,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as Boundary;
-    
-    this.boundaries.set(id, boundary);
-    return boundary;
+  async getFeaturesByStatus(status: string): Promise<IFeature[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getBoundary(id: number): Promise<Boundary | undefined> {
-    return this.boundaries.get(id);
+  async getFeaturesByTeam(teamId: string): Promise<IFeature[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async updateBoundaryStatus(id: number, status: string): Promise<Boundary> {
-    const boundary = await this.getBoundary(id);
-    if (!boundary) {
-      throw new Error(`Boundary with ID ${id} not found`);
-    }
-    
-    boundary.status = status as any;
-    boundary.updatedAt = new Date();
-    
-    return boundary;
+  async getAllFeatures(): Promise<IFeature[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async assignBoundary(id: number, userId: number): Promise<Boundary> {
-    const boundary = await this.getBoundary(id);
-    if (!boundary) {
-      throw new Error(`Boundary with ID ${id} not found`);
-    }
-    
-    boundary.assignedTo = userId;
-    boundary.updatedAt = new Date();
-    
-    return boundary;
+  async createBoundary(boundaryData: InsertBoundary): Promise<IBoundary> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getAllBoundaries(): Promise<Boundary[]> {
-    return Array.from(this.boundaries.values());
+  async getBoundary(id: string): Promise<IBoundary | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  // Task update methods
-  async createTaskUpdate(insertUpdate: any): Promise<TaskUpdate> {
-    const id = this.taskUpdateCurrentId++;
-    const update = {
-      id,
-      ...insertUpdate,
-      createdAt: new Date(),
-    } as TaskUpdate;
-    
-    this.taskUpdates.set(id, update);
-    return update;
+  async updateBoundaryStatus(id: string, status: string): Promise<IBoundary> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getTaskUpdates(taskId: number): Promise<TaskUpdate[]> {
-    return Array.from(this.taskUpdates.values()).filter(
-      (update) => update.taskId === taskId
-    );
+  async assignBoundary(id: string, userId: string): Promise<IBoundary> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  // Task evidence methods
-  async addTaskEvidence(insertEvidence: any): Promise<TaskEvidence> {
-    const id = this.taskEvidenceCurrentId++;
-    const evidence = {
-      id,
-      ...insertEvidence,
-      createdAt: new Date(),
-    } as TaskEvidence;
-    
-    this.taskEvidence.set(id, evidence);
-    return evidence;
+  async getAllBoundaries(): Promise<IBoundary[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
-  async getTaskEvidence(taskId: number): Promise<TaskEvidence[]> {
-    return Array.from(this.taskEvidence.values()).filter(
-      (evidence) => evidence.taskId === taskId
-    );
+  async deleteBoundary(id: string): Promise<boolean> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getTaskUpdates(taskId: string): Promise<ITaskUpdate[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async addTaskEvidence(evidenceData: InsertTaskEvidence): Promise<ITaskEvidence> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getTaskEvidence(taskId: string): Promise<ITaskEvidence[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async createTaskSubmission(submissionData: InsertTaskSubmission): Promise<ITaskSubmission> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getTaskSubmissions(taskId: string): Promise<ITaskSubmission[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getTaskSubmissionsByTeam(teamId: string): Promise<ITaskSubmission[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async updateSubmissionStatus(submissionId: string, status: string, reviewedBy: string, reviewComments?: string): Promise<ITaskSubmission> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async createShapefile(shapefileData: InsertShapefile): Promise<IShapefile> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getShapefile(id: string): Promise<IShapefile | undefined> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getAllShapefiles(): Promise<IShapefile[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getShapefilesByTeam(teamId: string): Promise<IShapefile[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async getShapefilesByUser(userId: string): Promise<IShapefile[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async updateShapefileVisibility(id: string, isVisible: boolean): Promise<IShapefile> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async deleteShapefile(id: string): Promise<boolean> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +35,7 @@ interface PointFeatureModalProps {
   selectedLocation: { lat: number; lng: number } | null;
   setSelectionMode: (mode: boolean) => void;
   assignedBoundaryId?: string;
+  selectedFeatureType?: string;
 }
 
 export default function PointFeatureModal({
@@ -44,6 +45,7 @@ export default function PointFeatureModal({
   selectedLocation,
   setSelectionMode,
   assignedBoundaryId,
+  selectedFeatureType,
 }: PointFeatureModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -75,12 +77,12 @@ export default function PointFeatureModal({
       return;
     }
 
-    // Validate file sizes (max 5MB each)
-    const invalidFiles = fileArray.filter(file => file.size > 5 * 1024 * 1024);
+    // Validate file sizes (max 10MB each)
+    const invalidFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024);
     if (invalidFiles.length > 0) {
       toast({
         title: "File size too large",
-        description: `${invalidFiles.length} file(s) exceed 5MB limit`,
+        description: `${invalidFiles.length} file(s) exceed 10MB limit`,
         variant: "destructive",
       });
       return;
@@ -115,9 +117,18 @@ export default function PointFeatureModal({
     });
 
     try {
+      // Get JWT token for authorization
+      const authToken = localStorage.getItem('auth_token');
+      const headers: HeadersInit = {};
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
+      
       const response = await fetch('/api/features/upload-images', {
         method: 'POST',
         body: formData,
+        credentials: 'include',
+        headers
       });
 
       if (!response.ok) {
@@ -137,7 +148,7 @@ export default function PointFeatureModal({
     defaultValues: {
       name: "",
       feaNo: "",
-      feaType: "Tower",
+      feaType: (selectedFeatureType as any) || "Tower",
       specificType: "",
       feaState: "Plan",
       feaStatus: "UnAssigned",
@@ -148,6 +159,14 @@ export default function PointFeatureModal({
       images: [],
     },
   });
+
+  // Update form when selectedFeatureType changes or modal opens
+  useEffect(() => {
+    if (open && selectedFeatureType) {
+      form.setValue("feaType", selectedFeatureType as any);
+      handleFeatureTypeChange(selectedFeatureType);
+    }
+  }, [open, selectedFeatureType, form]);
 
   // Clean up image preview URLs when modal closes
   const handleModalClose = () => {
@@ -283,13 +302,14 @@ export default function PointFeatureModal({
               name="feaType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Feature Type</FormLabel>
+                  <FormLabel>Feature</FormLabel>
                   <Select
                     onValueChange={(value: any) => {
                       field.onChange(value);
                       handleFeatureTypeChange(value);
                     }}
                     defaultValue={field.value}
+                    disabled={!!selectedFeatureType} // Disable if feature type is pre-selected
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -518,7 +538,7 @@ export default function PointFeatureModal({
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Supported formats: JPEG, PNG, GIF, WebP, BMP (Max 5MB per image)
+                  Supported formats: JPEG, PNG, GIF, WebP, BMP (Max 10MB per image)
                 </p>
               </div>
 

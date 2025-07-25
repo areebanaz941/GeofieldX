@@ -448,7 +448,7 @@ export default function CreateFeatureModal({
                             { color: "#A855F7", name: "Violet" },
                             { color: "#22C55E", name: "Green-500" },
                             { color: "#F472B6", name: "Pink-400" },
-                            { color: "#FBBF24", name: "Yellow" },
+                            { color: "#6B7280", name: "Gray" },
                             { color: "#64748B", name: "Slate" }
                           ].map(({ color, name }) => (
                             <button
@@ -641,7 +641,7 @@ export default function CreateFeatureModal({
                   <FormControl>
                     <ImageUpload
                       maxFiles={10}
-                      maxFileSize={5}
+                      maxFileSize={10}
                       onFilesChange={async (files) => {
                         console.log("📸 Files selected for upload:", files.length);
                         
@@ -652,17 +652,25 @@ export default function CreateFeatureModal({
                           });
                           console.log("📸 Uploading", files.length, "files to /api/features/upload-images");
                           
+                          // Get JWT token for authorization
+                          const authToken = localStorage.getItem('auth_token');
+                          const headers: HeadersInit = {};
+                          if (authToken) {
+                            headers.Authorization = `Bearer ${authToken}`;
+                          }
+                          
                           const response = await fetch('/api/features/upload-images', {
                             method: 'POST',
                             body: formData,
-                            credentials: 'include'
+                            credentials: 'include',
+                            headers
                           });
                           
                           if (response.ok) {
                             const result = await response.json();
                             console.log("📸 Upload response:", result);
                             
-                            const uploadedPaths = result.images || [];
+                            const uploadedPaths = result.imagePaths || [];
                             console.log("📸 All uploaded paths:", uploadedPaths);
                             console.log("📸 Current form images before update:", field.value);
                             

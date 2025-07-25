@@ -21,7 +21,7 @@ interface ImagePreview {
 
 export function ImageUpload({
   maxFiles = 10,
-  maxFileSize = 5,
+  maxFileSize = 10,
   accept = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'],
   onFilesChange,
   disabled = false,

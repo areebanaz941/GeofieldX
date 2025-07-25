@@ -114,7 +114,7 @@ const upload = multer({
 const featureImageUpload = multer({
   storage: storage_multer,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB per image
+    fileSize: 10 * 1024 * 1024, // 10MB per image
     files: 10, // Maximum 10 files
   },
   fileFilter: (req, file, cb) => {
@@ -235,28 +235,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static uploads
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-  // Image upload endpoint for feature creation
-  app.post("/api/upload/image", upload.single('image'), async (req: any, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No image file provided" });
-      }
-
-      console.log("📸 Image uploaded successfully:", req.file.filename);
-      
-      res.json({
-        message: "Image uploaded successfully",
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        size: req.file.size
-      });
-    } catch (error) {
-      console.error("Image upload error:", error);
-      res.status(500).json({ message: "Failed to upload image" });
-    }
-  });
-
-
   // Hybrid authentication middleware: tries session first, then JWT
   const isAuthenticated = async (req: Request, res: Response, next: any) => {
     // Try session authentication first
@@ -314,6 +292,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   };
 
+  // Image upload endpoints
+  // Image upload endpoint for feature creation (single)
+  app.post("/api/upload/image", upload.single('image'), async (req: any, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      console.log("📸 Image uploaded successfully:", req.file.filename);
+      
+      res.json({
+        message: "Image uploaded successfully",
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size
+      });
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
+  // Multiple images upload endpoint for feature creation
+  app.post("/api/features/upload-images", isAuthenticated, featureImageUpload.array('images', 10), async (req: any, res: Response) => {
+    try {
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+        return res.status(400).json({ message: "No image files provided" });
+      }
+      
+      const uploadedFiles = req.files as Express.Multer.File[];
+      const imagePaths = uploadedFiles.map(file => `/uploads/${file.filename}`);
+      
+      console.log("📸 Multiple images uploaded successfully:", imagePaths);
+      
+      res.json({
+        message: "Images uploaded successfully",
+        imagePaths: imagePaths,
+        count: uploadedFiles.length
+      });
+    } catch (error) {
+      console.error("Multiple images upload error:", error);
+      res.status(500).json({ message: "Failed to upload images" });
+    }
+  });
+
   // Authentication routes with JWT token generation
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     const user = req.user as any;
@@ -368,8 +391,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       userData.password = await bcrypt.hash(userData.password, 10);
       const newUser = await storage.createUser(userData);
       const userResponse = { ...newUser };
-      delete userResponse.password; // Don't send password back
-      res.status(201).json(userResponse);
+      const { password, ...safeUserResponse } = userResponse as any;
+      res.status(201).json(safeUserResponse);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
@@ -439,8 +462,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { lat, lng },
       );
       const userResponse = { ...updatedUser };
-      delete userResponse.password;
-      res.json(userResponse);
+      const { password, ...safeUserResponse } = userResponse as any;
+      res.json(safeUserResponse);
     } catch (error) {
       console.error("Update location error:", error);
       res.status(500).json({ message: "Failed to update location" });
@@ -965,7 +988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update feature with assigned team
         const updatedFeature = await storage.updateFeature(featureId, {
           assignedTo: teamId,
-          feaStatus: "Assigned"
+          feaStatus: "Assigned" as const
         });
 
         res.json(updatedFeature);
@@ -1278,6 +1301,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Delete boundary route
+  app.delete(
+    "/api/boundaries/:id",
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const boundaryId = req.params.id;
+        
+        const boundary = await storage.getBoundary(boundaryId);
+        if (!boundary) {
+          return res.status(404).json({ message: "Boundary not found" });
+        }
+
+        const success = await storage.deleteBoundary(boundaryId);
+        if (!success) {
+          return res.status(404).json({ message: "Boundary not found" });
+        }
+        
+        res.json({ message: "Boundary deleted successfully" });
+      } catch (error) {
+        console.error("Delete boundary error:", error);
+        res.status(500).json({ message: "Failed to delete boundary" });
+      }
+    },
+  );
+
   // Team management routes
   app.post("/api/teams", isAuthenticated, async (req, res) => {
     try {
@@ -1480,14 +1530,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "Longitude and latitude are required" });
       }
 
-      const nearbyUsers = await storage.getUsersNearLocation(
-        parseFloat(lng as string),
-        parseFloat(lat as string),
-        parseInt(maxDistance as string),
-      );
+      // Get all field users and filter by location manually
+      const allUsers = await storage.getAllFieldUsers();
+      const nearbyUsers = allUsers.filter((user: any) => {
+        if (!user.currentLocation || !user.currentLocation.coordinates) return false;
+        const [userLng, userLat] = user.currentLocation.coordinates;
+        const distance = Math.sqrt(Math.pow(parseFloat(lng as string) - userLng, 2) + Math.pow(parseFloat(lat as string) - userLat, 2));
+        return distance <= parseInt(maxDistance as string);
+      });
 
       // Remove passwords from response
-      const usersResponse = nearbyUsers.map((user) => {
+      const usersResponse = nearbyUsers.map((user: any) => {
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword;
       });
@@ -1506,7 +1559,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const boundaryId = req.params.id;
-        const features = await storage.getFeaturesInBoundary(boundaryId);
+        // Get all features and filter by boundary manually
+        const allFeatures = await storage.getAllFeatures();
+        const features = allFeatures.filter((feature: any) => feature.boundaryId === boundaryId);
         res.json(features);
       } catch (error) {
         console.error("Get features in boundary error:", error);
@@ -1522,7 +1577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const boundaryId = req.params.id;
-        const tasks = await storage.getTasksInBoundary(boundaryId);
+        // Get tasks by boundary - using getAllTasks and filtering
+        const allTasks = await storage.getAllTasks();
+        const tasks = allTasks.filter((task: any) => task.boundaryId === boundaryId);
         res.json(tasks);
       } catch (error) {
         console.error("Get tasks in boundary error:", error);
@@ -1540,7 +1597,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid user ID is required" });
       }
 
-      const stats = await storage.getTaskStatsByUser(userId as string);
+      // Get task statistics manually
+      const userTasks = await storage.getTasksByAssignee(userId as string);
+      const stats = {
+        total: userTasks.length,
+        completed: userTasks.filter((task: any) => task.status === 'Completed').length,
+        inProgress: userTasks.filter((task: any) => task.status === 'InProgress').length,
+        pending: userTasks.filter((task: any) => task.status === 'New').length
+      };
       res.json(stats);
     } catch (error) {
       console.error("Get task stats error:", error);
@@ -1550,7 +1614,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/analytics/feature-stats", isAuthenticated, async (req, res) => {
     try {
-      const stats = await storage.getFeatureStatsByType();
+      // Get feature statistics manually
+      const allFeatures = await storage.getAllFeatures();
+      const stats = {
+        total: allFeatures.length,
+        assigned: allFeatures.filter((feature: any) => feature.feaStatus === 'Assigned').length,
+        unassigned: allFeatures.filter((feature: any) => feature.feaStatus === 'UnAssigned').length,
+        completed: allFeatures.filter((feature: any) => feature.feaStatus === 'Completed').length,
+        delayed: allFeatures.filter((feature: any) => feature.feaStatus === 'Delayed').length
+      };
       res.json(stats);
     } catch (error) {
       console.error("Get feature stats error:", error);
@@ -1567,7 +1639,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search query is required" });
       }
 
-      const features = await storage.searchFeatures(q as string);
+      // Search features manually
+      const allFeatures = await storage.getAllFeatures();
+      const features = allFeatures.filter((feature: any) => 
+        feature.name.toLowerCase().includes((q as string).toLowerCase()) ||
+        feature.feaNo.toLowerCase().includes((q as string).toLowerCase()) ||
+        feature.feaType.toLowerCase().includes((q as string).toLowerCase())
+      );
       res.json(features);
     } catch (error) {
       console.error("Search features error:", error);
@@ -1583,7 +1661,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search query is required" });
       }
 
-      const tasks = await storage.searchTasks(q as string);
+      // Search tasks manually
+      const allTasks = await storage.getAllTasks();
+      const tasks = allTasks.filter((task: any) => 
+        task.title.toLowerCase().includes((q as string).toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes((q as string).toLowerCase()))
+      );
       res.json(tasks);
     } catch (error) {
       console.error("Search tasks error:", error);
@@ -1783,7 +1866,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "Invalid task ID format", invalidIds });
       }
 
-      const updatedCount = await storage.bulkUpdateTaskStatus(taskIds, status);
+      // Bulk update tasks manually
+      const updatePromises = taskIds.map((taskId: string) => 
+        storage.updateTaskStatus(taskId, status, req.user.id)
+      );
+      const results = await Promise.all(updatePromises);
+      const updatedCount = results.length;
       res.json({ message: `Updated ${updatedCount} tasks`, updatedCount });
     } catch (error) {
       console.error("Bulk update task status error:", error);

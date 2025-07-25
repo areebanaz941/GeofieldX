@@ -1022,7 +1022,7 @@ export default function MapView() {
         boundary={selectedBoundary}
       />
       
-      {/* Point Feature Modal */}
+      {/* Point Feature Modal - WITH selectedFeatureType prop */}
       {pointFeatureModalOpen && (
         <PointFeatureModal
           open={pointFeatureModalOpen}
@@ -1041,6 +1041,7 @@ export default function MapView() {
           selectedLocation={selectedLocation}
           setSelectionMode={setSelectionMode}
           assignedBoundaryId={user?.role === "Field" && boundaries.length > 0 ? boundaries[0]._id.toString() : undefined}
+          selectedFeatureType={selectedFeatureType}
         />
       )}
       
