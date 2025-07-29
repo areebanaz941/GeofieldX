@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
@@ -259,9 +259,20 @@ export default function MapView() {
     
     const [x, y] = coordinates;
     
-    // Check if coordinates are in valid geographic range
-    if (x >= -180 && x <= 180 && y >= -90 && y <= 90) {
-      return 'geographic';
+    // More precise check for valid geographic coordinates
+    // Allow for slightly more precision in the range check
+    if (x >= -180.0 && x <= 180.0 && y >= -90.0 && y <= 90.0) {
+      // Additional check: if coordinates are suspiciously large integers, they might be projected
+      // But allow for reasonable decimal precision in geographic coordinates
+      const isLikelyGeographic = (
+        (Math.abs(x) <= 180 && Math.abs(y) <= 90) &&
+        !(Math.abs(x) > 1000 && Math.abs(y) > 1000 && 
+          Number.isInteger(x) && Number.isInteger(y))
+      );
+      
+      if (isLikelyGeographic) {
+        return 'geographic';
+      }
     }
     
     // Check if coordinates look like common projected systems
@@ -275,9 +286,35 @@ export default function MapView() {
     return 'unknown';
   };
 
+  // Cache for coordinate transformations to avoid redundant processing
+  const transformationCache = useRef<Map<string, { success: boolean; coords?: number[]; projection?: string }>>(new Map());
+
+  // Function to clear transformation cache when needed
+  const clearTransformationCache = () => {
+    transformationCache.current.clear();
+    console.log('🔄 Transformation cache cleared');
+  };
+
+  // Clear cache when shapefiles change to ensure fresh processing
+  useEffect(() => {
+    clearTransformationCache();
+  }, [allShapefiles.length]);
+
   // Helper function to attempt coordinate transformation from common projected systems
   const transformProjectedCoordinates = (coordinates: number[]): { success: boolean; coords?: number[]; projection?: string } => {
     const [x, y] = coordinates;
+    
+    // Create cache key
+    const cacheKey = `${x},${y}`;
+    
+    // Check cache first
+    if (transformationCache.current.has(cacheKey)) {
+      const cached = transformationCache.current.get(cacheKey)!;
+      if (cached.success) {
+        console.log(`🔄 Using cached transformation for [${x}, ${y}] -> ${cached.projection}`);
+      }
+      return cached;
+    }
     
     // Common projected coordinate systems to try
     const commonProjections = [
@@ -328,7 +365,12 @@ export default function MapView() {
         const [lng, lat] = transformed;
         if (lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
           console.log(`✅ Successfully transformed coordinates using ${projection.name}`);
-          return { success: true, coords: [lng, lat], projection: projection.name };
+          const result = { success: true, coords: [lng, lat], projection: projection.name };
+          
+          // Cache the result
+          transformationCache.current.set(cacheKey, result);
+          
+          return result;
         }
       } catch (error) {
         // Projection failed, try next one
@@ -336,7 +378,11 @@ export default function MapView() {
       }
     }
     
-    return { success: false };
+    const result = { success: false };
+    // Cache the failed result to avoid retrying
+    transformationCache.current.set(cacheKey, result);
+    
+    return result;
   };
 
   // Helper function to validate and potentially convert coordinates
@@ -348,18 +394,17 @@ export default function MapView() {
         return { isValid: true, coords: coordinates, type: 'geographic' };
       
       case 'projected':
-        console.warn('⚠️ Projected coordinates detected. Attempting to transform to geographic coordinates.');
+        // Only show warning once per shapefile processing session
+        if (!transformationCache.current.has('warning_shown')) {
+          console.warn('⚠️ Projected coordinates detected. Attempting to transform to geographic coordinates.');
+          transformationCache.current.set('warning_shown', { success: true });
+        }
         
         // Attempt to transform projected coordinates to geographic
         const transformResult = transformProjectedCoordinates(coordinates);
         
         if (transformResult.success) {
-          console.log(`✅ Successfully transformed projected coordinates using ${transformResult.projection}`);
-          toast({
-            title: "Coordinate Transformation",
-            description: `Transformed coordinates using ${transformResult.projection}`,
-            variant: "default"
-          });
+          // Only log success once per unique coordinate transformation
           return { isValid: true, coords: transformResult.coords!, type: 'transformed' };
         } else {
           console.error('❌ Failed to transform projected coordinates. Using original values for testing.');
@@ -395,6 +440,9 @@ export default function MapView() {
   // Function to zoom to a specific shapefile with coordinate validation
   const zoomToShapefile = (shapefile: Shapefile) => {
     console.log('🔍 Zooming to specific shapefile:', shapefile.name);
+    
+    // Debug shapefile structure
+    debugShapefileStructure(shapefile);
     
     if (!shapefile || !shapefile.features) {
       console.warn('⚠️ Invalid shapefile data');
@@ -566,8 +614,21 @@ export default function MapView() {
     const centerLng = (minLon + maxLon) / 2;
     
     console.log(`🎯 Zooming to shapefile "${shapefile.name}" (${coordinateSystemType} coordinates)`);
-    console.log(`📊 Geographic extent: [${extent.join(', ')}]`);
-    console.log(`📍 Center: [${centerLat}, ${centerLng}]`);
+    console.log(`📊 Geographic extent: [minLng: ${extent[0]}, minLat: ${extent[1]}, maxLng: ${extent[2]}, maxLat: ${extent[3]}]`);
+    console.log(`📍 Center: [lng: ${centerLng}, lat: ${centerLat}]`);
+    
+    // Validate the calculated center coordinates
+    if (!isFinite(centerLng) || !isFinite(centerLat) || 
+        centerLng < -180 || centerLng > 180 || 
+        centerLat < -90 || centerLat > 90) {
+      console.error('❌ Invalid center coordinates calculated:', { centerLng, centerLat });
+      toast({
+        title: "Navigation Error",
+        description: "Calculated center coordinates are invalid. Cannot navigate to shapefile.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Create a custom event to trigger map zoom
     const zoomEvent = new CustomEvent('zoomToLocation', {
@@ -630,6 +691,36 @@ export default function MapView() {
       title: "Shapefile Added",
       description: `"${shapefile.name}" with ${shapefile.featureCount || 0} features`,
     });
+  };
+
+  // Function to debug shapefile data structure
+  const debugShapefileStructure = (shapefile: Shapefile) => {
+    console.log('🔍 Debugging shapefile structure:', {
+      name: shapefile.name,
+      id: shapefile._id,
+      isVisible: shapefile.isVisible,
+      featuresType: typeof shapefile.features,
+      featuresLength: Array.isArray(shapefile.features) ? shapefile.features.length : 'Not an array',
+      firstFeature: shapefile.features && Array.isArray(shapefile.features) ? shapefile.features[0] : 'No features or not array',
+      rawFeatures: shapefile.features
+    });
+    
+    // Try to parse features if they're a string
+    if (typeof shapefile.features === 'string') {
+      try {
+        const parsed = JSON.parse(shapefile.features);
+        console.log('🔍 Parsed features structure:', {
+          type: typeof parsed,
+          isArray: Array.isArray(parsed),
+          hasType: parsed && typeof parsed === 'object' && 'type' in parsed,
+          typeValue: parsed?.type,
+          hasFeatures: parsed && typeof parsed === 'object' && 'features' in parsed,
+          featuresCount: parsed?.features?.length || 0
+        });
+      } catch (error) {
+        console.error('❌ Failed to parse features as JSON:', error);
+      }
+    }
   };
 
   // Check if a point is within assigned boundaries for field users

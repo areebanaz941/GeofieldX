@@ -1422,10 +1422,13 @@ const OpenLayersMap = ({
     // If shapefiles are empty, just return
     if (!shapefiles || shapefiles.length === 0) return;
 
-    console.log(`🚀 Processing ${shapefiles.length} shapefiles - SHOWING ALL FEATURES`);
+    console.log(`🚀 Processing ${shapefiles.length} shapefiles for display`);
 
     // Get current zoom level for geometry simplification only
     const currentZoom = mapRef.current?.getView().getZoom() || 13;
+    
+    let totalFeaturesProcessed = 0;
+    let totalFeaturesAdded = 0;
 
     // Process each shapefile
     shapefiles.forEach(shapefile => {
@@ -1443,10 +1446,10 @@ const OpenLayersMap = ({
         // Determine if it's a FeatureCollection or array of features
         if (geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)) {
           const totalFeatures = geojson.features.length;
+          totalFeaturesProcessed += totalFeatures;
           
           // SHOW ALL FEATURES - No limiting
           const featuresToProcess = geojson.features;
-          console.log(`📊 Zoom ${currentZoom.toFixed(1)}: Showing ALL ${totalFeatures} features`);
           
           // Create an enhanced version with metadata
           const enhancedGeoJSON = {
@@ -1486,15 +1489,15 @@ const OpenLayersMap = ({
             
             // Add ALL features to source
             source.addFeatures(olFeatures);
-            console.log(`✅ Added ALL ${olFeatures.length} features from "${shapefile.name}" (light simplification: ${currentZoom < 8 ? 50 : currentZoom < 10 ? 25 : currentZoom < 12 ? 10 : 5})`);
+            totalFeaturesAdded += olFeatures.length;
           } catch (error) {
             console.error(`❌ Error parsing GeoJSON for "${shapefile.name}":`, error);
           }
         } else if (Array.isArray(geojson)) {
           // Handle array of features - SHOW ALL
           const totalFeatures = geojson.length;
+          totalFeaturesProcessed += totalFeatures;
           const featuresToProcess = geojson; // Show all features
-          console.log(`📊 Zoom ${currentZoom.toFixed(1)}: Showing ALL ${totalFeatures} features`);
           
           // Convert to GeoJSON FeatureCollection format
           const featureCollection = {
@@ -1531,7 +1534,7 @@ const OpenLayersMap = ({
             
             // Add ALL features to source
             source.addFeatures(olFeatures);
-            console.log(`✅ Added ALL ${olFeatures.length} features from "${shapefile.name}"`);
+            totalFeaturesAdded += olFeatures.length;
           } catch (error) {
             console.error(`❌ Error parsing feature array for "${shapefile.name}":`, error);
           }
@@ -1543,8 +1546,8 @@ const OpenLayersMap = ({
       }
     });
 
-    console.log(`🎯 Shapefile processing complete. Total features in source:`, source.getFeatures().length);
-    console.log(`🔥 Performance: ALL features rendered with light geometry simplification`);
+    // Summary logging
+    console.log(`✅ Shapefile processing complete: ${totalFeaturesAdded}/${totalFeaturesProcessed} features displayed from ${shapefiles.length} shapefiles`);
   }, [shapefiles, shapefileUpdateTrigger]); // Depend on both shapefiles and the update trigger
 
   const panTo = useCallback((lat: number, lng: number, zoom?: number) => {
