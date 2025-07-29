@@ -590,7 +590,7 @@ export default function MapView() {
     const processCoordinate = (coord: number[]) => {
       if (!Array.isArray(coord) || coord.length < 2) return;
       
-      const [lng, lat] = coord;
+      let [lng, lat] = coord;
       if (!isFinite(lng) || !isFinite(lat)) return;
       
       // Since coordinates should already be transformed by transformSavedShapefileCoordinates,
