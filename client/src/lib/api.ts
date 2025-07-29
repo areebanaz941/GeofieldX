@@ -318,3 +318,24 @@ export async function getUsersByTeam(teamId: string) {
   const res = await apiRequest('GET', `/api/teams/${teamId}/users`);
   return await res.json();
 }
+
+// Shapefile API
+export async function getAllShapefiles() {
+  const res = await apiRequest('GET', '/api/shapefiles');
+  return await res.json();
+}
+
+export async function getShapefile(id: string) {
+  const res = await apiRequest('GET', `/api/shapefiles/${id}`);
+  return await res.json();
+}
+
+export async function deleteShapefile(id: string) {
+  const res = await apiRequest('DELETE', `/api/shapefiles/${id}`);
+  return await res.json();
+}
+
+export async function updateShapefileVisibility(id: string, isVisible: boolean) {
+  const res = await apiRequest('PUT', `/api/shapefiles/${id}/visibility`, { isVisible });
+  return await res.json();
+}

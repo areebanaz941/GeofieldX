@@ -125,6 +125,15 @@ async function createIndexes() {
     await schema.TaskEvidence.collection.createIndex({ userId: 1 });
     await schema.TaskEvidence.collection.createIndex({ createdAt: -1 });
 
+    // Shapefile indexes
+    await schema.Shapefile.collection.createIndex({ uploadedBy: 1 });
+    await schema.Shapefile.collection.createIndex({ assignedTo: 1 });
+    await schema.Shapefile.collection.createIndex({ teamId: 1 });
+    await schema.Shapefile.collection.createIndex({ isVisible: 1 });
+    await schema.Shapefile.collection.createIndex({ shapefileType: 1 });
+    await schema.Shapefile.collection.createIndex({ createdAt: -1 });
+    await schema.Shapefile.collection.createIndex({ name: 1 });
+
     console.log("Database indexes created successfully");
   } catch (error) {
     console.error("Error creating indexes:", error);
@@ -181,6 +190,7 @@ export const db = {
   Boundary: schema.Boundary,
   TaskUpdate: schema.TaskUpdate,
   TaskEvidence: schema.TaskEvidence,
+  Shapefile: schema.Shapefile,
 
   // Connection utilities
   connect: connectToDatabase,
