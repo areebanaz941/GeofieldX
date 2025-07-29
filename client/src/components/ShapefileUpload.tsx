@@ -21,6 +21,7 @@ declare global {
 
 interface ShapefileUploadProps {
   onShapefileProcessed: (shapefile: ShapefileData) => void;
+  onShapefileUploaded?: () => void; // Callback to refresh saved shapefiles
 }
 
 interface ShapefileData {
@@ -170,7 +171,7 @@ const TooltipButton = ({
   );
 };
 
-export function ShapefileUpload({ onShapefileProcessed }: ShapefileUploadProps) {
+export function ShapefileUpload({ onShapefileProcessed, onShapefileUploaded }: ShapefileUploadProps) {
   const [open, setOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -352,30 +353,86 @@ export function ShapefileUpload({ onShapefileProcessed }: ShapefileUploadProps) 
 
       setProgress(90);
 
-      const shapefile: ShapefileData = {
-        _id: `shapefile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: name.trim(),
-        features: geojson,
-        projection: null,
-        uploadedAt: new Date(),
-        featureCount: features.length,
-      };
+      // Upload to server for database storage
+      addDebugLog('💾 Step 5: Uploading to server...');
+      const formData = new FormData();
+      formData.append('shapefile', selectedFile);
+      formData.append('name', name.trim());
+      formData.append('shapefileType', 'Other'); // Default type, can be made configurable
+      formData.append('description', ''); // Can be made configurable
 
-      addDebugLog(`✅ Shapefile object created: "${shapefile.name}" with ${shapefile.featureCount} features`);
-      console.log('🟢 Created shapefile object:', shapefile);
+      try {
+        const response = await fetch('/api/shapefiles/upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-      onShapefileProcessed(shapefile);
-      setProgress(100);
-      
-      addDebugLog('🎉 Processing completed successfully!');
-      toast({
-        title: 'Shapefile Processed Successfully',
-        description: `Processed "${name}" with ${features.length} features`,
-      });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Upload failed');
+        }
 
-      setSelectedFile(null);
-      setName('');
-      setOpen(false);
+        const savedShapefile = await response.json();
+        addDebugLog(`✅ Shapefile saved to database with ID: ${savedShapefile._id}`);
+
+        // Refresh saved shapefiles in the parent component
+        if (onShapefileUploaded) {
+          onShapefileUploaded();
+        }
+
+        // Create local shapefile object for immediate visualization
+        const shapefile: ShapefileData = {
+          _id: savedShapefile._id,
+          name: name.trim(),
+          features: geojson,
+          projection: null,
+          uploadedAt: new Date(),
+          featureCount: features.length,
+        };
+
+        addDebugLog(`✅ Shapefile object created: "${shapefile.name}" with ${shapefile.featureCount} features`);
+        console.log('🟢 Created shapefile object:', shapefile);
+
+        onShapefileProcessed(shapefile);
+        setProgress(100);
+        
+        addDebugLog('🎉 Processing completed successfully!');
+        toast({
+          title: 'Shapefile Uploaded Successfully',
+          description: `Uploaded and saved "${name}" with ${features.length} features`,
+        });
+
+        setSelectedFile(null);
+        setName('');
+        setOpen(false);
+
+      } catch (uploadError: any) {
+        addDebugLog(`❌ Upload error: ${uploadError.message}`);
+        console.error('❌ Upload error:', uploadError);
+        
+        // Still create local shapefile for visualization even if upload fails
+        const shapefile: ShapefileData = {
+          _id: `shapefile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: name.trim(),
+          features: geojson,
+          projection: null,
+          uploadedAt: new Date(),
+          featureCount: features.length,
+        };
+
+        onShapefileProcessed(shapefile);
+        setProgress(100);
+        
+        toast({
+          title: 'Shapefile Processed (Local Only)',
+          description: `Processed "${name}" locally. Upload to server failed: ${uploadError.message}`,
+          variant: 'destructive',
+        });
+
+        setSelectedFile(null);
+        setName('');
+        setOpen(false);
+      }
 
     } catch (error: any) {
       addDebugLog(`❌ Error during processing: ${error.message}`);

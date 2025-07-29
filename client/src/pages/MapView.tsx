@@ -19,13 +19,14 @@ import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 import FeatureSelectionDialog from "@/components/FeatureSelectionDialog";
 import { ShapefileUpload } from "@/components/ShapefileUpload";
 import { Shapefile } from "@/components/ShapefileLayer";
+import { ShapefileManager } from "@/components/ShapefileManager";
 
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
 import { EditFeatureModal } from "@/components/EditFeatureModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation, createParcel } from "@/lib/api";
+import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation, createParcel, getAllShapefiles } from "@/lib/api";
 import { IFeature, ITask, IUser, IBoundary } from "../../../shared/schema";
 
 // GeoJSON related interfaces
@@ -81,6 +82,9 @@ export default function MapView() {
   // Local shapefiles state for frontend-only processing
   const [localShapefiles, setLocalShapefiles] = useState<Shapefile[]>([]);
   
+  // Combined shapefiles state (local + saved)
+  const [allShapefiles, setAllShapefiles] = useState<Shapefile[]>([]);
+  
   // Feature selection dialog state
   const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
   const [selectedFeatureType, setSelectedFeatureType] = useState<string>('');
@@ -107,6 +111,25 @@ export default function MapView() {
     queryFn: getAllBoundaries,
   });
 
+  // Fetch saved shapefiles from database
+  const { data: savedShapefiles = [] } = useQuery({
+    queryKey: ["/api/shapefiles"],
+    queryFn: getAllShapefiles,
+  });
+
+  // Combine local and saved shapefiles, filtering by visibility
+  useEffect(() => {
+    const visibleSavedShapefiles = savedShapefiles.filter((shapefile: any) => shapefile.isVisible);
+    const combined = [...localShapefiles, ...visibleSavedShapefiles];
+    setAllShapefiles(combined);
+    
+    console.log("📂 Combined shapefiles:", {
+      local: localShapefiles.length,
+      savedVisible: visibleSavedShapefiles.length,
+      total: combined.length
+    });
+  }, [localShapefiles, savedShapefiles]);
+
   // Debug data for supervisors
   useEffect(() => {
     if (user?.role === "Supervisor") {
@@ -115,11 +138,12 @@ export default function MapView() {
         boundariesCount: boundaries.length,
         tasksCount: tasks.length,
         teamsCount: fieldUsers.length,
+        shapefilesCount: allShapefiles.length,
         features: features.slice(0, 3), // Show first 3 features
         boundaries: boundaries.slice(0, 3) // Show first 3 boundaries
       });
     }
-  }, [features, boundaries, tasks, fieldUsers, user]);
+  }, [features, boundaries, tasks, fieldUsers, allShapefiles, user]);
 
   const { data: teams = [] } = useQuery({
     queryKey: ["/api/teams"],
@@ -484,18 +508,20 @@ export default function MapView() {
   const zoomToRecentShapefile = () => {
     console.log('🔍 Attempting to zoom to recent shapefile...');
     
-    if (!localShapefiles || localShapefiles.length === 0) {
+    if (!allShapefiles || allShapefiles.length === 0) {
       console.warn('⚠️ No shapefiles available');
       toast({
         title: "No Shapefiles",
-        description: "No shapefiles have been uploaded yet",
+        description: "No shapefiles are currently visible",
         variant: "destructive"
       });
       return;
     }
     
-    // Get the most recent shapefile
-    const recentShapefile = localShapefiles[localShapefiles.length - 1];
+    // Get the most recent shapefile (prioritize local uploads, then saved)
+    const recentShapefile = localShapefiles.length > 0 
+      ? localShapefiles[localShapefiles.length - 1]
+      : allShapefiles[allShapefiles.length - 1];
     zoomToShapefile(recentShapefile);
   };
 
@@ -697,6 +723,25 @@ export default function MapView() {
     });
   };
 
+  // Handle shapefile selection from manager
+  const handleShapefileSelect = (shapefile: any) => {
+    console.log('📍 Shapefile selected from manager:', shapefile.name);
+    zoomToShapefile(shapefile);
+  };
+
+  // Handle shapefile visibility toggle from manager
+  const handleShapefileToggle = (shapefile: any, isVisible: boolean) => {
+    console.log(`👁️ Shapefile visibility toggled: ${shapefile.name} - ${isVisible ? 'visible' : 'hidden'}`);
+    // The effect above will automatically update allShapefiles when savedShapefiles changes
+    queryClient.invalidateQueries({ queryKey: ["/api/shapefiles"] });
+  };
+
+  // Handle shapefile upload completion
+  const handleShapefileUploaded = () => {
+    console.log('🔄 Refreshing saved shapefiles after upload');
+    queryClient.invalidateQueries({ queryKey: ["/api/shapefiles"] });
+  };
+
   // Handle feature selection from dialog
   const handleFeatureSelect = (featureType: string, drawingType: 'point' | 'line' | 'polygon') => {
     console.log('🟢 Feature selected:', featureType, 'drawing type:', drawingType);
@@ -758,7 +803,7 @@ export default function MapView() {
             {/* Left side controls */}
             <div className="flex gap-2">
               {/* Show Recent Shapefile Button */}
-              {localShapefiles.length > 0 && (
+              {allShapefiles.length > 0 && (
                 <button
                   onClick={zoomToRecentShapefile}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-lg flex items-center gap-1 text-xs font-medium transition-colors"
@@ -768,9 +813,16 @@ export default function MapView() {
               )}
             </div>
             
-            {/* Shapefile Upload - Mobile */}
-            <div className="ml-auto">
-              <ShapefileUpload onShapefileProcessed={handleShapefileProcessed} />
+            {/* Shapefile Controls - Mobile */}
+            <div className="ml-auto flex gap-2">
+              <ShapefileManager 
+                onShapefileSelect={handleShapefileSelect}
+                onShapefileToggle={handleShapefileToggle}
+              />
+              <ShapefileUpload 
+                onShapefileProcessed={handleShapefileProcessed}
+                onShapefileUploaded={handleShapefileUploaded}
+              />
             </div>
           </div>
 
@@ -779,7 +831,7 @@ export default function MapView() {
             {/* Left side buttons - Desktop */}
             <div className="absolute top-4 left-4 z-10 flex gap-2">
               {/* Show Recent Shapefile Button - Desktop */}
-              {localShapefiles.length > 0 && (
+              {allShapefiles.length > 0 && (
                 <button
                   onClick={zoomToRecentShapefile}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
@@ -789,9 +841,16 @@ export default function MapView() {
               )}
             </div>
             
-            {/* Shapefile Upload Button - Desktop Top Right */}
-            <div className="absolute top-4 right-4 z-[1000]">
-              <ShapefileUpload onShapefileProcessed={handleShapefileProcessed} />
+            {/* Shapefile Controls - Desktop Top Right */}
+            <div className="absolute top-4 right-4 z-[1000] flex gap-2">
+              <ShapefileManager 
+                onShapefileSelect={handleShapefileSelect}
+                onShapefileToggle={handleShapefileToggle}
+              />
+              <ShapefileUpload 
+                onShapefileProcessed={handleShapefileProcessed}
+                onShapefileUploaded={handleShapefileUploaded}
+              />
             </div>
           </div>
 
@@ -801,7 +860,7 @@ export default function MapView() {
             boundaries={boundaries}
             tasks={tasks}
             allTeams={teams}
-            shapefiles={localShapefiles}
+            shapefiles={allShapefiles}
             activeFilters={activeFilters}
             onFeatureClick={handleFeatureClick}
             onBoundaryClick={handleBoundaryClick}
