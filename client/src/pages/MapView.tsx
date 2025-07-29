@@ -118,13 +118,93 @@ export default function MapView() {
     queryFn: getAllShapefiles,
   });
 
-  // Combine local and saved shapefiles, filtering by visibility
+  // Function to transform coordinates in saved shapefiles
+  const transformSavedShapefileCoordinates = (shapefile: any) => {
+    if (!shapefile.features) return shapefile;
+    
+    try {
+      // Parse features if they're a string
+      let features = typeof shapefile.features === 'string' 
+        ? JSON.parse(shapefile.features) 
+        : shapefile.features;
+      
+      // Handle different GeoJSON formats
+      let processableFeatures: any[] = [];
+      if (features && typeof features === 'object' && features.type === 'FeatureCollection' && Array.isArray(features.features)) {
+        processableFeatures = features.features;
+      } else if (Array.isArray(features)) {
+        processableFeatures = features;
+      } else {
+        return shapefile; // Return unchanged if format is not recognized
+      }
+      
+      // Transform coordinates in each feature
+      const transformedFeatures = processableFeatures.map(feature => {
+        if (!feature || !feature.geometry || !feature.geometry.coordinates) {
+          return feature;
+        }
+        
+        const transformCoordinates = (coords: any): any => {
+          if (!Array.isArray(coords)) return coords;
+          
+          // Check if this is a coordinate pair [lng, lat]
+          if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+            const validation = validateAndProcessCoordinates(coords);
+            return validation.isValid ? validation.coords : coords;
+          }
+          
+          // Recursively transform nested coordinate arrays
+          return coords.map(subCoord => transformCoordinates(subCoord));
+        };
+        
+        return {
+          ...feature,
+          geometry: {
+            ...feature.geometry,
+            coordinates: transformCoordinates(feature.geometry.coordinates)
+          }
+        };
+      });
+      
+      // Reconstruct the features in the original format
+      let transformedFeaturesData;
+      if (features && typeof features === 'object' && features.type === 'FeatureCollection') {
+        transformedFeaturesData = {
+          ...features,
+          features: transformedFeatures
+        };
+      } else {
+        transformedFeaturesData = transformedFeatures;
+      }
+      
+             console.log(`🔄 Applied coordinate transformation to saved shapefile: ${shapefile.name}`, {
+         originalFeatureCount: processableFeatures.length,
+         transformedFeatureCount: transformedFeatures.length,
+         sampleOriginalCoords: processableFeatures[0]?.geometry?.coordinates,
+         sampleTransformedCoords: transformedFeatures[0]?.geometry?.coordinates
+       });
+      
+      return {
+        ...shapefile,
+        features: transformedFeaturesData
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error transforming coordinates for shapefile ${shapefile.name}:`, error);
+      return shapefile; // Return unchanged if transformation fails
+    }
+  };
+
+  // Combine local and saved shapefiles, filtering by visibility and transforming coordinates
   useEffect(() => {
-    const visibleSavedShapefiles = savedShapefiles.filter((shapefile: any) => shapefile.isVisible);
+    const visibleSavedShapefiles = savedShapefiles
+      .filter((shapefile: any) => shapefile.isVisible)
+      .map(transformSavedShapefileCoordinates); // Apply coordinate transformation
+    
     const combined = [...localShapefiles, ...visibleSavedShapefiles];
     setAllShapefiles(combined);
     
-    console.log("📂 Combined shapefiles:", {
+    console.log("📂 Combined shapefiles with coordinate transformation:", {
       local: localShapefiles.length,
       savedVisible: visibleSavedShapefiles.length,
       total: combined.length
@@ -513,19 +593,31 @@ export default function MapView() {
       const [lng, lat] = coord;
       if (!isFinite(lng) || !isFinite(lat)) return;
       
-      // Validate coordinate system
-      const validation = validateAndProcessCoordinates([lng, lat]);
-      
-      if (!validation.isValid) {
-        if (validation.type === 'projected') {
-          hasProjectedCoords = true;
-          coordinateSystemType = 'projected';
+      // Since coordinates should already be transformed by transformSavedShapefileCoordinates,
+      // we can do a simpler validation check for geographic coordinates
+      if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+        // These might be projected coordinates that weren't transformed
+        const validation = validateAndProcessCoordinates([lng, lat]);
+        
+        if (!validation.isValid) {
+          if (validation.type === 'projected') {
+            hasProjectedCoords = true;
+            coordinateSystemType = 'projected';
+          }
+          return;
         }
-        return;
+        
+        const [validLng, validLat] = validation.coords!;
+        coordinateSystemType = validation.type;
+        lng = validLng;
+        lat = validLat;
+      } else {
+        // Coordinates are already in valid geographic range
+        coordinateSystemType = 'geographic';
       }
       
-      const [validLng, validLat] = validation.coords!;
-      coordinateSystemType = validation.type;
+      const validLng = lng;
+      const validLat = lat;
       
       minLon = Math.min(minLon, validLng);
       maxLon = Math.max(maxLon, validLng);
