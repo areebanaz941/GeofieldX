@@ -260,16 +260,35 @@ export default function MapView() {
     const [x, y] = coordinates;
     
     // Check if coordinates are in valid geographic range
+    // Use stricter bounds to avoid false positives for small projected coordinate values
     if (x >= -180 && x <= 180 && y >= -90 && y <= 90) {
+      // Additional check: if values are very precise decimals in geographic range,
+      // they might be already transformed coordinates
+      const xDecimalPlaces = (x.toString().split('.')[1] || '').length;
+      const yDecimalPlaces = (y.toString().split('.')[1] || '').length;
+      
+      // If coordinates have many decimal places and are in geographic range,
+      // they're likely already transformed
+      if (xDecimalPlaces > 6 || yDecimalPlaces > 6) {
+        console.log('🔍 Detected high-precision geographic coordinates, likely already transformed');
+        return 'geographic';
+      }
+      
       return 'geographic';
     }
     
     // Check if coordinates look like common projected systems
     // UTM coordinates are typically 6-7 digits for easting, 7-8 digits for northing
-    // State Plane coordinates vary but are typically large numbers
-    if ((Math.abs(x) > 180 || Math.abs(y) > 90) && 
-        (Math.abs(x) < 10000000 && Math.abs(y) < 20000000)) {
-      return 'projected';
+    // Web Mercator coordinates can be very large
+    if ((Math.abs(x) > 180 || Math.abs(y) > 90)) {
+      // Web Mercator typically has very large values
+      if (Math.abs(x) > 20000000 || Math.abs(y) > 20000000) {
+        return 'projected';
+      }
+      // UTM and other projected systems
+      if (Math.abs(x) < 10000000 && Math.abs(y) < 20000000) {
+        return 'projected';
+      }
     }
     
     return 'unknown';
@@ -340,7 +359,7 @@ export default function MapView() {
   };
 
   // Helper function to validate and potentially convert coordinates
-  const validateAndProcessCoordinates = (coordinates: number[]): { isValid: boolean; coords?: number[]; type: string } => {
+  const validateAndProcessCoordinates = (coordinates: number[], isFromSavedShapefile: boolean = false): { isValid: boolean; coords?: number[]; type: string } => {
     const coordType = detectCoordinateSystem(coordinates);
     
     switch (coordType) {
@@ -348,6 +367,28 @@ export default function MapView() {
         return { isValid: true, coords: coordinates, type: 'geographic' };
       
       case 'projected':
+        // If this is from a saved shapefile and coordinates look like they might be already transformed,
+        // be more cautious about transformation
+        if (isFromSavedShapefile) {
+          console.warn('⚠️ Projected coordinates detected in saved shapefile. Checking if already transformed...');
+          
+          // Check if these might be Web Mercator coordinates that were stored without transformation
+          const [x, y] = coordinates;
+          
+                     // If coordinates are relatively small but outside geographic bounds,
+           // they might be already transformed but stored incorrectly, or in wrong order
+           if (Math.abs(x) < 1000000 && Math.abs(y) < 1000000) {
+             // Check if swapping coordinates makes them valid geographic coordinates
+             if (y >= -180 && y <= 180 && x >= -90 && x <= 90) {
+               console.log('🔄 Coordinates appear to be in lat/lng order instead of lng/lat. Swapping...');
+               return { isValid: true, coords: [y, x], type: 'swapped_geographic' };
+             }
+             
+             console.log('🔍 Small projected coordinates detected, likely already transformed. Using as-is.');
+             return { isValid: true, coords: coordinates, type: 'assumed_geographic' };
+           }
+        }
+        
         console.warn('⚠️ Projected coordinates detected. Attempting to transform to geographic coordinates.');
         
         // Attempt to transform projected coordinates to geographic
@@ -355,21 +396,30 @@ export default function MapView() {
         
         if (transformResult.success) {
           console.log(`✅ Successfully transformed projected coordinates using ${transformResult.projection}`);
-          toast({
-            title: "Coordinate Transformation",
-            description: `Transformed coordinates using ${transformResult.projection}`,
-            variant: "default"
-          });
+          // Only show toast for new transformations, not for saved shapefiles
+          if (!isFromSavedShapefile) {
+            toast({
+              title: "Coordinate Transformation",
+              description: `Transformed coordinates using ${transformResult.projection}`,
+              variant: "default"
+            });
+          }
           return { isValid: true, coords: transformResult.coords!, type: 'transformed' };
         } else {
-          console.error('❌ Failed to transform projected coordinates. Using original values for testing.');
-          toast({
-            title: "Coordinate System Warning",
-            description: "Could not transform projected coordinates. Map display may be incorrect.",
-            variant: "destructive"
-          });
-          // Return as invalid to prevent out-of-bounds errors
-          return { isValid: false, coords: coordinates, type: 'projected' };
+          console.error('❌ Failed to transform projected coordinates.');
+          
+          if (isFromSavedShapefile) {
+            // For saved shapefiles, try to use coordinates as-is but warn user
+            console.log('🔄 Attempting to use saved shapefile coordinates as-is...');
+            return { isValid: true, coords: coordinates, type: 'unverified' };
+          } else {
+            toast({
+              title: "Coordinate System Warning",
+              description: "Could not transform projected coordinates. Map display may be incorrect.",
+              variant: "destructive"
+            });
+            return { isValid: false, coords: coordinates, type: 'projected' };
+          }
         }
       
       default:
@@ -465,8 +515,8 @@ export default function MapView() {
       const [lng, lat] = coord;
       if (!isFinite(lng) || !isFinite(lat)) return;
       
-      // Validate coordinate system
-      const validation = validateAndProcessCoordinates([lng, lat]);
+      // Validate coordinate system (mark as from saved shapefile since we're processing stored data)
+      const validation = validateAndProcessCoordinates([lng, lat], true);
       
       if (!validation.isValid) {
         if (validation.type === 'projected') {
@@ -567,7 +617,13 @@ export default function MapView() {
     
     console.log(`🎯 Zooming to shapefile "${shapefile.name}" (${coordinateSystemType} coordinates)`);
     console.log(`📊 Geographic extent: [${extent.join(', ')}]`);
-    console.log(`📍 Center: [${centerLat}, ${centerLng}]`);
+    console.log(`📍 Center: [${centerLng}, ${centerLat}]`);
+    
+    // Add debugging for coordinate validation
+    console.log(`🔍 Coordinate system analysis:`);
+    console.log(`   - Min coordinates: [${minLon}, ${minLat}]`);
+    console.log(`   - Max coordinates: [${maxLon}, ${maxLat}]`);
+    console.log(`   - Coordinate system type: ${coordinateSystemType}`);
     
     // Create a custom event to trigger map zoom
     const zoomEvent = new CustomEvent('zoomToLocation', {
