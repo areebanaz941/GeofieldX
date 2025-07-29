@@ -138,33 +138,43 @@ export default function MapView() {
         return shapefile; // Return unchanged if format is not recognized
       }
       
-      // Transform coordinates in each feature
-      const transformedFeatures = processableFeatures.map(feature => {
-        if (!feature || !feature.geometry || !feature.geometry.coordinates) {
-          return feature;
-        }
-        
-        const transformCoordinates = (coords: any): any => {
-          if (!Array.isArray(coords)) return coords;
-          
-          // Check if this is a coordinate pair [lng, lat]
-          if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-            const validation = validateAndProcessCoordinates(coords);
-            return validation.isValid ? validation.coords : coords;
+              // Transform coordinates in each feature
+        const transformedFeatures = processableFeatures.map(feature => {
+          if (!feature || !feature.geometry || !feature.geometry.coordinates) {
+            return { ...feature }; // Always return a new object
           }
           
-          // Recursively transform nested coordinate arrays
-          return coords.map(subCoord => transformCoordinates(subCoord));
-        };
-        
-        return {
-          ...feature,
-          geometry: {
-            ...feature.geometry,
-            coordinates: transformCoordinates(feature.geometry.coordinates)
+          const transformCoordinates = (coords: any): any => {
+            if (!Array.isArray(coords)) return coords;
+            
+            // Check if this is a coordinate pair [lng, lat]
+            if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+              try {
+                const validation = validateAndProcessCoordinates([coords[0], coords[1]]); // Create explicit copy
+                return validation.isValid && validation.coords ? [validation.coords[0], validation.coords[1]] : [coords[0], coords[1]];
+              } catch (error) {
+                console.error('Error transforming coordinate pair:', error);
+                return [coords[0], coords[1]]; // Return safe copy
+              }
+            }
+            
+            // Recursively transform nested coordinate arrays
+            return coords.map(subCoord => transformCoordinates(subCoord));
+          };
+          
+          try {
+            return {
+              ...feature,
+              geometry: {
+                ...feature.geometry,
+                coordinates: transformCoordinates(feature.geometry.coordinates)
+              }
+            };
+          } catch (error) {
+            console.error('Error processing feature geometry:', error);
+            return { ...feature }; // Return original feature if transformation fails
           }
-        };
-      });
+        });
       
       // Reconstruct the features in the original format
       let transformedFeaturesData;
@@ -467,11 +477,17 @@ export default function MapView() {
 
   // Helper function to validate and potentially convert coordinates
   const validateAndProcessCoordinates = (coordinates: number[]): { isValid: boolean; coords?: number[]; type: string } => {
-    const coordType = detectCoordinateSystem(coordinates);
+    if (!Array.isArray(coordinates) || coordinates.length < 2) {
+      return { isValid: false, coords: [0, 0], type: 'invalid' };
+    }
+    
+    // Create a safe copy of coordinates to avoid modifying originals
+    const coordsCopy = [coordinates[0], coordinates[1]];
+    const coordType = detectCoordinateSystem(coordsCopy);
     
     switch (coordType) {
       case 'geographic':
-        return { isValid: true, coords: coordinates, type: 'geographic' };
+        return { isValid: true, coords: coordsCopy, type: 'geographic' };
       
       case 'projected':
         // Only show warning once per shapefile processing session
@@ -481,11 +497,11 @@ export default function MapView() {
         }
         
         // Attempt to transform projected coordinates to geographic
-        const transformResult = transformProjectedCoordinates(coordinates);
+        const transformResult = transformProjectedCoordinates(coordsCopy);
         
-        if (transformResult.success) {
+        if (transformResult.success && transformResult.coords) {
           // Only log success once per unique coordinate transformation
-          return { isValid: true, coords: transformResult.coords!, type: 'transformed' };
+          return { isValid: true, coords: [transformResult.coords[0], transformResult.coords[1]], type: 'transformed' };
         } else {
           console.error('❌ Failed to transform projected coordinates. Using original values for testing.');
           toast({
@@ -494,12 +510,12 @@ export default function MapView() {
             variant: "destructive"
           });
           // Return as invalid to prevent out-of-bounds errors
-          return { isValid: false, coords: coordinates, type: 'projected' };
+          return { isValid: false, coords: coordsCopy, type: 'projected' };
         }
       
       default:
         console.warn('⚠️ Unknown coordinate system detected. Attempting to use as-is for testing.');
-        return { isValid: true, coords: coordinates, type: 'unknown' };
+        return { isValid: true, coords: coordsCopy, type: 'unknown' };
     }
   };
 
@@ -590,7 +606,7 @@ export default function MapView() {
     const processCoordinate = (coord: number[]) => {
       if (!Array.isArray(coord) || coord.length < 2) return;
       
-      const [lng, lat] = coord;
+      let [lng, lat] = coord;
       if (!isFinite(lng) || !isFinite(lat)) return;
       
       // Since coordinates should already be transformed by transformSavedShapefileCoordinates,
@@ -607,10 +623,8 @@ export default function MapView() {
           return;
         }
         
-        const [validLng, validLat] = validation.coords!;
+        [lng, lat] = validation.coords!;
         coordinateSystemType = validation.type;
-        lng = validLng;
-        lat = validLat;
       } else {
         // Coordinates are already in valid geographic range
         coordinateSystemType = 'geographic';
