@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
 import OpenLayersMap from "@/lib/OpenLayersMap";
+import proj4 from "proj4";
 import MapFilterControls from "@/components/MapFilterControls";
 import MapLegend from "@/components/MapLegend";
 
@@ -274,6 +275,70 @@ export default function MapView() {
     return 'unknown';
   };
 
+  // Helper function to attempt coordinate transformation from common projected systems
+  const transformProjectedCoordinates = (coordinates: number[]): { success: boolean; coords?: number[]; projection?: string } => {
+    const [x, y] = coordinates;
+    
+    // Common projected coordinate systems to try
+    const commonProjections = [
+      // Web Mercator (most common web projection)
+      { name: 'Web Mercator (EPSG:3857)', proj: '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs' },
+      
+      // UTM zones (Northern Hemisphere - common zones)
+      { name: 'UTM Zone 10N (EPSG:32610)', proj: '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 11N (EPSG:32611)', proj: '+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 12N (EPSG:32612)', proj: '+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 13N (EPSG:32613)', proj: '+proj=utm +zone=13 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 14N (EPSG:32614)', proj: '+proj=utm +zone=14 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 15N (EPSG:32615)', proj: '+proj=utm +zone=15 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 16N (EPSG:32616)', proj: '+proj=utm +zone=16 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 17N (EPSG:32617)', proj: '+proj=utm +zone=17 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 18N (EPSG:32618)', proj: '+proj=utm +zone=18 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 19N (EPSG:32619)', proj: '+proj=utm +zone=19 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 20N (EPSG:32620)', proj: '+proj=utm +zone=20 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 30N (EPSG:32630)', proj: '+proj=utm +zone=30 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 31N (EPSG:32631)', proj: '+proj=utm +zone=31 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 32N (EPSG:32632)', proj: '+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 33N (EPSG:32633)', proj: '+proj=utm +zone=33 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 34N (EPSG:32634)', proj: '+proj=utm +zone=34 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 35N (EPSG:32635)', proj: '+proj=utm +zone=35 +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 36N (EPSG:32636)', proj: '+proj=utm +zone=36 +datum=WGS84 +units=m +no_defs' },
+      
+      // UTM zones (Southern Hemisphere - common zones)
+      { name: 'UTM Zone 30S (EPSG:32730)', proj: '+proj=utm +zone=30 +south +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 31S (EPSG:32731)', proj: '+proj=utm +zone=31 +south +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 32S (EPSG:32732)', proj: '+proj=utm +zone=32 +south +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 33S (EPSG:32733)', proj: '+proj=utm +zone=33 +south +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 34S (EPSG:32734)', proj: '+proj=utm +zone=34 +south +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 35S (EPSG:32735)', proj: '+proj=utm +zone=35 +south +datum=WGS84 +units=m +no_defs' },
+      { name: 'UTM Zone 36S (EPSG:32736)', proj: '+proj=utm +zone=36 +south +datum=WGS84 +units=m +no_defs' },
+      
+      // National grids and other common projections
+      { name: 'British National Grid (EPSG:27700)', proj: '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs' },
+      { name: 'State Plane California III (EPSG:2227)', proj: '+proj=lcc +lat_1=37.06666666666667 +lat_2=38.43333333333333 +lat_0=36.5 +lon_0=-120.5 +x_0=2000000.0001016 +y_0=500000.0001016001 +ellps=GRS80 +datum=NAD83 +to_meter=0.3048006096012192 +no_defs' },
+    ];
+
+    // Try each projection
+    for (const projection of commonProjections) {
+      try {
+        const wgs84 = '+proj=longlat +datum=WGS84 +no_defs';
+        const transformed = proj4(projection.proj, wgs84, [x, y]);
+        
+        // Check if the transformed coordinates are within valid geographic bounds
+        const [lng, lat] = transformed;
+        if (lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
+          console.log(`✅ Successfully transformed coordinates using ${projection.name}`);
+          return { success: true, coords: [lng, lat], projection: projection.name };
+        }
+      } catch (error) {
+        // Projection failed, try next one
+        continue;
+      }
+    }
+    
+    return { success: false };
+  };
+
   // Helper function to validate and potentially convert coordinates
   const validateAndProcessCoordinates = (coordinates: number[]): { isValid: boolean; coords?: number[]; type: string } => {
     const coordType = detectCoordinateSystem(coordinates);
@@ -283,9 +348,29 @@ export default function MapView() {
         return { isValid: true, coords: coordinates, type: 'geographic' };
       
       case 'projected':
-        // For testing: Allow projected coordinates but warn the user
-        console.warn('⚠️ Projected coordinates detected. Attempting to use as-is for testing.');
-        return { isValid: true, coords: coordinates, type: 'projected' };
+        console.warn('⚠️ Projected coordinates detected. Attempting to transform to geographic coordinates.');
+        
+        // Attempt to transform projected coordinates to geographic
+        const transformResult = transformProjectedCoordinates(coordinates);
+        
+        if (transformResult.success) {
+          console.log(`✅ Successfully transformed projected coordinates using ${transformResult.projection}`);
+          toast({
+            title: "Coordinate Transformation",
+            description: `Transformed coordinates using ${transformResult.projection}`,
+            variant: "default"
+          });
+          return { isValid: true, coords: transformResult.coords!, type: 'transformed' };
+        } else {
+          console.error('❌ Failed to transform projected coordinates. Using original values for testing.');
+          toast({
+            title: "Coordinate System Warning",
+            description: "Could not transform projected coordinates. Map display may be incorrect.",
+            variant: "destructive"
+          });
+          // Return as invalid to prevent out-of-bounds errors
+          return { isValid: false, coords: coordinates, type: 'projected' };
+        }
       
       default:
         console.warn('⚠️ Unknown coordinate system detected. Attempting to use as-is for testing.');
@@ -433,10 +518,10 @@ export default function MapView() {
     
     // Handle projected coordinate system
     if (hasProjectedCoords && !validCoordinatesFound) {
-      console.error('❌ Shapefile contains projected coordinates');
+      console.error('❌ Shapefile contains projected coordinates that could not be transformed');
       toast({
-        title: "Coordinate System Issue",
-        description: `Shapefile "${shapefile.name}" uses projected coordinates. Geographic coordinate conversion is needed for map display. Please provide the shapefile in geographic coordinates (WGS84) or include projection information.`,
+        title: "Coordinate Transformation Failed",
+        description: `Shapefile "${shapefile.name}" uses a projected coordinate system that could not be automatically transformed. Please provide the shapefile in geographic coordinates (WGS84) or contact support for help with coordinate system conversion.`,
         variant: "destructive"
       });
       return;
@@ -458,7 +543,7 @@ export default function MapView() {
       console.error('❌ Coordinates outside valid geographic range:', { minLon, maxLon, minLat, maxLat });
       toast({
         title: "Coordinate Range Error",
-        description: "Shapefile coordinates are outside valid geographic range. Please check the coordinate system.",
+        description: `Shapefile coordinates are outside valid geographic range (Longitude: ${minLon.toFixed(2)} to ${maxLon.toFixed(2)}, Latitude: ${minLat.toFixed(2)} to ${maxLat.toFixed(2)}). This suggests the shapefile uses a projected coordinate system that needs transformation.`,
         variant: "destructive"
       });
       return;

@@ -365,6 +365,7 @@ export function ShapefileUpload({ onShapefileProcessed, onShapefileUploaded }: S
         const response = await fetch('/api/shapefiles/upload', {
           method: 'POST',
           body: formData,
+          credentials: 'include', // Include session cookies for authentication
         });
 
         if (!response.ok) {
