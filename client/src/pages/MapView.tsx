@@ -118,7 +118,7 @@ export default function MapView() {
     queryFn: getAllShapefiles,
   });
 
-  // Function to transform coordinates in saved shapefiles
+    // Function to transform coordinates in saved shapefiles using a more robust approach
   const transformSavedShapefileCoordinates = (shapefile: any) => {
     if (!shapefile.features) return shapefile;
     
@@ -138,43 +138,52 @@ export default function MapView() {
         return shapefile; // Return unchanged if format is not recognized
       }
       
-              // Transform coordinates in each feature
-        const transformedFeatures = processableFeatures.map(feature => {
-          if (!feature || !feature.geometry || !feature.geometry.coordinates) {
-            return { ...feature }; // Always return a new object
+      // Simple coordinate transformation function that doesn't modify originals
+      const transformSingleCoordinate = (x: number, y: number): [number, number] => {
+        // Check if coordinates are already in geographic range
+        if (x >= -180 && x <= 180 && y >= -90 && y <= 90) {
+          return [x, y]; // Already geographic
+        }
+        
+        // Try Web Mercator transformation (most common projected system)
+        try {
+          const wgs84 = '+proj=longlat +datum=WGS84 +no_defs';
+          const webMercator = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs';
+          const transformed = proj4(webMercator, wgs84, [x, y]);
+          
+          // Validate the transformation result
+          if (transformed[0] >= -180 && transformed[0] <= 180 && transformed[1] >= -90 && transformed[1] <= 90) {
+            return [transformed[0], transformed[1]];
+          }
+        } catch (error) {
+          // Transformation failed, return original
+        }
+        
+        return [x, y]; // Return original if transformation fails
+      };
+      
+      // Deep clone and transform coordinates
+      const transformedFeatures = JSON.parse(JSON.stringify(processableFeatures)).map((feature: any) => {
+        if (!feature || !feature.geometry || !feature.geometry.coordinates) {
+          return feature;
+        }
+        
+        const transformCoordinatesArray = (coords: any): any => {
+          if (!Array.isArray(coords)) return coords;
+          
+          // Check if this is a coordinate pair [lng, lat]
+          if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+            const [newX, newY] = transformSingleCoordinate(coords[0], coords[1]);
+            return [newX, newY];
           }
           
-          const transformCoordinates = (coords: any): any => {
-            if (!Array.isArray(coords)) return coords;
-            
-            // Check if this is a coordinate pair [lng, lat]
-            if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-              try {
-                const validation = validateAndProcessCoordinates([coords[0], coords[1]]); // Create explicit copy
-                return validation.isValid && validation.coords ? [validation.coords[0], validation.coords[1]] : [coords[0], coords[1]];
-              } catch (error) {
-                console.error('Error transforming coordinate pair:', error);
-                return [coords[0], coords[1]]; // Return safe copy
-              }
-            }
-            
-            // Recursively transform nested coordinate arrays
-            return coords.map(subCoord => transformCoordinates(subCoord));
-          };
-          
-          try {
-            return {
-              ...feature,
-              geometry: {
-                ...feature.geometry,
-                coordinates: transformCoordinates(feature.geometry.coordinates)
-              }
-            };
-          } catch (error) {
-            console.error('Error processing feature geometry:', error);
-            return { ...feature }; // Return original feature if transformation fails
-          }
-        });
+          // Handle nested arrays (MultiPoint, LineString, Polygon, etc.)
+          return coords.map((subCoord: any) => transformCoordinatesArray(subCoord));
+        };
+        
+        feature.geometry.coordinates = transformCoordinatesArray(feature.geometry.coordinates);
+        return feature;
+      });
       
       // Reconstruct the features in the original format
       let transformedFeaturesData;
@@ -187,12 +196,10 @@ export default function MapView() {
         transformedFeaturesData = transformedFeatures;
       }
       
-             console.log(`🔄 Applied coordinate transformation to saved shapefile: ${shapefile.name}`, {
-         originalFeatureCount: processableFeatures.length,
-         transformedFeatureCount: transformedFeatures.length,
-         sampleOriginalCoords: processableFeatures[0]?.geometry?.coordinates,
-         sampleTransformedCoords: transformedFeatures[0]?.geometry?.coordinates
-       });
+      console.log(`🔄 Applied coordinate transformation to saved shapefile: ${shapefile.name}`, {
+        originalFeatureCount: processableFeatures.length,
+        transformedFeatureCount: transformedFeatures.length
+      });
       
       return {
         ...shapefile,
@@ -606,32 +613,40 @@ export default function MapView() {
     const processCoordinate = (coord: number[]) => {
       if (!Array.isArray(coord) || coord.length < 2) return;
       
-      let [lng, lat] = coord;
-      if (!isFinite(lng) || !isFinite(lat)) return;
+      const x = coord[0];
+      const y = coord[1];
+      if (!isFinite(x) || !isFinite(y)) return;
       
       // Since coordinates should already be transformed by transformSavedShapefileCoordinates,
-      // we can do a simpler validation check for geographic coordinates
-      if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+      // most coordinates should be in geographic range. Handle edge cases.
+      let validLng = x;
+      let validLat = y;
+      
+      if (x < -180 || x > 180 || y < -90 || y > 90) {
         // These might be projected coordinates that weren't transformed
-        const validation = validateAndProcessCoordinates([lng, lat]);
-        
-        if (!validation.isValid) {
-          if (validation.type === 'projected') {
+        try {
+          const wgs84 = '+proj=longlat +datum=WGS84 +no_defs';
+          const webMercator = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs';
+          const transformed = proj4(webMercator, wgs84, [x, y]);
+          
+          if (transformed[0] >= -180 && transformed[0] <= 180 && transformed[1] >= -90 && transformed[1] <= 90) {
+            validLng = transformed[0];
+            validLat = transformed[1];
+            coordinateSystemType = 'transformed';
+          } else {
             hasProjectedCoords = true;
             coordinateSystemType = 'projected';
+            return;
           }
+        } catch (error) {
+          hasProjectedCoords = true;
+          coordinateSystemType = 'projected';
           return;
         }
-        
-        [lng, lat] = validation.coords!;
-        coordinateSystemType = validation.type;
       } else {
         // Coordinates are already in valid geographic range
         coordinateSystemType = 'geographic';
       }
-      
-      const validLng = lng;
-      const validLat = lat;
       
       minLon = Math.min(minLon, validLng);
       maxLon = Math.max(maxLon, validLng);
