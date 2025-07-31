@@ -14,6 +14,7 @@ import { Trash2, MapPin, Users } from 'lucide-react';
 // Boundary Management Component
 function BoundaryManagement() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const { data: boundaries = [], isLoading } = useQuery({
     queryKey: ['/api/boundaries'],
     queryFn: getAllBoundaries
