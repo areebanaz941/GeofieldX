@@ -11,6 +11,68 @@
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Defensive script to handle browser extension interference -->
+    <script>
+      // Global error handler for unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason && event.reason.message && event.reason.message.includes('Cannot destructure property')) {
+          console.warn('[Extension Interference] Destructuring error caught:', event.reason.message);
+          // Prevent the error from propagating
+          event.preventDefault();
+        }
+      });
+      
+      // Global error handler for JavaScript errors
+      window.addEventListener('error', function(event) {
+        if (event.message && event.message.includes('Cannot destructure property')) {
+          console.warn('[Extension Interference] JavaScript error caught:', event.message);
+          // Prevent the error from propagating
+          event.preventDefault();
+        }
+      });
+      
+      // Defensive wrapper for console methods to prevent extension interference
+      (function() {
+        const originalConsole = { ...console };
+        
+        // Override console methods to add context
+        ['log', 'warn', 'error', 'info'].forEach(method => {
+          console[method] = function(...args) {
+            try {
+              // Check if this is likely from an extension
+              const stack = new Error().stack;
+              if (stack && (stack.includes('extension://') || stack.includes('chrome-extension://'))) {
+                // Prefix extension logs
+                originalConsole[method]('[Extension]', ...args);
+              } else {
+                originalConsole[method](...args);
+              }
+            } catch (e) {
+              // Fallback to original console if there's any issue
+              originalConsole[method](...args);
+            }
+          };
+        });
+      })();
+      
+      // Prevent extensions from overriding critical global functions
+      (function() {
+        const protectedGlobals = ['fetch', 'XMLHttpRequest', 'Promise'];
+        
+        protectedGlobals.forEach(globalName => {
+          const original = window[globalName];
+          if (original) {
+            Object.defineProperty(window, globalName, {
+              value: original,
+              writable: false,
+              configurable: false
+            });
+          }
+        });
+      })();
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>

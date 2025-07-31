@@ -502,20 +502,46 @@ export default function MapView() {
   // Location event listeners for built-in control (simplified)
   useEffect(() => {
     const handleLocationSuccess = (event: any) => {
-      const { message, latitude, longitude } = event.detail;
-      toast({
-        title: "Location Found! 🎯",
-        description: `${message} (${latitude}, ${longitude})`,
-      });
+      // Safe destructuring with validation
+      if (!event || !event.detail || typeof event.detail !== 'object') {
+        console.warn('Invalid locationSuccess event:', event);
+        return;
+      }
+      
+      const { message, latitude, longitude } = event.detail || {};
+      
+      if (message && latitude !== undefined && longitude !== undefined) {
+        toast({
+          title: "Location Found! 🎯",
+          description: `${message} (${latitude}, ${longitude})`,
+        });
+      } else {
+        console.warn('Incomplete location data:', event.detail);
+      }
     };
 
     const handleLocationError = (event: any) => {
-      const { message } = event.detail;
-      toast({
-        title: "Location Error ❌",
-        description: message,
-        variant: "destructive",
-      });
+      // Safe destructuring with validation
+      if (!event || !event.detail || typeof event.detail !== 'object') {
+        console.warn('Invalid locationError event:', event);
+        return;
+      }
+      
+      const { message } = event.detail || {};
+      
+      if (message) {
+        toast({
+          title: "Location Error ❌",
+          description: message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Location Error ❌",
+          description: "Unknown location error occurred",
+          variant: "destructive",
+        });
+      }
     };
 
     // Add event listeners

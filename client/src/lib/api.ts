@@ -13,49 +13,105 @@ import type {
   InsertTeam
 } from '@shared/schema';
 
+// Helper function to safely parse JSON responses
+async function safeJsonResponse(res: Response) {
+  try {
+    const text = await res.text();
+    if (!text) {
+      console.warn('Empty response received');
+      return null;
+    }
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('Failed to parse JSON response:', error);
+    throw new Error('Invalid JSON response from server');
+  }
+}
+
 // Auth API
 export async function login(username: string, password: string) {
-  const res = await apiRequest('POST', '/api/login', { username, password });
-  const data = await res.json();
-  
-  // Store JWT token if provided
-  if (data.token) {
-    setAuthToken(data.token);
+  try {
+    const res = await apiRequest('POST', '/api/login', { username, password });
+    const data = await safeJsonResponse(res);
+    
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid login response format');
+    }
+    
+    // Store JWT token if provided
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Login API error:', error);
+    throw error;
   }
-  
-  return data;
 }
 
 export async function logout() {
-  const res = await apiRequest('POST', '/api/logout');
-  
-  // Clear JWT token on logout
-  setAuthToken(null);
-  
-  return await res.json();
+  try {
+    const res = await apiRequest('POST', '/api/logout');
+    
+    // Clear JWT token on logout
+    setAuthToken(null);
+    
+    return await safeJsonResponse(res);
+  } catch (error) {
+    console.error('Logout API error:', error);
+    throw error;
+  }
 }
 
 export async function getCurrentUser() {
-  const res = await apiRequest('GET', '/api/current-user');
-  return await res.json();
+  try {
+    const res = await apiRequest('GET', '/api/current-user');
+    const userData = await safeJsonResponse(res);
+    
+    if (!userData || typeof userData !== 'object') {
+      console.warn('getCurrentUser returned invalid data:', userData);
+      return null;
+    }
+    
+    return userData;
+  } catch (error) {
+    console.error('getCurrentUser API error:', error);
+    throw error;
+  }
 }
 
 export async function register(userData: InsertUser) {
-  const res = await apiRequest('POST', '/api/users', userData);
-  return await res.json();
+  try {
+    const res = await apiRequest('POST', '/api/users', userData);
+    return await safeJsonResponse(res);
+  } catch (error) {
+    console.error('Register API error:', error);
+    throw error;
+  }
 }
 
 // User API
 export async function getFieldUsers() {
-  const res = await apiRequest('GET', '/api/users/field');
-  return await res.json();
+  try {
+    const res = await apiRequest('GET', '/api/users/field');
+    return await safeJsonResponse(res);
+  } catch (error) {
+    console.error('getFieldUsers API error:', error);
+    throw error;
+  }
 }
 
 
 
 export async function updateUserLocation(lat: number, lng: number) {
-  const res = await apiRequest('POST', '/api/users/location', { lat, lng });
-  return await res.json();
+  try {
+    const res = await apiRequest('POST', '/api/users/location', { lat, lng });
+    return await safeJsonResponse(res);
+  } catch (error) {
+    console.error('updateUserLocation API error:', error);
+    throw error;
+  }
 }
 
 // Task API
