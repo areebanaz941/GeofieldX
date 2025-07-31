@@ -24,8 +24,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       try {
         const userData = await getCurrentUser();
-        setUser(userData);
+        // Add null check and validation
+        if (userData && typeof userData === 'object') {
+          setUser(userData);
+        } else {
+          console.warn('getCurrentUser returned invalid data:', userData);
+          setUser(null);
+        }
       } catch (error) {
+        console.warn('Auth check failed:', error);
         // If error, user is not logged in
         setUser(null);
       } finally {
@@ -40,8 +47,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       const response = await apiLogin(username, password);
-      setUser(response.user);
+      
+      // Add validation for login response
+      if (!response || typeof response !== 'object') {
+        throw new Error('Invalid login response');
+      }
+      
+      // Safe destructuring with fallback
+      const { user: userData } = response || {};
+      
+      if (!userData) {
+        throw new Error('No user data in login response');
+      }
+      
+      setUser(userData);
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -54,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiLogout();
       setUser(null);
     } catch (error) {
+      console.error('Logout error:', error);
       toast({
         title: "Error",
         description: "Failed to logout",
@@ -67,8 +89,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (data: InsertUser) => {
     try {
       setIsLoading(true);
-      await apiRegister(data);
+      const response = await apiRegister(data);
+      
+      // Add validation for register response
+      if (!response || typeof response !== 'object') {
+        console.warn('Invalid register response:', response);
+      }
     } catch (error) {
+      console.error('Register error:', error);
       throw error;
     } finally {
       setIsLoading(false);
