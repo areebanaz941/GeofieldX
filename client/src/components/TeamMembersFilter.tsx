@@ -1,10 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { User } from "@shared/schema";
+import { IUser } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 
 interface TeamMembersFilterProps {
-  teams: User[];
-  onTeamClick: (team: User) => void;
+  teams: IUser[];
+  onTeamClick: (team: IUser) => void;
 }
 
 export default function TeamMembersFilter({

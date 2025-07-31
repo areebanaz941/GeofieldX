@@ -90,6 +90,27 @@ export default function MapView() {
   // Local shapefiles state for frontend-only processing
   const [localShapefiles, setLocalShapefiles] = useState<Shapefile[]>([]);
 
+  // Fetch data first
+  const { data: features = [] } = useQuery({
+    queryKey: ["/api/features"],
+    queryFn: getAllFeatures,
+  });
+  
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["/api/tasks"],
+    queryFn: getAllTasks,
+  });
+  
+  const { data: fieldUsers = [] } = useQuery({
+    queryKey: ["/api/users/field"],
+    queryFn: getFieldUsers,
+  });
+
+  const { data: boundaries = [] } = useQuery({
+    queryKey: ["/api/boundaries"],
+    queryFn: getAllBoundaries,
+  });
+
   // Handle URL parameters for navigation
   useEffect(() => {
     if (!mapMethods) return;
@@ -128,27 +149,6 @@ export default function MapView() {
   const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
   const [selectedFeatureType, setSelectedFeatureType] = useState<string>('');
   const [supervisorPolygonModalOpen, setSupervisorPolygonModalOpen] = useState(false);
-  
-  // Fetch data
-  const { data: features = [] } = useQuery({
-    queryKey: ["/api/features"],
-    queryFn: getAllFeatures,
-  });
-  
-  const { data: tasks = [] } = useQuery({
-    queryKey: ["/api/tasks"],
-    queryFn: getAllTasks,
-  });
-  
-  const { data: fieldUsers = [] } = useQuery({
-    queryKey: ["/api/users/field"],
-    queryFn: getFieldUsers,
-  });
-
-  const { data: boundaries = [] } = useQuery({
-    queryKey: ["/api/boundaries"],
-    queryFn: getAllBoundaries,
-  });
 
   // Fetch saved shapefiles from database
   const { data: savedShapefiles = [] } = useQuery({

@@ -20,12 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getAllTeams, assignFeatureToTeam } from "@/lib/api";
-import { Feature } from "@shared/schema";
+import { IFeature } from "@shared/schema";
 
 interface FeatureAssignmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  feature: Feature | null;
+  feature: IFeature | null;
 }
 
 export default function FeatureAssignmentModal({

@@ -1,10 +1,10 @@
 import React, { createContext, useState, useEffect } from "react";
 import { getCurrentUser, login as apiLogin, logout as apiLogout, register as apiRegister } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { User, InsertUser } from "@shared/schema";
+import { IUser, InsertUser } from "@shared/schema";
 
 interface AuthContextType {
-  user: User | null;
+  user: IUser | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export { AuthContext };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<IUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
