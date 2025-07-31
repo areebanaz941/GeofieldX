@@ -29,13 +29,13 @@ import {
   getAllTeams,
   getFieldUsers
 } from "@/lib/api";
-import { Task, TaskUpdate, ITeam, IUser } from "@shared/schema";
+import { ITask, ITaskUpdate, ITeam, IUser } from "@shared/schema";
 
 interface TaskDetailsModalProps {
   open: boolean;
   onClose: () => void;
   onOpenChange: (open: boolean) => void;
-  task: Task;
+  task: ITask;
 }
 
 export default function TaskDetailsModal({
@@ -290,7 +290,7 @@ export default function TaskDetailsModal({
                 <h4 className="text-sm font-medium text-neutral-500 mb-2">Updates</h4>
                 <div className="space-y-3">
                   {updates.length > 0 ? (
-                    updates.map((update: TaskUpdate) => (
+                    updates.map((update: ITaskUpdate) => (
                       <div key={update.id} className="bg-neutral-50 p-3 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center">

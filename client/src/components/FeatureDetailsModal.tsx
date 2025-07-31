@@ -101,8 +101,8 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
   console.log('Feature teamId:', displayFeature.teamId);
   console.log('Creator team data:', creatorTeam);
 
-  const isParcel = feature.feaType === 'Parcel';
-  const isAssigned = !!feature.assignedTo;
+  const isParcel = feature?.feaType === 'Parcel';
+  const isAssigned = !!feature?.assignedTo;
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
@@ -110,7 +110,7 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
             <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-            {feature.name || `${feature.feaType} #${feature.feaNo}`}
+            {feature?.name || `${feature?.feaType} #${feature?.feaNo}`}
           </DialogTitle>
         </DialogHeader>
         
@@ -180,21 +180,21 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
             <CardContent className="space-y-2">
               <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                 <span className="text-xs sm:text-sm text-muted-foreground">Type:</span>
-                <Badge variant="secondary" className="w-fit">{feature.feaType}</Badge>
+                <Badge variant="secondary" className="w-fit">{feature?.feaType}</Badge>
               </div>
               <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                 <span className="text-xs sm:text-sm text-muted-foreground">Number:</span>
-                <span className="text-xs sm:text-sm font-medium">{feature.feaNo}</span>
+                                  <span className="text-xs sm:text-sm font-medium">{feature?.feaNo}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                 <span className="text-xs sm:text-sm text-muted-foreground">Status:</span>
-                <Badge variant={feature.feaStatus === 'Active' ? 'default' : 'outline'} className="w-fit">
-                  {feature.feaStatus}
+                <Badge variant={feature?.feaStatus === 'Active' ? 'default' : 'outline'} className="w-fit">
+                  {feature?.feaStatus}
                 </Badge>
               </div>
               <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                 <span className="text-xs sm:text-sm text-muted-foreground">State:</span>
-                <Badge variant="outline" className="w-fit">{feature.feaState}</Badge>
+                <Badge variant="outline" className="w-fit">{feature?.feaState}</Badge>
               </div>
             </CardContent>
           </Card>
@@ -253,21 +253,21 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {feature.specificType && (
+              {feature?.specificType && (
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                   <span className="text-xs sm:text-sm text-muted-foreground">Specific Type:</span>
-                  <span className="text-xs sm:text-sm font-medium">{feature.specificType}</span>
+                                      <span className="text-xs sm:text-sm font-medium">{feature?.specificType}</span>
                 </div>
               )}
               <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                 <span className="text-xs sm:text-sm text-muted-foreground">Maintenance:</span>
-                <Badge variant="outline" className="w-fit">{feature.maintenance}</Badge>
+                <Badge variant="outline" className="w-fit">{feature?.maintenance}</Badge>
               </div>
-              {feature.createdAt && (
+              {feature?.createdAt && (
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                   <span className="text-xs sm:text-sm text-muted-foreground">Created:</span>
                   <span className="text-xs sm:text-sm">
-                    {new Date(feature.createdAt).toLocaleDateString()}
+                    {new Date(feature?.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               )}
