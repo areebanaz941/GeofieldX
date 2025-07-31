@@ -1422,7 +1422,7 @@ const OpenLayersMap = ({
     // If shapefiles are empty, just return
     if (!shapefiles || shapefiles.length === 0) return;
 
-    console.log(`🚀 Processing ${shapefiles.length} shapefiles for display`);
+    // Processing shapefiles for display
 
     // Get current zoom level for geometry simplification only
     const currentZoom = mapRef.current?.getView().getZoom() || 13;
@@ -1546,8 +1546,7 @@ const OpenLayersMap = ({
       }
     });
 
-    // Summary logging
-    console.log(`✅ Shapefile processing complete: ${totalFeaturesAdded}/${totalFeaturesProcessed} features displayed from ${shapefiles.length} shapefiles`);
+    // Shapefile processing complete
   }, [shapefiles, shapefileUpdateTrigger]); // Depend on both shapefiles and the update trigger
 
   const panTo = useCallback((lat: number, lng: number, zoom?: number) => {

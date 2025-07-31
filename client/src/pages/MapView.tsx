@@ -299,28 +299,9 @@ export default function MapView() {
     
     const combined = [...localShapefiles, ...visibleSavedShapefiles];
     setAllShapefiles(combined);
-    
-    console.log("📂 Combined shapefiles with coordinate transformation:", {
-      local: localShapefiles.length,
-      savedVisible: visibleSavedShapefiles.length,
-      total: combined.length
-    });
   }, [localShapefiles, savedShapefiles]);
 
-  // Debug data for supervisors
-  useEffect(() => {
-    if (user?.role === "Supervisor") {
-      console.log("🔍 Supervisor MapView Data:", {
-        featuresCount: features.length,
-        boundariesCount: boundaries.length,
-        tasksCount: tasks.length,
-        teamsCount: fieldUsers.length,
-        shapefilesCount: allShapefiles.length,
-        features: features.slice(0, 3), // Show first 3 features
-        boundaries: boundaries.slice(0, 3) // Show first 3 boundaries
-      });
-    }
-  }, [features, boundaries, tasks, fieldUsers, allShapefiles, user]);
+  // Removed debug logging to reduce console noise
 
   const { data: teams = [] } = useQuery({
     queryKey: ["/api/teams"],

@@ -362,8 +362,16 @@ export function ShapefileUpload({ onShapefileProcessed, onShapefileUploaded }: S
       formData.append('description', ''); // Can be made configurable
 
       try {
+        // Get auth token for JWT authentication
+        const authToken = localStorage.getItem('auth_token');
+        const headers: HeadersInit = {};
+        if (authToken) {
+          headers.Authorization = `Bearer ${authToken}`;
+        }
+
         const response = await fetch('/api/shapefiles/upload', {
           method: 'POST',
+          headers,
           body: formData,
           credentials: 'include', // Include session cookies for authentication
         });

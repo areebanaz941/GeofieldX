@@ -40,12 +40,9 @@ export default function BoundaryAssignmentModal({
   const { data: teams = [] } = useQuery({
     queryKey: ["/api/teams"],
     queryFn: getAllTeams,
+    enabled: open, // Only fetch when modal is open
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
-
-  // Debug log for teams data
-  console.log("Teams fetched for assignment:", teams);
-  console.log("Teams length:", teams?.length);
-  console.log("Approved teams:", teams?.filter((team: any) => team.status?.toLowerCase() === "approved"));
 
   const assignMutation = useMutation({
     mutationFn: ({ boundaryId, teamId }: { boundaryId: string; teamId: string }) =>
