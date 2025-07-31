@@ -339,8 +339,8 @@ export default function CreateFeatureModal({
                 <FormItem>
                   <FormLabel>Feature Type</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
+                    onValueChange={field?.onChange}
+                    value={field?.value || ""}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -394,8 +394,8 @@ export default function CreateFeatureModal({
                 <FormItem>
                   <FormLabel>{feaType} Type</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
+                    onValueChange={field?.onChange}
+                    value={field?.value || ""}
                     key={feaType} // Force re-render when feature type changes
                   >
                     <FormControl>
