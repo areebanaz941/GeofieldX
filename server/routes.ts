@@ -1902,64 +1902,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let features: any[] = [];
         
         try {
-          // Import required modules for shapefile processing using ES modules
-          const AdmZip = (await import('adm-zip')).default;
-          const shapefile = await import('shapefile');
+          // Import shpjs for shapefile to GeoJSON conversion
+          const shp = (await import('shpjs')).default;
           const fs = await import('fs');
-          const path = await import('path');
 
-          // Extract ZIP file
-          const zip = new AdmZip(req.file.path);
-          const zipEntries = zip.getEntries();
+          // Read the uploaded file as buffer
+          const buffer = fs.readFileSync(req.file.path);
           
-          console.log(`📂 ZIP contains ${zipEntries.length} files`);
+          console.log(`🔍 Converting shapefile to GeoJSON using shpjs`);
           
-          // Find .shp file
-          const shpEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith('.shp'));
+          // Convert shapefile to GeoJSON using shpjs
+          const geojson = await shp(buffer);
           
-          if (!shpEntry) {
-            throw new Error('No .shp file found in ZIP archive');
+          console.log(`📊 Conversion result type:`, typeof geojson);
+          console.log(`📊 GeoJSON structure:`, Object.keys(geojson));
+          
+          // Handle different return types from shpjs
+          let featureCollection;
+          
+          if (Array.isArray(geojson)) {
+            // If it's an array of FeatureCollections, take the first one
+            featureCollection = geojson[0];
+          } else if (geojson.type === 'FeatureCollection') {
+            // If it's already a FeatureCollection
+            featureCollection = geojson;
+          } else if (geojson.features) {
+            // If it has features property
+            featureCollection = geojson;
+          } else {
+            throw new Error('Unexpected GeoJSON structure from shpjs');
           }
-
-          console.log(`📍 Found SHP file: ${shpEntry.entryName}`);
-
-          // Extract to temporary directory
-          const tempDir = path.join(process.cwd(), 'temp', Date.now().toString());
-          fs.mkdirSync(tempDir, { recursive: true });
           
-          try {
-            zip.extractAllTo(tempDir, true);
-            
-            // Get the .shp file path
-            const shpFilePath = path.join(tempDir, shpEntry.entryName);
-            
-            console.log(`🔍 Reading shapefile from: ${shpFilePath}`);
-            
-            // Read shapefile
-            const source = await shapefile.open(shpFilePath);
-            
-            let result;
-            while (!(result = await source.read()).done) {
-              const feature = result.value;
-              
-              if (feature && feature.geometry && feature.properties) {
-                features.push({
-                  geometry: feature.geometry,
-                  properties: feature.properties
-                });
-              }
-            }
-            
-            console.log(`✅ Extracted ${features.length} features from shapefile`);
-            
-          } finally {
-            // Clean up temporary files
-            try {
-              fs.rmSync(tempDir, { recursive: true, force: true });
-            } catch (cleanupError) {
-              console.warn('Failed to cleanup temp files:', cleanupError);
-            }
+          if (featureCollection && featureCollection.features) {
+            features = featureCollection.features.map((feature: any) => ({
+              type: "Feature",
+              geometry: feature.geometry,
+              properties: feature.properties || {}
+            }));
           }
+          
+          console.log(`✅ Extracted ${features.length} features from shapefile using shpjs`);
           
         } catch (parseError) {
           console.error('❌ Shapefile parsing error:', parseError);
