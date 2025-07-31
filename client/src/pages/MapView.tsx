@@ -83,8 +83,8 @@ export default function MapView() {
   // Map methods for navigation
   const [mapMethods, setMapMethods] = useState<{
     panTo: (lat: number, lng: number, zoom?: number) => void;
-    zoomToFeature: (featureId: string) => void;
-    zoomToBoundary: (boundaryId: string) => void;
+    zoomToFeature: (featureId: string) => boolean;
+    zoomToBoundary: (boundaryId: string) => boolean;
   } | null>(null);
   
   // Local shapefiles state for frontend-only processing
@@ -113,34 +113,108 @@ export default function MapView() {
 
   // Handle URL parameters for navigation
   useEffect(() => {
+    console.log('🔄 MapView navigation effect triggered');
+    console.log('mapMethods available:', !!mapMethods);
+    console.log('features count:', features.length);
+    console.log('boundaries count:', boundaries.length);
+    
     if (!mapMethods) return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const featureId = urlParams.get('feature');
     const boundaryId = urlParams.get('boundary');
+    
+    console.log('URL params - featureId:', featureId, 'boundaryId:', boundaryId);
 
     if (featureId && features.length > 0) {
-      // Small delay to ensure features are loaded and rendered
-      setTimeout(() => {
-        mapMethods.zoomToFeature(featureId);
-        // Clear the URL parameter after navigation
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('feature');
-        window.history.replaceState({}, '', newUrl.toString());
-      }, 500);
+      console.log('📍 Scheduling feature navigation for ID:', featureId);
+      // Retry logic to ensure features are loaded and rendered
+      const attemptFeatureNavigation = (retries = 0) => {
+        if (retries > 10) {
+          console.error('❌ Failed to navigate to feature after multiple attempts');
+          toast({
+            title: "Navigation Failed",
+            description: "Unable to locate the feature on the map. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        setTimeout(() => {
+          console.log(`⏰ Executing feature navigation (attempt ${retries + 1})`);
+          
+          // Check if the feature exists in the layer before attempting navigation
+          const success = mapMethods.zoomToFeature(featureId);
+          
+          if (!success) {
+            console.log(`🔄 Feature not found, retrying... (attempt ${retries + 1})`);
+            attemptFeatureNavigation(retries + 1);
+          } else {
+            // Clear the URL parameter after successful navigation
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('feature');
+            window.history.replaceState({}, '', newUrl.toString());
+          }
+        }, 200 + (retries * 100)); // Increasing delay for each retry
+      };
+      
+      attemptFeatureNavigation();
     }
 
     if (boundaryId && boundaries.length > 0) {
-      // Small delay to ensure boundaries are loaded and rendered
-      setTimeout(() => {
-        mapMethods.zoomToBoundary(boundaryId);
-        // Clear the URL parameter after navigation
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('boundary');
-        window.history.replaceState({}, '', newUrl.toString());
-      }, 500);
+      console.log('🏔️ Scheduling boundary navigation for ID:', boundaryId);
+      // Retry logic to ensure boundaries are loaded and rendered
+      const attemptBoundaryNavigation = (retries = 0) => {
+        if (retries > 10) {
+          console.error('❌ Failed to navigate to boundary after multiple attempts');
+          toast({
+            title: "Navigation Failed",
+            description: "Unable to locate the boundary on the map. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        setTimeout(() => {
+          console.log(`⏰ Executing boundary navigation (attempt ${retries + 1})`);
+          
+          // Check if the boundary exists in the layer before attempting navigation
+          const success = mapMethods.zoomToBoundary(boundaryId);
+          
+          if (!success) {
+            console.log(`🔄 Boundary not found, retrying... (attempt ${retries + 1})`);
+            attemptBoundaryNavigation(retries + 1);
+          } else {
+            // Clear the URL parameter after successful navigation
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('boundary');
+            window.history.replaceState({}, '', newUrl.toString());
+          }
+        }, 200 + (retries * 100)); // Increasing delay for each retry
+      };
+      
+      attemptBoundaryNavigation();
     }
   }, [mapMethods, features, boundaries]);
+
+  // Handle map navigation errors
+  useEffect(() => {
+    const handleNavigationError = (event: CustomEvent) => {
+      const { type, id, error } = event.detail;
+      toast({
+        title: "Navigation Failed",
+        description: `Unable to navigate to ${type}: ${error}`,
+        variant: "destructive",
+      });
+      console.error(`Map navigation error for ${type} ${id}:`, error);
+    };
+
+    window.addEventListener('map-navigation-error', handleNavigationError as EventListener);
+    
+    return () => {
+      window.removeEventListener('map-navigation-error', handleNavigationError as EventListener);
+    };
+  }, [toast]);
   
   // Combined shapefiles state (local + saved)
   const [allShapefiles, setAllShapefiles] = useState<Shapefile[]>([]);

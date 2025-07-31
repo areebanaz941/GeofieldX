@@ -381,8 +381,8 @@ interface MapProps {
   clearDrawnPolygon?: boolean;
   onMapReady?: (mapMethods: { 
     panTo: (lat: number, lng: number, zoom?: number) => void;
-    zoomToFeature: (featureId: string) => void;
-    zoomToBoundary: (boundaryId: string) => void;
+    zoomToFeature: (featureId: string) => boolean;
+    zoomToBoundary: (boundaryId: string) => boolean;
   }) => void;
 }
 
@@ -1575,23 +1575,35 @@ const OpenLayersMap = ({
   }, []);
 
   // Method to zoom to a specific feature and highlight it
-  const zoomToFeature = useCallback((featureId: string) => {
-    if (!mapRef.current || !featuresLayerRef.current) return;
+  const zoomToFeature = useCallback((featureId: string): boolean => {
+    console.log('🎯 zoomToFeature called with ID:', featureId);
+    
+    if (!mapRef.current || !featuresLayerRef.current) {
+      console.log('❌ Map or features layer not available');
+      return false;
+    }
 
     const source = featuresLayerRef.current.getSource();
-    if (!source) return;
+    if (!source) {
+      console.log('❌ Features layer source not available');
+      return false;
+    }
 
     // Find the feature by ID
     const olFeatures = source.getFeatures();
+    console.log('📊 Total features in layer:', olFeatures.length);
+    
     const targetFeature = olFeatures.find(f => {
       const featureData = f.get('featureData');
       return featureData && featureData._id.toString() === featureId;
     });
 
     if (targetFeature) {
+      console.log('✅ Found target feature:', targetFeature.get('featureData'));
       const geometry = targetFeature.getGeometry();
       if (geometry) {
         const extent = geometry.getExtent();
+        console.log('📍 Feature extent:', extent);
         const view = mapRef.current.getView();
         
         // Fit to the feature extent with padding
@@ -1601,30 +1613,59 @@ const OpenLayersMap = ({
           maxZoom: 18
         });
 
+        console.log('🎯 Successfully zoomed to feature');
         // Highlight the feature temporarily
         highlightFeature(targetFeature);
+        return true;
+      } else {
+        console.log('❌ Feature has no geometry');
+        // Dispatch custom event for error handling
+        window.dispatchEvent(new CustomEvent('map-navigation-error', {
+          detail: { type: 'feature', id: featureId, error: 'Feature has no geometry' }
+        }));
+        return false;
       }
+    } else {
+      console.log('❌ Feature not found with ID:', featureId);
+      console.log('Available feature IDs:', olFeatures.map(f => {
+        const data = f.get('featureData');
+        return data ? data._id.toString() : 'no-data';
+      }));
+      // Don't dispatch error event here - let the retry logic handle it
+      return false;
     }
   }, []);
 
   // Method to zoom to a specific boundary and highlight it
-  const zoomToBoundary = useCallback((boundaryId: string) => {
-    if (!mapRef.current || !boundariesLayerRef.current) return;
+  const zoomToBoundary = useCallback((boundaryId: string): boolean => {
+    console.log('🏔️ zoomToBoundary called with ID:', boundaryId);
+    
+    if (!mapRef.current || !boundariesLayerRef.current) {
+      console.log('❌ Map or boundaries layer not available');
+      return false;
+    }
 
     const source = boundariesLayerRef.current.getSource();
-    if (!source) return;
+    if (!source) {
+      console.log('❌ Boundaries layer source not available');
+      return false;
+    }
 
     // Find the boundary by ID
     const olFeatures = source.getFeatures();
+    console.log('📊 Total boundaries in layer:', olFeatures.length);
+    
     const targetBoundary = olFeatures.find(f => {
       const boundaryData = f.get('boundaryData');
       return boundaryData && boundaryData._id.toString() === boundaryId;
     });
 
     if (targetBoundary) {
+      console.log('✅ Found target boundary:', targetBoundary.get('boundaryData'));
       const geometry = targetBoundary.getGeometry();
       if (geometry) {
         const extent = geometry.getExtent();
+        console.log('📍 Boundary extent:', extent);
         const view = mapRef.current.getView();
         
         // Fit to the boundary extent with padding
@@ -1634,9 +1675,26 @@ const OpenLayersMap = ({
           maxZoom: 16
         });
 
+        console.log('🏔️ Successfully zoomed to boundary');
         // Highlight the boundary temporarily
         highlightFeature(targetBoundary);
+        return true;
+      } else {
+        console.log('❌ Boundary has no geometry');
+        // Dispatch custom event for error handling
+        window.dispatchEvent(new CustomEvent('map-navigation-error', {
+          detail: { type: 'boundary', id: boundaryId, error: 'Boundary has no geometry' }
+        }));
+        return false;
       }
+    } else {
+      console.log('❌ Boundary not found with ID:', boundaryId);
+      console.log('Available boundary IDs:', olFeatures.map(f => {
+        const data = f.get('boundaryData');
+        return data ? data._id.toString() : 'no-data';
+      }));
+      // Don't dispatch error event here - let the retry logic handle it
+      return false;
     }
   }, []);
 
