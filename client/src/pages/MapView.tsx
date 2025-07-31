@@ -195,7 +195,7 @@ export default function MapView() {
       
       attemptBoundaryNavigation();
     }
-  }, [mapMethods, features, boundaries]);
+  }, [mapMethods, features.length, boundaries.length]);
 
   // Handle map navigation errors
   useEffect(() => {
