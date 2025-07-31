@@ -571,6 +571,9 @@ export function ShapefileUpload({ onShapefileProcessed, onShapefileUploaded }: S
             <Upload className="w-5 h-5 text-green-600" />
             Upload Shapefile
           </DialogTitle>
+          <p className="text-sm text-gray-600 mt-2">
+            Upload and save your shapefile to the database for future use. The shapefile will be processed and stored permanently.
+          </p>
         </DialogHeader>
         <div className="space-y-5">
           <div>
@@ -671,7 +674,7 @@ export function ShapefileUpload({ onShapefileProcessed, onShapefileUploaded }: S
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing {progress > 0 ? `${progress}%` : '...'}
+                  {progress < 90 ? 'Processing' : 'Saving to Database'} {progress > 0 ? `${progress}%` : '...'}
                   <div
                     className="absolute bottom-0 left-0 h-1 bg-green-400 transition-all duration-300 rounded-b"
                     style={{ width: `${progress}%` }}
@@ -680,7 +683,7 @@ export function ShapefileUpload({ onShapefileProcessed, onShapefileUploaded }: S
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Process Shapefile
+                  Upload & Save to Database
                 </>
               )}
             </Button>
