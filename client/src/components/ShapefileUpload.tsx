@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Upload, FileUp, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getAuthToken } from '@/lib/queryClient';
 
 // Use the global shp function like in the working example
 declare global {
@@ -362,15 +363,36 @@ export function ShapefileUpload({ onShapefileProcessed, onShapefileUploaded }: S
       formData.append('description', ''); // Can be made configurable
 
       try {
+        // Prepare headers with authentication
+        const headers: HeadersInit = {};
+        const authToken = getAuthToken();
+        if (authToken) {
+          headers.Authorization = `Bearer ${authToken}`;
+        }
+
         const response = await fetch('/api/shapefiles/upload', {
           method: 'POST',
+          headers,
           body: formData,
           credentials: 'include', // Include session cookies for authentication
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Upload failed');
+          let errorMessage = 'Upload failed';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || 'Upload failed';
+          } catch (e) {
+            // If we can't parse the error response, use status-based messages
+            if (response.status === 401) {
+              errorMessage = 'Authentication failed. Please log in again.';
+            } else if (response.status === 403) {
+              errorMessage = 'Access denied. You may not have permission to upload shapefiles.';
+            } else {
+              errorMessage = `Upload failed (${response.status})`;
+            }
+          }
+          throw new Error(errorMessage);
         }
 
         const savedShapefile = await response.json();
