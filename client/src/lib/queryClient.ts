@@ -25,6 +25,7 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  retries: number = 2
 ): Promise<Response> {
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
   
@@ -33,15 +34,29 @@ export async function apiRequest(
     headers.Authorization = `Bearer ${authToken}`;
   }
   
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: data ? JSON.stringify(data) : undefined,
+        credentials: "include",
+      });
 
-  await throwIfResNotOk(res);
-  return res;
+      await throwIfResNotOk(res);
+      return res;
+    } catch (error) {
+      // If this is the last attempt or it's not a network error, throw
+      if (attempt === retries || (error instanceof Error && !error.message.includes('Failed to fetch') && !error.message.includes('ERR_HTTP2_PROTOCOL_ERROR'))) {
+        throw error;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
