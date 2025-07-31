@@ -828,8 +828,15 @@ export default function MapView() {
   // Function to zoom to the most recent shapefile
   const zoomToRecentShapefile = () => {
     console.log('🔍 Attempting to zoom to recent shapefile...');
+    console.log('📊 Current state:', {
+      allShapefiles: allShapefiles.length,
+      localShapefiles: localShapefiles.length,
+      allShapefilesNames: allShapefiles.map(s => s.name),
+      localShapefilesNames: localShapefiles.map(s => s.name)
+    });
     
-    if (!allShapefiles || allShapefiles.length === 0) {
+    // Check if we have any shapefiles available (local or saved)
+    if ((!allShapefiles || allShapefiles.length === 0) && (!localShapefiles || localShapefiles.length === 0)) {
       console.warn('⚠️ No shapefiles available');
       toast({
         title: "No Shapefiles",
@@ -843,6 +850,13 @@ export default function MapView() {
     const recentShapefile = localShapefiles.length > 0 
       ? localShapefiles[localShapefiles.length - 1]
       : allShapefiles[allShapefiles.length - 1];
+    
+    console.log('🎯 Selected recent shapefile:', {
+      name: recentShapefile.name,
+      source: localShapefiles.length > 0 ? 'local' : 'saved',
+      id: recentShapefile._id
+    });
+    
     zoomToShapefile(recentShapefile);
   };
 
@@ -1154,7 +1168,7 @@ export default function MapView() {
             {/* Left side controls */}
             <div className="flex gap-2">
               {/* Show Recent Shapefile Button */}
-              {allShapefiles.length > 0 && (
+              {(allShapefiles.length > 0 || localShapefiles.length > 0) && (
                 <button
                   onClick={zoomToRecentShapefile}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-lg flex items-center gap-1 text-xs font-medium transition-colors"
@@ -1182,7 +1196,7 @@ export default function MapView() {
             {/* Left side buttons - Desktop */}
             <div className="absolute top-4 left-4 z-10 flex gap-2">
               {/* Show Recent Shapefile Button - Desktop */}
-              {allShapefiles.length > 0 && (
+              {(allShapefiles.length > 0 || localShapefiles.length > 0) && (
                 <button
                   onClick={zoomToRecentShapefile}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
