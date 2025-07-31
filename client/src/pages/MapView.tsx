@@ -80,8 +80,46 @@ export default function MapView() {
   const [editFeatureModalOpen, setEditFeatureModalOpen] = useState(false);
   const [featureToEdit, setFeatureToEdit] = useState<IFeature | null>(null);
   
+  // Map methods for navigation
+  const [mapMethods, setMapMethods] = useState<{
+    panTo: (lat: number, lng: number, zoom?: number) => void;
+    zoomToFeature: (featureId: string) => void;
+    zoomToBoundary: (boundaryId: string) => void;
+  } | null>(null);
+  
   // Local shapefiles state for frontend-only processing
   const [localShapefiles, setLocalShapefiles] = useState<Shapefile[]>([]);
+
+  // Handle URL parameters for navigation
+  useEffect(() => {
+    if (!mapMethods) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const featureId = urlParams.get('feature');
+    const boundaryId = urlParams.get('boundary');
+
+    if (featureId && features.length > 0) {
+      // Small delay to ensure features are loaded and rendered
+      setTimeout(() => {
+        mapMethods.zoomToFeature(featureId);
+        // Clear the URL parameter after navigation
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('feature');
+        window.history.replaceState({}, '', newUrl.toString());
+      }, 500);
+    }
+
+    if (boundaryId && boundaries.length > 0) {
+      // Small delay to ensure boundaries are loaded and rendered
+      setTimeout(() => {
+        mapMethods.zoomToBoundary(boundaryId);
+        // Clear the URL parameter after navigation
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('boundary');
+        window.history.replaceState({}, '', newUrl.toString());
+      }, 500);
+    }
+  }, [mapMethods, features, boundaries]);
   
   // Combined shapefiles state (local + saved)
   const [allShapefiles, setAllShapefiles] = useState<Shapefile[]>([]);
@@ -1241,6 +1279,7 @@ export default function MapView() {
             linePoints={linePoints}
             clearDrawnPolygon={clearPolygon}
             className="w-full h-full"
+            onMapReady={setMapMethods}
           />
           
           {/* Mobile Drawing Button - Bottom Center */}

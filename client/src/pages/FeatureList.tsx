@@ -225,6 +225,15 @@ export default function FeatureList() {
                     <Button 
                       variant="outline" 
                       size="sm"
+                      onClick={() => setLocation(`/map?feature=${feature._id}`)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <MapPin className="h-4 w-4 mr-1" />
+                      View on Map
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
                       onClick={() => setLocation(`/features/${feature.feaType.toLowerCase()}/${feature._id}`)}
                     >
                       View Details
