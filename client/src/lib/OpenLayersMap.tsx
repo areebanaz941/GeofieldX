@@ -379,6 +379,11 @@ interface MapProps {
   linePoints?: { lat: number; lng: number }[];
   className?: string;
   clearDrawnPolygon?: boolean;
+  onMapReady?: (mapMethods: { 
+    panTo: (lat: number, lng: number, zoom?: number) => void;
+    zoomToFeature: (featureId: string) => void;
+    zoomToBoundary: (boundaryId: string) => void;
+  }) => void;
 }
 
 const OpenLayersMap = ({
@@ -405,7 +410,8 @@ const OpenLayersMap = ({
   lineDrawingMode = false,
   linePoints = [],
   className = 'h-full w-full',
-  clearDrawnPolygon = false
+  clearDrawnPolygon = false,
+  onMapReady
 }: MapProps) => {
   const mapRef = useRef<Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -928,6 +934,15 @@ const OpenLayersMap = ({
 
     // Store map reference for later use
     mapRef.current = map;
+
+    // Call onMapReady callback with map methods
+    if (onMapReady) {
+      onMapReady({
+        panTo,
+        zoomToFeature,
+        zoomToBoundary
+      });
+    }
 
     // Add zoom change listener to update icon sizes
     map.getView().on('change:resolution', () => {
@@ -1556,6 +1571,116 @@ const OpenLayersMap = ({
       if (zoom) {
         view.setZoom(zoom);
       }
+    }
+  }, []);
+
+  // Method to zoom to a specific feature and highlight it
+  const zoomToFeature = useCallback((featureId: string) => {
+    if (!mapRef.current || !featuresLayerRef.current) return;
+
+    const source = featuresLayerRef.current.getSource();
+    if (!source) return;
+
+    // Find the feature by ID
+    const olFeatures = source.getFeatures();
+    const targetFeature = olFeatures.find(f => {
+      const featureData = f.get('featureData');
+      return featureData && featureData._id.toString() === featureId;
+    });
+
+    if (targetFeature) {
+      const geometry = targetFeature.getGeometry();
+      if (geometry) {
+        const extent = geometry.getExtent();
+        const view = mapRef.current.getView();
+        
+        // Fit to the feature extent with padding
+        view.fit(extent, {
+          padding: [50, 50, 50, 50],
+          duration: 1000,
+          maxZoom: 18
+        });
+
+        // Highlight the feature temporarily
+        highlightFeature(targetFeature);
+      }
+    }
+  }, []);
+
+  // Method to zoom to a specific boundary and highlight it
+  const zoomToBoundary = useCallback((boundaryId: string) => {
+    if (!mapRef.current || !boundariesLayerRef.current) return;
+
+    const source = boundariesLayerRef.current.getSource();
+    if (!source) return;
+
+    // Find the boundary by ID
+    const olFeatures = source.getFeatures();
+    const targetBoundary = olFeatures.find(f => {
+      const boundaryData = f.get('boundaryData');
+      return boundaryData && boundaryData._id.toString() === boundaryId;
+    });
+
+    if (targetBoundary) {
+      const geometry = targetBoundary.getGeometry();
+      if (geometry) {
+        const extent = geometry.getExtent();
+        const view = mapRef.current.getView();
+        
+        // Fit to the boundary extent with padding
+        view.fit(extent, {
+          padding: [50, 50, 50, 50],
+          duration: 1000,
+          maxZoom: 16
+        });
+
+        // Highlight the boundary temporarily
+        highlightFeature(targetBoundary);
+      }
+    }
+  }, []);
+
+  // Method to highlight a feature temporarily
+  const highlightFeature = useCallback((feature: Feature) => {
+    if (!mapRef.current) return;
+
+    // Create a temporary highlight layer if it doesn't exist
+    let highlightLayer = mapRef.current.getLayers().getArray().find(layer => 
+      layer.get('name') === 'highlight-layer'
+    ) as VectorLayer<VectorSource>;
+
+    if (!highlightLayer) {
+      const highlightSource = new VectorSource();
+      highlightLayer = new VectorLayer({
+        source: highlightSource,
+        style: new Style({
+          stroke: new Stroke({
+            color: '#ff0000',
+            width: 4
+          }),
+          fill: new Fill({
+            color: 'rgba(255, 0, 0, 0.1)'
+          })
+        }),
+        zIndex: 1000
+      });
+      highlightLayer.set('name', 'highlight-layer');
+      mapRef.current.addLayer(highlightLayer);
+    }
+
+    const highlightSource = highlightLayer.getSource();
+    if (highlightSource) {
+      // Clear previous highlights
+      highlightSource.clear();
+      
+      // Clone the feature for highlighting
+      const highlightFeature = feature.clone();
+      highlightSource.addFeature(highlightFeature);
+
+      // Remove highlight after 3 seconds
+      setTimeout(() => {
+        highlightSource.clear();
+      }, 3000);
     }
   }, []);
 

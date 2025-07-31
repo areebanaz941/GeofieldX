@@ -106,6 +106,15 @@ function BoundaryManagement() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => setLocation(`/map?boundary=${boundary._id}`)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <MapPin className="h-4 w-4 mr-1" />
+                      View on Map
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleDelete(boundary._id, boundary.name)}
                       disabled={deleteMutation.isPending}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
