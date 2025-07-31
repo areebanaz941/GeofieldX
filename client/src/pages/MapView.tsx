@@ -158,28 +158,32 @@ export default function MapView() {
     });
   };
 
-  // Function to process saved shapefiles using shpjs (similar to temporary shapefile processing)
+  // Function to process saved shapefiles (simplified to match temporary shapefile processing)
   const processSavedShapefileWithShpJS = async (shapefile: any) => {
-    if (!shapefile.features) return shapefile;
+    if (!shapefile.features) {
+      console.warn(`⚠️ Saved shapefile "${shapefile.name}" has no features`);
+      return shapefile;
+    }
     
     try {
-      // Load shp.js library
-      const shp = await loadShpJS();
-      
       // Parse features if they're a string
       let features = typeof shapefile.features === 'string' 
         ? JSON.parse(shapefile.features) 
         : shapefile.features;
       
-      // If features are already processed GeoJSON, return as is with coordinate transformation
+      // If features are already processed GeoJSON, return as is without transformation
       if (features && (features.type === 'FeatureCollection' || Array.isArray(features))) {
-        console.log(`🔄 Shapefile ${shapefile.name} already in GeoJSON format, applying coordinate transformation`);
-        return transformSavedShapefileCoordinates(shapefile);
+        console.log(`✅ Saved shapefile "${shapefile.name}" already in GeoJSON format, using as-is`);
+        return {
+          ...shapefile,
+          features: features
+        };
       }
       
       // If features contain raw shapefile data, process with shpjs
       if (features instanceof ArrayBuffer || (features && features.buffer)) {
-        console.log(`🔄 Processing saved shapefile ${shapefile.name} with shpjs`);
+        console.log(`🔄 Processing saved shapefile "${shapefile.name}" with shpjs`);
+        const shp = await loadShpJS();
         const geojson = await shp(features);
         
         // Extract features in the same way as ShapefileUpload
@@ -192,25 +196,21 @@ export default function MapView() {
           processedFeatures = [geojson];
         }
         
-        // Apply coordinate transformation to the processed features
-        const processedShapefile = {
+        return {
           ...shapefile,
           features: {
             type: 'FeatureCollection',
             features: processedFeatures
           }
         };
-        
-        return transformSavedShapefileCoordinates(processedShapefile);
       }
       
-      // Fallback to existing coordinate transformation
-      return transformSavedShapefileCoordinates(shapefile);
+      // Return shapefile as-is if no processing needed
+      return shapefile;
       
     } catch (error) {
-      console.error(`❌ Error processing saved shapefile ${shapefile.name} with shpjs:`, error);
-      // Fallback to existing coordinate transformation
-      return transformSavedShapefileCoordinates(shapefile);
+      console.error(`❌ Error processing saved shapefile "${shapefile.name}":`, error);
+      return shapefile;
     }
   };
 
@@ -293,12 +293,19 @@ export default function MapView() {
 
   // Combine local and saved shapefiles, filtering by visibility and transforming coordinates
   useEffect(() => {
-    const visibleSavedShapefiles = savedShapefiles
-      .filter((shapefile: any) => shapefile.isVisible)
-      .map(processSavedShapefileWithShpJS); // Apply coordinate transformation
+    const processShapefiles = async () => {
+      const visibleSavedShapefiles = savedShapefiles.filter((shapefile: any) => shapefile.isVisible);
+      
+      // Process saved shapefiles asynchronously
+      const processedSavedShapefiles = await Promise.all(
+        visibleSavedShapefiles.map(processSavedShapefileWithShpJS)
+      );
+      
+      const combined = [...localShapefiles, ...processedSavedShapefiles];
+      setAllShapefiles(combined);
+    };
     
-    const combined = [...localShapefiles, ...visibleSavedShapefiles];
-    setAllShapefiles(combined);
+    processShapefiles();
   }, [localShapefiles, savedShapefiles]);
 
   // Removed debug logging to reduce console noise
@@ -670,8 +677,7 @@ export default function MapView() {
       let [lng, lat] = coord;
       if (!isFinite(lng) || !isFinite(lat)) return;
       
-      // Since coordinates should already be transformed by transformSavedShapefileCoordinates,
-      // we can do a simpler validation check for geographic coordinates
+      // Check if coordinates are valid geographic coordinates (longitude/latitude)
       if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
         // These might be projected coordinates that weren't transformed
         const validation = validateAndProcessCoordinates([lng, lat]);
