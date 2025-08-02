@@ -433,7 +433,7 @@ const OpenLayersMap = ({
   const locationControlRef = useRef<LocationControl | null>(null);
 
   // State for triggering shapefile re-processing on zoom changes
-  const [shapefileUpdateTrigger, setShapefileUpdateTrigger] = useState(0);
+  // Removed shapefileUpdateTrigger state as it was causing excessive re-renders
 
   // Initialize map
   useEffect(() => {
@@ -1039,29 +1039,27 @@ const OpenLayersMap = ({
     };
   }, []);
 
-  // Zoom change listener for shapefile optimization
+  // Zoom change listener for shapefile optimization - DISABLED to prevent performance issues
   useEffect(() => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-    let zoomTimeout: NodeJS.Timeout;
-
-    const handleZoomEnd = () => {
-      // Debounce zoom changes to avoid too frequent updates
-      clearTimeout(zoomTimeout);
-      zoomTimeout = setTimeout(() => {
-        console.log('🔄 Zoom changed, updating shapefile features...');
-        // Trigger re-processing of shapefiles
-        setShapefileUpdateTrigger(prev => prev + 1);
-      }, 300); // Wait 300ms after zoom stops
-    };
-
-    map.getView().on('change:resolution', handleZoomEnd);
-
-    return () => {
-      clearTimeout(zoomTimeout);
-      map.getView().un('change:resolution', handleZoomEnd);
-    };
+    // DISABLED: This was causing excessive re-renders and hanging
+    // The shapefiles will be rendered once and cached, zoom-based optimization is not needed
+    // for most use cases and was causing more harm than good
+    
+    // if (!mapRef.current) return;
+    // const map = mapRef.current;
+    // let zoomTimeout: NodeJS.Timeout;
+    // const handleZoomEnd = () => {
+    //   clearTimeout(zoomTimeout);
+    //   zoomTimeout = setTimeout(() => {
+    //     console.log('🔄 Zoom changed, updating shapefile features...');
+    //     setShapefileUpdateTrigger(prev => prev + 1);
+    //   }, 300);
+    // };
+    // map.getView().on('change:resolution', handleZoomEnd);
+    // return () => {
+    //   clearTimeout(zoomTimeout);
+    //   map.getView().un('change:resolution', handleZoomEnd);
+    // };
   }, []);
 
   // Handle drawing modes (polygon, point, line)
@@ -1562,7 +1560,7 @@ const OpenLayersMap = ({
     });
 
     // Shapefile processing complete
-  }, [shapefiles, shapefileUpdateTrigger]); // Depend on both shapefiles and the update trigger
+  }, [shapefiles]); // Only depend on shapefiles, remove update trigger to prevent excessive re-renders
 
   const panTo = useCallback((lat: number, lng: number, zoom?: number) => {
     if (mapRef.current) {

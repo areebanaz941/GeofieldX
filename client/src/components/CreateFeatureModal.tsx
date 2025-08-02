@@ -135,7 +135,7 @@ export default function CreateFeatureModal({
         form.setValue("feaType", "" as any); // Force empty selection
       }
     }
-  }, [open, drawnPolygon, form]);
+  }, [open, drawnPolygon]); // Remove form dependency to prevent infinite loops
 
   useEffect(() => {
     let options: string[] = [];
@@ -173,7 +173,7 @@ export default function CreateFeatureModal({
     }
     // Clear geometry when switching feature types
     form.setValue("geometry", undefined);
-  }, [feaType, form]);
+  }, [feaType]); // Remove form dependency to prevent infinite loops
 
   // Handle multi-point collection for fiber cables
   useEffect(() => {
@@ -186,10 +186,13 @@ export default function CreateFeatureModal({
         );
         
         if (!isDuplicate) {
-          setMultiplePoints(prev => [...prev, selectedLocation]);
-          toast({
-            title: `Point ${multiplePoints.length + 1} added`,
-            description: multiplePoints.length + 1 >= 2 ? "You can finish or add more points" : "Add at least one more point",
+          setMultiplePoints(prev => {
+            const newPoints = [...prev, selectedLocation];
+            toast({
+              title: `Point ${newPoints.length} added`,
+              description: newPoints.length >= 2 ? "You can finish or add more points" : "Add at least one more point",
+            });
+            return newPoints;
           });
         }
       } else {
@@ -200,7 +203,7 @@ export default function CreateFeatureModal({
         });
       }
     }
-  }, [selectedLocation, collectingPoints, feaType, multiplePoints.length]);
+  }, [selectedLocation, collectingPoints, feaType]); // Remove multiplePoints.length dependency to prevent infinite loops
 
   // Update geometry when coordinates change
   useEffect(() => {
