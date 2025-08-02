@@ -113,6 +113,7 @@ export default function MapView() {
 
   // Track navigation attempts to prevent infinite loops
   const navigationAttemptedRef = useRef<Set<string>>(new Set());
+  const navigationFailureTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Clear navigation tracking when URL changes significantly
   useEffect(() => {
@@ -123,6 +124,36 @@ export default function MapView() {
     // If no navigation parameters exist, clear the tracking
     if (!featureId && !boundaryId) {
       navigationAttemptedRef.current.clear();
+      // Clear failure timeout if no navigation needed
+      if (navigationFailureTimeoutRef.current) {
+        clearTimeout(navigationFailureTimeoutRef.current);
+        navigationFailureTimeoutRef.current = null;
+      }
+    } else {
+      // Set up a timeout to show error message if navigation doesn't succeed within 10 seconds
+      if (navigationFailureTimeoutRef.current) {
+        clearTimeout(navigationFailureTimeoutRef.current);
+      }
+      navigationFailureTimeoutRef.current = setTimeout(() => {
+        const urlParamsCheck = new URLSearchParams(window.location.search);
+        const stillHasFeature = urlParamsCheck.get('feature');
+        const stillHasBoundary = urlParamsCheck.get('boundary');
+        
+        // Only show error if URL parameters still exist (navigation didn't succeed)
+        if (stillHasFeature || stillHasBoundary) {
+          toast({
+            title: "Navigation Failed",
+            description: "Unable to locate the selected item on the map. Please try again or check if the item still exists.",
+            variant: "destructive",
+          });
+          
+          // Clear the URL parameters to prevent further attempts
+          const newUrl = new URL(window.location.href);
+          if (stillHasFeature) newUrl.searchParams.delete('feature');
+          if (stillHasBoundary) newUrl.searchParams.delete('boundary');
+          window.history.replaceState({}, '', newUrl.toString());
+        }
+      }, 10000); // 10 second timeout
     }
   }, []); // Remove window.location.search dependency to prevent infinite loops
   
@@ -161,16 +192,22 @@ export default function MapView() {
       if (featureId && features.length > 0) {
         const navigationKey = `feature-${featureId}`;
         
-        // Check if navigation is already in progress or completed
-        if (navigationAttemptedRef.current.has(navigationKey) || activeNavigationRef.current.has(navigationKey)) {
-          console.log('📍 Navigation already attempted/in progress for feature:', featureId);
+        // Check if navigation is already completed
+        if (navigationAttemptedRef.current.has(navigationKey)) {
+          console.log('📍 Navigation already completed for feature:', featureId);
+          return;
+        }
+        
+        // Check if navigation is already in progress
+        if (activeNavigationRef.current.has(navigationKey)) {
+          console.log('📍 Navigation already in progress for feature:', featureId);
           return;
         }
         
         console.log('📍 Starting feature navigation for ID:', featureId);
         activeNavigationRef.current.add(navigationKey);
         
-        // Single attempt with immediate feedback
+        // Attempt navigation with retry logic
         const success = mapMethods.zoomToFeature(featureId);
         
         if (success) {
@@ -181,12 +218,8 @@ export default function MapView() {
           newUrl.searchParams.delete('feature');
           window.history.replaceState({}, '', newUrl.toString());
         } else {
-          console.log('❌ Feature navigation failed - feature not found');
-          toast({
-            title: "Navigation Failed",
-            description: "Unable to locate the feature on the map. The map may still be loading.",
-            variant: "destructive",
-          });
+          console.log('❌ Feature navigation failed - will retry when more data loads');
+          // Don't show error immediately, let it retry when more data loads
         }
         
         activeNavigationRef.current.delete(navigationKey);
@@ -195,16 +228,22 @@ export default function MapView() {
       if (boundaryId && boundaries.length > 0) {
         const navigationKey = `boundary-${boundaryId}`;
         
-        // Check if navigation is already in progress or completed
-        if (navigationAttemptedRef.current.has(navigationKey) || activeNavigationRef.current.has(navigationKey)) {
-          console.log('🏔️ Navigation already attempted/in progress for boundary:', boundaryId);
+        // Check if navigation is already completed
+        if (navigationAttemptedRef.current.has(navigationKey)) {
+          console.log('🏔️ Navigation already completed for boundary:', boundaryId);
+          return;
+        }
+        
+        // Check if navigation is already in progress
+        if (activeNavigationRef.current.has(navigationKey)) {
+          console.log('🏔️ Navigation already in progress for boundary:', boundaryId);
           return;
         }
         
         console.log('🏔️ Starting boundary navigation for ID:', boundaryId);
         activeNavigationRef.current.add(navigationKey);
         
-        // Single attempt with immediate feedback
+        // Attempt navigation with retry logic
         const success = mapMethods.zoomToBoundary(boundaryId);
         
         if (success) {
@@ -215,18 +254,14 @@ export default function MapView() {
           newUrl.searchParams.delete('boundary');
           window.history.replaceState({}, '', newUrl.toString());
         } else {
-          console.log('❌ Boundary navigation failed - boundary not found');
-          toast({
-            title: "Navigation Failed",
-            description: "Unable to locate the boundary on the map. The map may still be loading.",
-            variant: "destructive",
-          });
+          console.log('❌ Boundary navigation failed - will retry when more data loads');
+          // Don't show error immediately, let it retry when more data loads
         }
         
         activeNavigationRef.current.delete(navigationKey);
       }
     }, 500); // 500ms debounce
-  }, []); // Remove dependencies that cause infinite loops
+  }, [mapMethods, features.length, boundaries.length, toast]); // Include necessary dependencies
 
   // Handle URL parameters for navigation - trigger when essential dependencies change
   useEffect(() => {
@@ -234,13 +269,16 @@ export default function MapView() {
     if (mapMethods && (features.length > 0 || boundaries.length > 0)) {
       handleUrlNavigation();
     }
-  }, [mapMethods, features.length, boundaries.length, handleUrlNavigation]);
+  }, [mapMethods, features, boundaries, handleUrlNavigation]);
 
   // Cleanup navigation timeout on unmount
   useEffect(() => {
     return () => {
       if (navigationTimeoutRef.current) {
         clearTimeout(navigationTimeoutRef.current);
+      }
+      if (navigationFailureTimeoutRef.current) {
+        clearTimeout(navigationFailureTimeoutRef.current);
       }
     };
   }, []);
