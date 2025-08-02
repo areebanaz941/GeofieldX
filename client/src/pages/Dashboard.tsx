@@ -277,7 +277,10 @@ export default function Dashboard() {
             <CardContent>
               {/* Feature Statistics Grid - Same as supervisor dashboard */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <Card className="bg-gray-50 border-0 shadow-sm">
+                <Card 
+                  className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
+                  onClick={() => setLocation('/features/Tower')}
+                >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
                       <FeatureIcon type="Tower" status="unassigned" size={32} />
@@ -292,7 +295,10 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gray-50 border-0 shadow-sm">
+                <Card 
+                  className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
+                  onClick={() => setLocation('/features/Manhole')}
+                >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
                       <FeatureIcon type="Manhole" status="assigned" size={32} />
@@ -307,7 +313,10 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gray-50 border-0 shadow-sm">
+                <Card 
+                  className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
+                  onClick={() => setLocation('/features/FiberCable')}
+                >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
                       <FeatureIcon type="FiberCable" status="complete" size={32} />
@@ -322,7 +331,10 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gray-50 border-0 shadow-sm">
+                <Card 
+                  className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
+                  onClick={() => setLocation('/features/Parcel')}
+                >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
                       <FeatureIcon type="Parcel" status="delayed" size={32} />
@@ -334,8 +346,81 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </div>
+              
+              {/* View All Features Button */}
+              <div className="mt-4 flex justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setLocation('/features/all')}
+                  className="text-[#1E5CB3] border-[#1E5CB3] hover:bg-[#1E5CB3] hover:text-white"
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  View All Features on Map
+                </Button>
+              </div>
             </CardContent>
           </Card>
+
+          {/* Assigned Boundaries Section - New for Field Users */}
+          {assignedBoundaries.length > 0 && (
+            <Card className="bg-white border-0 shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] bg-clip-text text-transparent">
+                  Assigned Boundaries
+                </CardTitle>
+                <CardDescription>
+                  Boundary areas assigned to your team
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {assignedBoundaries.slice(0, 3).map((boundary: any) => (
+                    <div key={boundary._id} className="border rounded-lg p-3 hover:bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{boundary.name}</h4>
+                          {boundary.description && (
+                            <p className="text-sm text-gray-600 mt-1">{boundary.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                            <span className={`px-2 py-1 rounded-full ${
+                              boundary.feaStatus === 'Active' ? 'bg-green-100 text-green-800' :
+                              boundary.feaStatus === 'New' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {boundary.feaStatus}
+                            </span>
+                            <span>Type: {boundary.feaType}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/map?feature=${boundary._id}`)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <MapPin className="h-4 w-4 mr-1" />
+                          View on Map
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {assignedBoundaries.length > 3 && (
+                    <div className="text-center pt-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setLocation('/features/Parcel')}
+                        className="text-[#1E5CB3] hover:text-[#0D2E5A]"
+                      >
+                        View all {assignedBoundaries.length} boundaries
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Actions */}
           <Card className="bg-white border-0 shadow-md">
