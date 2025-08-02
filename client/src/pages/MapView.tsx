@@ -126,6 +126,10 @@ export default function MapView() {
     }
   }, []); // Remove window.location.search dependency to prevent infinite loops
   
+  // Debounced navigation handler to prevent rapid successive calls
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeNavigationRef = useRef<Set<string>>(new Set());
+  
   // Handle URL parameters for navigation - using useCallback to prevent re-creation
   const handleUrlNavigation = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -135,112 +139,111 @@ export default function MapView() {
     // Only proceed if there are URL parameters to process
     if (!featureId && !boundaryId) return;
     
+    // Check if map methods are available
+    if (!mapMethods) {
+      console.log('🔄 MapView navigation deferred - mapMethods not ready');
+      return;
+    }
+    
     console.log('🔄 MapView navigation effect triggered');
     console.log('mapMethods available:', !!mapMethods);
     console.log('features count:', features.length);
     console.log('boundaries count:', boundaries.length);
-    
-    if (!mapMethods) return;
-    
     console.log('URL params - featureId:', featureId, 'boundaryId:', boundaryId);
 
-    if (featureId && features.length > 0) {
-      // Check if we've already attempted navigation for this feature
-      const navigationKey = `feature-${featureId}`;
-      if (navigationAttemptedRef.current.has(navigationKey)) {
-        console.log('📍 Navigation already attempted for feature:', featureId);
-        return;
-      }
-      
-      console.log('📍 Scheduling feature navigation for ID:', featureId);
-      navigationAttemptedRef.current.add(navigationKey);
-      
-      // Retry logic to ensure features are loaded and rendered
-      const attemptFeatureNavigation = (retries = 0) => {
-        if (retries > 10) {
-          console.error('❌ Failed to navigate to feature after multiple attempts');
-          navigationAttemptedRef.current.delete(navigationKey);
-          toast({
-            title: "Navigation Failed",
-            description: "Unable to locate the feature on the map. Please try again.",
-            variant: "destructive",
-          });
+    // Clear any existing navigation timeout
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+
+    // Debounce navigation attempts
+    navigationTimeoutRef.current = setTimeout(() => {
+      if (featureId && features.length > 0) {
+        const navigationKey = `feature-${featureId}`;
+        
+        // Check if navigation is already in progress or completed
+        if (navigationAttemptedRef.current.has(navigationKey) || activeNavigationRef.current.has(navigationKey)) {
+          console.log('📍 Navigation already attempted/in progress for feature:', featureId);
           return;
         }
         
-        setTimeout(() => {
-          console.log(`⏰ Executing feature navigation (attempt ${retries + 1})`);
-          
-          // Check if the feature exists in the layer before attempting navigation
-          const success = mapMethods.zoomToFeature(featureId);
-          
-          if (!success) {
-            console.log(`🔄 Feature not found, retrying... (attempt ${retries + 1})`);
-            attemptFeatureNavigation(retries + 1);
-          } else {
-            // Clear the URL parameter after successful navigation
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('feature');
-            window.history.replaceState({}, '', newUrl.toString());
-            // Keep the navigation key in the set to prevent re-attempts
-          }
-        }, 200 + (retries * 100)); // Increasing delay for each retry
-      };
-      
-      attemptFeatureNavigation();
-    }
-
-    if (boundaryId && boundaries.length > 0) {
-      // Check if we've already attempted navigation for this boundary
-      const navigationKey = `boundary-${boundaryId}`;
-      if (navigationAttemptedRef.current.has(navigationKey)) {
-        console.log('🏔️ Navigation already attempted for boundary:', boundaryId);
-        return;
-      }
-      
-      console.log('🏔️ Scheduling boundary navigation for ID:', boundaryId);
-      navigationAttemptedRef.current.add(navigationKey);
-      
-      // Retry logic to ensure boundaries are loaded and rendered
-      const attemptBoundaryNavigation = (retries = 0) => {
-        if (retries > 10) {
-          console.error('❌ Failed to navigate to boundary after multiple attempts');
-          navigationAttemptedRef.current.delete(navigationKey);
+        console.log('📍 Starting feature navigation for ID:', featureId);
+        activeNavigationRef.current.add(navigationKey);
+        
+        // Single attempt with immediate feedback
+        const success = mapMethods.zoomToFeature(featureId);
+        
+        if (success) {
+          console.log('✅ Feature navigation successful');
+          navigationAttemptedRef.current.add(navigationKey);
+          // Clear the URL parameter after successful navigation
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('feature');
+          window.history.replaceState({}, '', newUrl.toString());
+        } else {
+          console.log('❌ Feature navigation failed - feature not found');
           toast({
             title: "Navigation Failed",
-            description: "Unable to locate the boundary on the map. Please try again.",
+            description: "Unable to locate the feature on the map. The map may still be loading.",
             variant: "destructive",
           });
+        }
+        
+        activeNavigationRef.current.delete(navigationKey);
+      }
+
+      if (boundaryId && boundaries.length > 0) {
+        const navigationKey = `boundary-${boundaryId}`;
+        
+        // Check if navigation is already in progress or completed
+        if (navigationAttemptedRef.current.has(navigationKey) || activeNavigationRef.current.has(navigationKey)) {
+          console.log('🏔️ Navigation already attempted/in progress for boundary:', boundaryId);
           return;
         }
         
-        setTimeout(() => {
-          console.log(`⏰ Executing boundary navigation (attempt ${retries + 1})`);
-          
-          // Check if the boundary exists in the layer before attempting navigation
-          const success = mapMethods.zoomToBoundary(boundaryId);
-          
-          if (!success) {
-            console.log(`🔄 Boundary not found, retrying... (attempt ${retries + 1})`);
-            attemptBoundaryNavigation(retries + 1);
-          } else {
-            // Clear the URL parameter after successful navigation
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('boundary');
-            window.history.replaceState({}, '', newUrl.toString());
-            // Keep the navigation key in the set to prevent re-attempts
-          }
-        }, 200 + (retries * 100)); // Increasing delay for each retry
-      };
-      
-      attemptBoundaryNavigation();
-    }
-  }, [mapMethods, features.length, boundaries.length, toast]);
+        console.log('🏔️ Starting boundary navigation for ID:', boundaryId);
+        activeNavigationRef.current.add(navigationKey);
+        
+        // Single attempt with immediate feedback
+        const success = mapMethods.zoomToBoundary(boundaryId);
+        
+        if (success) {
+          console.log('✅ Boundary navigation successful');
+          navigationAttemptedRef.current.add(navigationKey);
+          // Clear the URL parameter after successful navigation
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('boundary');
+          window.history.replaceState({}, '', newUrl.toString());
+        } else {
+          console.log('❌ Boundary navigation failed - boundary not found');
+          toast({
+            title: "Navigation Failed",
+            description: "Unable to locate the boundary on the map. The map may still be loading.",
+            variant: "destructive",
+          });
+        }
+        
+        activeNavigationRef.current.delete(navigationKey);
+      }
+    }, 500); // 500ms debounce
+  }, []); // Remove dependencies that cause infinite loops
 
-  // Handle URL parameters for navigation - run once when dependencies change
+  // Handle URL parameters for navigation - trigger when essential dependencies change
   useEffect(() => {
-    handleUrlNavigation();
-  }, [handleUrlNavigation]);
+    // Only trigger navigation when we have the essential components ready
+    if (mapMethods && (features.length > 0 || boundaries.length > 0)) {
+      handleUrlNavigation();
+    }
+  }, [mapMethods, features.length, boundaries.length, handleUrlNavigation]);
+
+  // Cleanup navigation timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle map navigation errors
   useEffect(() => {
