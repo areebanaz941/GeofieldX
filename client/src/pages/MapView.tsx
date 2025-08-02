@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
@@ -124,10 +124,10 @@ export default function MapView() {
     if (!featureId && !boundaryId) {
       navigationAttemptedRef.current.clear();
     }
-  }, [window.location.search]);
+  }, []); // Remove window.location.search dependency to prevent infinite loops
   
-  // Handle URL parameters for navigation - optimized to reduce unnecessary re-runs
-  useEffect(() => {
+  // Handle URL parameters for navigation - using useCallback to prevent re-creation
+  const handleUrlNavigation = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const featureId = urlParams.get('feature');
     const boundaryId = urlParams.get('boundary');
@@ -235,7 +235,12 @@ export default function MapView() {
       
       attemptBoundaryNavigation();
     }
-  }, [mapMethods, features.length, boundaries.length]);
+  }, [mapMethods, features.length, boundaries.length, toast]);
+
+  // Handle URL parameters for navigation - run once when dependencies change
+  useEffect(() => {
+    handleUrlNavigation();
+  }, [handleUrlNavigation]);
 
   // Handle map navigation errors
   useEffect(() => {
