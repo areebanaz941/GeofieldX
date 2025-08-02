@@ -1,7 +1,12 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 // JWT Token management
-let authToken: string | null = localStorage.getItem('auth_token');
+let authToken: string | null = null;
+
+// Initialize token from localStorage when available
+if (typeof window !== 'undefined') {
+  authToken = localStorage.getItem('auth_token');
+}
 
 export const setAuthToken = (token: string | null) => {
   authToken = token;
@@ -28,6 +33,11 @@ export async function apiRequest(
   retries: number = 2
 ): Promise<Response> {
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
+  
+  // Ensure we have the latest token from localStorage
+  if (!authToken && typeof window !== 'undefined') {
+    authToken = localStorage.getItem('auth_token');
+  }
   
   // Add JWT token if available
   if (authToken) {
@@ -66,6 +76,11 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const headers: HeadersInit = {};
+    
+    // Ensure we have the latest token from localStorage
+    if (!authToken && typeof window !== 'undefined') {
+      authToken = localStorage.getItem('auth_token');
+    }
     
     // Add JWT token if available
     if (authToken) {

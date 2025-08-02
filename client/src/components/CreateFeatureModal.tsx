@@ -9,6 +9,7 @@ import useAuth from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -242,7 +243,17 @@ export default function CreateFeatureModal({
     },
     onError: (error: any) => {
       console.error("Error creating feature:", error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to create feature";
+      let errorMessage = "Failed to create feature";
+      
+      // Handle different error types
+      if (error?.message?.includes('401')) {
+        errorMessage = "Authentication failed. Please log in again.";
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
         description: Array.isArray(errorMessage) ? errorMessage.map(e => e.message).join(", ") : errorMessage,
@@ -256,6 +267,16 @@ export default function CreateFeatureModal({
     console.log("🔥 Form state at submission:", form.getValues());
     console.log("🔥 Images in values:", values.images);
     console.log("🔥 Images from form.getValues():", form.getValues("images"));
+    
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to create features",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Validate geometry based on feature type
     if (!values.geometry) {
@@ -332,6 +353,9 @@ export default function CreateFeatureModal({
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto fixed left-4 top-4 transform translate-x-0 translate-y-0 bg-white/95 backdrop-blur-sm">
         <DialogHeader>
           <DialogTitle>Add New Feature</DialogTitle>
+          <DialogDescription>
+            Fill in the details below to create a new feature on the map.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

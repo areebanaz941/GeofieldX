@@ -207,6 +207,8 @@ export async function createFeature(featureData: any) {
     const headers: HeadersInit = {};
     if (authToken) {
       headers.Authorization = `Bearer ${authToken}`;
+    } else {
+      console.warn('No auth token found when creating feature');
     }
     
     const res = await fetch('/api/features', {
