@@ -111,27 +111,55 @@ export default function MapView() {
     queryFn: getAllBoundaries,
   });
 
-  // Handle URL parameters for navigation
+  // Track navigation attempts to prevent infinite loops
+  const navigationAttemptedRef = useRef<Set<string>>(new Set());
+  
+  // Clear navigation tracking when URL changes significantly
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const featureId = urlParams.get('feature');
+    const boundaryId = urlParams.get('boundary');
+    
+    // If no navigation parameters exist, clear the tracking
+    if (!featureId && !boundaryId) {
+      navigationAttemptedRef.current.clear();
+    }
+  }, [window.location.search]);
+  
+  // Handle URL parameters for navigation - optimized to reduce unnecessary re-runs
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const featureId = urlParams.get('feature');
+    const boundaryId = urlParams.get('boundary');
+    
+    // Only proceed if there are URL parameters to process
+    if (!featureId && !boundaryId) return;
+    
     console.log('🔄 MapView navigation effect triggered');
     console.log('mapMethods available:', !!mapMethods);
     console.log('features count:', features.length);
     console.log('boundaries count:', boundaries.length);
     
     if (!mapMethods) return;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const featureId = urlParams.get('feature');
-    const boundaryId = urlParams.get('boundary');
     
     console.log('URL params - featureId:', featureId, 'boundaryId:', boundaryId);
 
     if (featureId && features.length > 0) {
+      // Check if we've already attempted navigation for this feature
+      const navigationKey = `feature-${featureId}`;
+      if (navigationAttemptedRef.current.has(navigationKey)) {
+        console.log('📍 Navigation already attempted for feature:', featureId);
+        return;
+      }
+      
       console.log('📍 Scheduling feature navigation for ID:', featureId);
+      navigationAttemptedRef.current.add(navigationKey);
+      
       // Retry logic to ensure features are loaded and rendered
       const attemptFeatureNavigation = (retries = 0) => {
         if (retries > 10) {
           console.error('❌ Failed to navigate to feature after multiple attempts');
+          navigationAttemptedRef.current.delete(navigationKey);
           toast({
             title: "Navigation Failed",
             description: "Unable to locate the feature on the map. Please try again.",
@@ -154,6 +182,7 @@ export default function MapView() {
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete('feature');
             window.history.replaceState({}, '', newUrl.toString());
+            // Keep the navigation key in the set to prevent re-attempts
           }
         }, 200 + (retries * 100)); // Increasing delay for each retry
       };
@@ -162,11 +191,21 @@ export default function MapView() {
     }
 
     if (boundaryId && boundaries.length > 0) {
+      // Check if we've already attempted navigation for this boundary
+      const navigationKey = `boundary-${boundaryId}`;
+      if (navigationAttemptedRef.current.has(navigationKey)) {
+        console.log('🏔️ Navigation already attempted for boundary:', boundaryId);
+        return;
+      }
+      
       console.log('🏔️ Scheduling boundary navigation for ID:', boundaryId);
+      navigationAttemptedRef.current.add(navigationKey);
+      
       // Retry logic to ensure boundaries are loaded and rendered
       const attemptBoundaryNavigation = (retries = 0) => {
         if (retries > 10) {
           console.error('❌ Failed to navigate to boundary after multiple attempts');
+          navigationAttemptedRef.current.delete(navigationKey);
           toast({
             title: "Navigation Failed",
             description: "Unable to locate the boundary on the map. Please try again.",
@@ -189,6 +228,7 @@ export default function MapView() {
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete('boundary');
             window.history.replaceState({}, '', newUrl.toString());
+            // Keep the navigation key in the set to prevent re-attempts
           }
         }, 200 + (retries * 100)); // Increasing delay for each retry
       };
