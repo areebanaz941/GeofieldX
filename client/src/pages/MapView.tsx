@@ -269,7 +269,7 @@ export default function MapView() {
     if (mapMethods && (features.length > 0 || boundaries.length > 0)) {
       handleUrlNavigation();
     }
-  }, [mapMethods, features, boundaries, handleUrlNavigation]);
+  }, [mapMethods, features.length, boundaries.length]);
 
   // Cleanup navigation timeout on unmount
   useEffect(() => {
