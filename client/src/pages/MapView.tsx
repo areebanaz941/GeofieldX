@@ -141,6 +141,7 @@ export default function MapView() {
         
         // Only show error if URL parameters still exist (navigation didn't succeed)
         if (stillHasFeature || stillHasBoundary) {
+          console.log('⚠️ Navigation timeout - showing error message');
           toast({
             title: "Navigation Failed",
             description: "Unable to locate the selected item on the map. Please try again or check if the item still exists.",
@@ -152,6 +153,9 @@ export default function MapView() {
           if (stillHasFeature) newUrl.searchParams.delete('feature');
           if (stillHasBoundary) newUrl.searchParams.delete('boundary');
           window.history.replaceState({}, '', newUrl.toString());
+          
+          // Clear navigation tracking
+          navigationAttemptedRef.current.clear();
         }
       }, 10000); // 10 second timeout
     }
@@ -262,7 +266,7 @@ export default function MapView() {
         activeNavigationRef.current.delete(navigationKey);
       }
     }, 500); // 500ms debounce
-  }, [mapMethods, toast]); // Include necessary dependencies
+  }, []); // Remove dependencies to prevent infinite loops
 
   // Handle URL parameters for navigation - trigger when essential dependencies change
   useEffect(() => {
@@ -278,6 +282,7 @@ export default function MapView() {
     // 3. URL parameters have changed since last check
     if ((featureId || boundaryId) && mapMethods) {
       if (currentUrlParams !== lastUrlParamsRef.current) {
+        console.log('🔄 URL parameters changed, triggering navigation');
         lastUrlParamsRef.current = currentUrlParams;
         handleUrlNavigation();
       }
@@ -285,7 +290,7 @@ export default function MapView() {
       // Clear the last URL params if no parameters exist
       lastUrlParamsRef.current = '';
     }
-  }, [mapMethods, handleUrlNavigation]);
+  }, [mapMethods]); // Simplified dependency array
 
   // Monitor data changes and retry navigation if needed
   useEffect(() => {
@@ -300,12 +305,14 @@ export default function MapView() {
       
       // Check if navigation was attempted but failed, and now we have data
       if (featureId && features.length > 0 && !navigationAttemptedRef.current.has(featureKey)) {
+        console.log('🔄 Retrying feature navigation after data loaded');
         handleUrlNavigation();
       } else if (boundaryId && boundaries.length > 0 && !navigationAttemptedRef.current.has(boundaryKey)) {
+        console.log('🔄 Retrying boundary navigation after data loaded');
         handleUrlNavigation();
       }
     }
-  }, [features.length, boundaries.length, mapMethods, handleUrlNavigation]);
+  }, [features.length, boundaries.length, mapMethods]); // Simplified dependency array
 
   // Cleanup navigation timeout on unmount
   useEffect(() => {
