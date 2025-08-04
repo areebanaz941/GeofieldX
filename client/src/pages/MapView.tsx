@@ -160,6 +160,7 @@ export default function MapView() {
   // Debounced navigation handler to prevent rapid successive calls
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeNavigationRef = useRef<Set<string>>(new Set());
+  const lastUrlParamsRef = useRef<string>('');
   
   // Handle URL parameters for navigation - using useCallback to prevent re-creation
   const handleUrlNavigation = useCallback(() => {
@@ -261,15 +262,50 @@ export default function MapView() {
         activeNavigationRef.current.delete(navigationKey);
       }
     }, 500); // 500ms debounce
-  }, [mapMethods, features.length, boundaries.length, toast]); // Include necessary dependencies
+  }, [mapMethods, toast]); // Include necessary dependencies
 
   // Handle URL parameters for navigation - trigger when essential dependencies change
   useEffect(() => {
-    // Only trigger navigation when we have the essential components ready
-    if (mapMethods && (features.length > 0 || boundaries.length > 0)) {
-      handleUrlNavigation();
+    // Check if there are URL parameters to process
+    const urlParams = new URLSearchParams(window.location.search);
+    const featureId = urlParams.get('feature');
+    const boundaryId = urlParams.get('boundary');
+    const currentUrlParams = window.location.search;
+    
+    // Only trigger navigation if:
+    // 1. There are URL parameters
+    // 2. Essential components are ready
+    // 3. URL parameters have changed since last check
+    if ((featureId || boundaryId) && mapMethods) {
+      if (currentUrlParams !== lastUrlParamsRef.current) {
+        lastUrlParamsRef.current = currentUrlParams;
+        handleUrlNavigation();
+      }
+    } else if (!featureId && !boundaryId) {
+      // Clear the last URL params if no parameters exist
+      lastUrlParamsRef.current = '';
     }
-  }, [mapMethods, features.length, boundaries.length]);
+  }, [mapMethods, handleUrlNavigation]);
+
+  // Monitor data changes and retry navigation if needed
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const featureId = urlParams.get('feature');
+    const boundaryId = urlParams.get('boundary');
+    
+    // If we have URL parameters and data has loaded, try navigation
+    if ((featureId || boundaryId) && mapMethods) {
+      const featureKey = `feature-${featureId}`;
+      const boundaryKey = `boundary-${boundaryId}`;
+      
+      // Check if navigation was attempted but failed, and now we have data
+      if (featureId && features.length > 0 && !navigationAttemptedRef.current.has(featureKey)) {
+        handleUrlNavigation();
+      } else if (boundaryId && boundaries.length > 0 && !navigationAttemptedRef.current.has(boundaryKey)) {
+        handleUrlNavigation();
+      }
+    }
+  }, [features.length, boundaries.length, mapMethods, handleUrlNavigation]);
 
   // Cleanup navigation timeout on unmount
   useEffect(() => {
