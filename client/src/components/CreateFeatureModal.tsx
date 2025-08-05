@@ -36,15 +36,24 @@ import { useToast } from "@/hooks/use-toast";
 import { featureStateEnum, featureStatusEnum, maintenanceEnum } from "@shared/schema";
 import { ImageUpload } from "@/components/ui/image-upload";
 
-// Define form schema with dynamic specific type options
+// Import the correct enums from shared schema
+import { 
+  FEATURE_TYPES, 
+  SPECIFIC_FEATURE_TYPES, 
+  FEATURE_STATES, 
+  FEATURE_STATUSES, 
+  MAINTENANCE_STATUSES 
+} from "@shared/schema";
+
+// Define form schema with correct enum values matching the server
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   feaNo: z.string().min(1, "Feature number is required"),
-  feaType: z.enum(["Tower", "Manhole", "FiberCable", "Parcel"]),
-  specificType: z.string().min(1, "Specific type is required"),
-  feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
-  feaStatus: z.enum(["Assigned", "UnAssigned", "Completed", "Delayed"]),
-  maintenance: z.enum(["Required", "None"]),
+  feaType: z.enum(FEATURE_TYPES),
+  specificType: z.enum(SPECIFIC_FEATURE_TYPES),
+  feaState: z.enum(FEATURE_STATES),
+  feaStatus: z.enum(FEATURE_STATUSES),
+  maintenance: z.enum(MAINTENANCE_STATUSES),
   maintenanceDate: z.string().optional(),
   assignedTo: z.string().optional(),
   remarks: z.string().optional(),
@@ -96,9 +105,9 @@ export default function CreateFeatureModal({
       name: "",
       feaNo: "",
       feaType: drawnPolygon ? "Parcel" : "Tower", // Will be overridden by useEffect
-      specificType: "",
+      specificType: "Mobillink", // Default to first valid option
       feaState: "Plan",
-      feaStatus: "UnAssigned",
+      feaStatus: "New", // Use valid enum value
       assignedTo: "",
       maintenance: "None",
       maintenanceDate: "",
@@ -324,12 +333,12 @@ export default function CreateFeatureModal({
     const submitData = {
       name: values.name.trim(),
       feaNo: values.feaNo.trim(),
-      feaType: values.feaType as "Tower" | "Manhole" | "FiberCable" | "Parcel",
-      specificType: values.specificType as "Mobillink" | "Ptcl" | "2-way" | "4-way" | "10F" | "24F" | "Commercial" | "Residential",
-      feaState: values.feaState as "Plan" | "Under Construction" | "As-Built" | "Abandoned",
-      feaStatus: values.feaStatus as "Assigned" | "UnAssigned" | "Completed" | "Delayed",
+      feaType: values.feaType,
+      specificType: values.specificType,
+      feaState: values.feaState,
+      feaStatus: values.feaStatus,
       ...(values.assignedTo && { assignedTo: values.assignedTo }),
-      maintenance: values.maintenance as "Required" | "None",
+      maintenance: values.maintenance,
       geometry: {
         type: values.geometry!.type,
         coordinates: values.geometry!.coordinates
@@ -375,10 +384,11 @@ export default function CreateFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Tower">Tower</SelectItem>
-                      <SelectItem value="Manhole">Manhole</SelectItem>
-                      <SelectItem value="FiberCable">Fiber Cable</SelectItem>
-                      <SelectItem value="Parcel">Parcel</SelectItem>
+                      {FEATURE_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type === "FiberCable" ? "Fiber Cable" : type}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -551,7 +561,7 @@ export default function CreateFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {["Assigned", "UnAssigned", "Completed", "Delayed"].map((status) => (
+                      {FEATURE_STATUSES.map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
                         </SelectItem>

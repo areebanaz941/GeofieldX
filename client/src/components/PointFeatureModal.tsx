@@ -11,15 +11,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  FEATURE_TYPES, 
+  SPECIFIC_FEATURE_TYPES, 
+  FEATURE_STATES, 
+  FEATURE_STATUSES, 
+  MAINTENANCE_STATUSES,
+  FeatureType
+} from "@shared/schema";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   feaNo: z.string().min(1, "Feature number is required"),
-  feaType: z.enum(["Tower", "Manhole", "Pole", "Cabinet", "Equipment", "Utility"]),
-  specificType: z.string().min(1, "Specific type is required"),
-  feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
-  feaStatus: z.enum(["Assigned", "UnAssigned", "Completed", "Delayed"]),
-  maintenance: z.enum(["Required", "None"]),
+  feaType: z.enum(FEATURE_TYPES),
+  specificType: z.enum(SPECIFIC_FEATURE_TYPES),
+  feaState: z.enum(FEATURE_STATES),
+  feaStatus: z.enum(FEATURE_STATUSES),
+  maintenance: z.enum(MAINTENANCE_STATUSES),
   maintenanceDate: z.string().optional(),
   assignedTo: z.string().optional(),
   remarks: z.string().optional(),
@@ -149,9 +157,9 @@ export default function PointFeatureModal({
       name: "",
       feaNo: "",
       feaType: (selectedFeatureType as any) || "Tower",
-      specificType: "",
+      specificType: "Mobillink", // Default to first valid option
       feaState: "Plan",
-      feaStatus: "UnAssigned",
+      feaStatus: "New", // Use valid enum value
       maintenance: "None",
       maintenanceDate: "",
       assignedTo: "",
@@ -181,7 +189,7 @@ export default function PointFeatureModal({
   const feaType = form.watch("feaType");
 
   // Update specific type options when feature type changes
-  const updateSpecificTypeOptions = (type: "Tower" | "Manhole" | "Pole" | "Cabinet" | "Equipment" | "Utility") => {
+  const updateSpecificTypeOptions = (type: FeatureType) => {
     let options: string[];
     switch (type) {
       case "Tower":
@@ -202,15 +210,21 @@ export default function PointFeatureModal({
       case "Utility":
         options = ["Water Valve", "Gas Meter", "Electrical Box", "Fire Hydrant"];
         break;
+      case "FiberCable":
+        options = ["10F", "24F"];
+        break;
+      case "Parcel":
+        options = ["Commercial", "Residential", "Water Body", "Vegetation", "Agricultural", "Industrial", "Recreational", "Government", "Mixed Use", "Vacant Land"];
+        break;
       default:
-        options = ["Standard"];
+        options = ["Mobillink"]; // Default to first valid option
     }
     setSpecificTypeOptions(options);
     form.setValue("specificType", options[0] || "");
   };
 
   // Update options when feature type changes
-  const handleFeatureTypeChange = (value: "Tower" | "Manhole" | "Pole" | "Cabinet" | "Equipment" | "Utility") => {
+  const handleFeatureTypeChange = (value: FeatureType) => {
     updateSpecificTypeOptions(value);
   };
 
@@ -320,12 +334,11 @@ export default function PointFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Tower">Tower</SelectItem>
-                      <SelectItem value="Manhole">Manhole</SelectItem>
-                      <SelectItem value="Pole">Pole</SelectItem>
-                      <SelectItem value="Cabinet">Cabinet</SelectItem>
-                      <SelectItem value="Equipment">Equipment</SelectItem>
-                      <SelectItem value="Utility">Utility</SelectItem>
+                      {FEATURE_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -453,7 +466,7 @@ export default function PointFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {["Assigned", "UnAssigned", "Completed", "Delayed"].map((status) => (
+                      {FEATURE_STATUSES.map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
                         </SelectItem>
