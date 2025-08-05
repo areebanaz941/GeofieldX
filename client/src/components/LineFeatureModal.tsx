@@ -11,14 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  SPECIFIC_FEATURE_TYPES, 
+  FEATURE_STATES, 
+  FEATURE_STATUSES, 
+  MAINTENANCE_STATUSES 
+} from "@shared/schema";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   feaNo: z.string().min(1, "Feature number is required"),
-  specificType: z.enum(["10F", "24F"]),
-  feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
-  feaStatus: z.enum(["Assigned", "UnAssigned", "Completed", "Delayed"]),
-  maintenance: z.enum(["Required", "None"]),
+  specificType: z.enum(SPECIFIC_FEATURE_TYPES),
+  feaState: z.enum(FEATURE_STATES),
+  feaStatus: z.enum(FEATURE_STATUSES),
+  maintenance: z.enum(MAINTENANCE_STATUSES),
   maintenanceDate: z.string().optional(),
   assignedTo: z.string().optional(),
   remarks: z.string().optional(),
@@ -57,7 +63,7 @@ export default function LineFeatureModal({
       feaNo: "",
       specificType: "10F",
       feaState: "Plan",
-      feaStatus: "UnAssigned",
+      feaStatus: "New", // Use valid enum value
       maintenance: "None",
       maintenanceDate: "",
       assignedTo: "",
@@ -262,7 +268,7 @@ export default function LineFeatureModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {["Assigned", "UnAssigned", "Completed", "Delayed"].map((status) => (
+                      {FEATURE_STATUSES.map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
                         </SelectItem>

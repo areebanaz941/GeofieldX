@@ -55,7 +55,7 @@ async function addInitialData(storage: IStorage) {
       log("Creating supervisor account with username: supervisor12");
       const supervisorData: InsertUser = {
         username: "supervisor12",
-        password: "supervisor@12", // Will be hashed in storage.createUser
+        password: await bcrypt.hash("supervisor@12", 10), // Hash the password
         name: "System Supervisor",
         email: "supervisor@geowhats.com",
         role: "Supervisor",
@@ -534,7 +534,7 @@ async function addInitialData(storage: IStorage) {
 
       const fieldUserData: InsertUser = {
         username: "field_user_demo",
-        password: "demo123",
+        password: await bcrypt.hash("demo123", 10), // Hash the password
         name: "Demo Field User",
         email: "field.demo@geowhats.com",
         role: "Field",
