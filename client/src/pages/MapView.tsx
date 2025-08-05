@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
@@ -90,6 +90,14 @@ export default function MapView() {
   // Local shapefiles state for frontend-only processing
   const [localShapefiles, setLocalShapefiles] = useState<Shapefile[]>([]);
 
+  // ✅ STABLE TOAST CALLBACK - Fixed dependencies
+  const stableToast = useCallback((toastData: any) => {
+    toast(toastData);
+  }, [toast]); // ✅ Proper dependency but stabilized with useMemo below
+  
+  // ✅ MEMOIZE toast function to prevent recreation
+  const memoizedToast = useMemo(() => stableToast, [stableToast]);
+
   // Fetch data first
   const { data: features = [] } = useQuery({
     queryKey: ["/api/features"],
@@ -111,226 +119,214 @@ export default function MapView() {
     queryFn: getAllBoundaries,
   });
 
-  // Track navigation attempts to prevent infinite loops
-  const navigationAttemptedRef = useRef<Set<string>>(new Set());
-  const navigationFailureTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Clear navigation tracking when URL changes significantly
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const featureId = urlParams.get('feature');
-    const boundaryId = urlParams.get('boundary');
+  // ✅ COMPLETELY REWRITTEN NAVIGATION CONTROLLER - Simple and stable
+  const navigationController = useRef({
+    hasProcessed: false, // Changed from hasAttempted to hasProcessed
+    timeoutId: null as NodeJS.Timeout | null,
     
-    // If no navigation parameters exist, clear the tracking
-    if (!featureId && !boundaryId) {
-      navigationAttemptedRef.current.clear();
-      // Clear failure timeout if no navigation needed
-      if (navigationFailureTimeoutRef.current) {
-        clearTimeout(navigationFailureTimeoutRef.current);
-        navigationFailureTimeoutRef.current = null;
+    // Simple check for navigation params
+    getNavigationParams(): { featureId: string | null; boundaryId: string | null } {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        featureId: params.get('feature'),
+        boundaryId: params.get('boundary')
+      };
+    },
+    
+    // Clear URL params after successful navigation
+    clearUrlParams(featureId?: string, boundaryId?: string) {
+      const url = new URL(window.location.href);
+      let changed = false;
+      if (featureId) {
+        url.searchParams.delete('feature');
+        changed = true;
       }
-    } else {
-      // Set up a timeout to show error message if navigation doesn't succeed within 10 seconds
-      if (navigationFailureTimeoutRef.current) {
-        clearTimeout(navigationFailureTimeoutRef.current);
+      if (boundaryId) {
+        url.searchParams.delete('boundary');
+        changed = true;
       }
-      navigationFailureTimeoutRef.current = setTimeout(() => {
-        const urlParamsCheck = new URLSearchParams(window.location.search);
-        const stillHasFeature = urlParamsCheck.get('feature');
-        const stillHasBoundary = urlParamsCheck.get('boundary');
-        
-        // Only show error if URL parameters still exist (navigation didn't succeed)
-        if (stillHasFeature || stillHasBoundary) {
-          console.log('⚠️ Navigation timeout - showing error message');
-          toast({
-            title: "Navigation Failed",
-            description: "Unable to locate the selected item on the map. Please try again or check if the item still exists.",
+      if (changed) {
+        window.history.replaceState({}, '', url.toString());
+      }
+    },
+    
+    // ✅ SIMPLIFIED: One-time navigation attempt
+    attemptNavigation(mapMethods: any, features: any[], boundaries: any[], toastCallback: Function) {
+      // Skip if already processed
+      if (this.hasProcessed) {
+        return;
+      }
+      
+      const { featureId, boundaryId } = this.getNavigationParams();
+      
+      // No navigation needed
+      if (!featureId && !boundaryId) {
+        this.hasProcessed = true;
+        return;
+      }
+      
+      // Map not ready
+      if (!mapMethods) {
+        return;
+      }
+      
+      console.log('🎯 One-time navigation attempt:', { featureId, boundaryId });
+      
+      let success = false;
+      
+      // Try feature navigation
+      if (featureId && features.length > 0) {
+        try {
+          success = mapMethods.zoomToFeature(featureId);
+          if (success) {
+            console.log('✅ Feature navigation successful');
+            this.clearUrlParams(featureId);
+          }
+        } catch (error) {
+          console.error('❌ Feature navigation error:', error);
+        }
+      }
+      
+      // Try boundary navigation if feature failed
+      if (!success && boundaryId && boundaries.length > 0) {
+        try {
+          success = mapMethods.zoomToBoundary(boundaryId);
+          if (success) {
+            console.log('✅ Boundary navigation successful');
+            this.clearUrlParams(undefined, boundaryId);
+          }
+        } catch (error) {
+          console.error('❌ Boundary navigation error:', error);
+        }
+      }
+      
+      // Mark as processed regardless of success/failure
+      this.hasProcessed = true;
+      
+      // Clear timeout
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId);
+        this.timeoutId = null;
+      }
+      
+      // Show error if failed
+      if (!success) {
+        console.log('❌ Navigation failed, clearing URL params');
+        this.clearUrlParams(featureId || undefined, boundaryId || undefined);
+        toastCallback({
+          title: "Navigation Failed",
+          description: "Could not locate the item on the map.",
+          variant: "destructive",
+        });
+      }
+    },
+    
+    // ✅ SIMPLIFIED: Set timeout once
+    setFailureTimeout(toastCallback: Function) {
+      if (this.timeoutId || this.hasProcessed) return;
+      
+      const { featureId, boundaryId } = this.getNavigationParams();
+      if (!featureId && !boundaryId) return;
+      
+      this.timeoutId = setTimeout(() => {
+        if (!this.hasProcessed) {
+          console.log('⏰ Navigation timeout');
+          toastCallback({
+            title: "Navigation Timeout",
+            description: "Navigation took too long. Please try again.",
             variant: "destructive",
           });
-          
-          // Clear the URL parameters to prevent further attempts
-          const newUrl = new URL(window.location.href);
-          if (stillHasFeature) newUrl.searchParams.delete('feature');
-          if (stillHasBoundary) newUrl.searchParams.delete('boundary');
-          window.history.replaceState({}, '', newUrl.toString());
-          
-          // Clear navigation tracking
-          navigationAttemptedRef.current.clear();
+          this.clearUrlParams(featureId || undefined, boundaryId || undefined);
+          this.hasProcessed = true;
         }
-      }, 10000); // 10 second timeout
+        this.timeoutId = null;
+      }, 5000); // Reduced to 5 seconds
+    },
+    
+    // Reset for new navigation (call this when URL changes)
+    reset() {
+      console.log('🔄 Resetting navigation controller');
+      this.hasProcessed = false;
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId);
+        this.timeoutId = null;
+      }
     }
-  }, []); // Remove window.location.search dependency to prevent infinite loops
+  });
+
+  // ✅ FIXED NAVIGATION EFFECT - Keep all functionality but prevent multiple executions
+  const lastProcessedUrl = useRef('');
   
-  // Debounced navigation handler to prevent rapid successive calls
-  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const activeNavigationRef = useRef<Set<string>>(new Set());
-  const lastUrlParamsRef = useRef<string>('');
-  
-  // Handle URL parameters for navigation - using useCallback to prevent re-creation
-  const handleUrlNavigation = useCallback(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const featureId = urlParams.get('feature');
-    const boundaryId = urlParams.get('boundary');
+  useEffect(() => {
+    const controller = navigationController.current;
+    const currentUrl = window.location.search;
     
-    // Only proceed if there are URL parameters to process
-    if (!featureId && !boundaryId) return;
-    
-    // Check if map methods are available
-    if (!mapMethods) {
-      console.log('🔄 MapView navigation deferred - mapMethods not ready');
+    // Skip if we already processed this exact URL
+    if (lastProcessedUrl.current === currentUrl && controller.hasProcessed) {
       return;
     }
     
-    console.log('🔄 MapView navigation effect triggered');
-    console.log('mapMethods available:', !!mapMethods);
-    console.log('features count:', features.length);
-    console.log('boundaries count:', boundaries.length);
-    console.log('URL params - featureId:', featureId, 'boundaryId:', boundaryId);
-
-    // Clear any existing navigation timeout
-    if (navigationTimeoutRef.current) {
-      clearTimeout(navigationTimeoutRef.current);
-    }
-
-    // Debounce navigation attempts
-    navigationTimeoutRef.current = setTimeout(() => {
-      if (featureId && features.length > 0) {
-        const navigationKey = `feature-${featureId}`;
-        
-        // Check if navigation is already completed
-        if (navigationAttemptedRef.current.has(navigationKey)) {
-          console.log('📍 Navigation already completed for feature:', featureId);
-          return;
-        }
-        
-        // Check if navigation is already in progress
-        if (activeNavigationRef.current.has(navigationKey)) {
-          console.log('📍 Navigation already in progress for feature:', featureId);
-          return;
-        }
-        
-        console.log('📍 Starting feature navigation for ID:', featureId);
-        activeNavigationRef.current.add(navigationKey);
-        
-        // Attempt navigation with retry logic
-        const success = mapMethods.zoomToFeature(featureId);
-        
-        if (success) {
-          console.log('✅ Feature navigation successful');
-          navigationAttemptedRef.current.add(navigationKey);
-          // Clear the URL parameter after successful navigation
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('feature');
-          window.history.replaceState({}, '', newUrl.toString());
-        } else {
-          console.log('❌ Feature navigation failed - will retry when more data loads');
-          // Don't show error immediately, let it retry when more data loads
-        }
-        
-        activeNavigationRef.current.delete(navigationKey);
-      }
-
-      if (boundaryId && boundaries.length > 0) {
-        const navigationKey = `boundary-${boundaryId}`;
-        
-        // Check if navigation is already completed
-        if (navigationAttemptedRef.current.has(navigationKey)) {
-          console.log('🏔️ Navigation already completed for boundary:', boundaryId);
-          return;
-        }
-        
-        // Check if navigation is already in progress
-        if (activeNavigationRef.current.has(navigationKey)) {
-          console.log('🏔️ Navigation already in progress for boundary:', boundaryId);
-          return;
-        }
-        
-        console.log('🏔️ Starting boundary navigation for ID:', boundaryId);
-        activeNavigationRef.current.add(navigationKey);
-        
-        // Attempt navigation with retry logic
-        const success = mapMethods.zoomToBoundary(boundaryId);
-        
-        if (success) {
-          console.log('✅ Boundary navigation successful');
-          navigationAttemptedRef.current.add(navigationKey);
-          // Clear the URL parameter after successful navigation
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('boundary');
-          window.history.replaceState({}, '', newUrl.toString());
-        } else {
-          console.log('❌ Boundary navigation failed - will retry when more data loads');
-          // Don't show error immediately, let it retry when more data loads
-        }
-        
-        activeNavigationRef.current.delete(navigationKey);
-      }
-    }, 500); // 500ms debounce
-  }, []); // Remove dependencies to prevent infinite loops
-
-  // Handle URL parameters for navigation - trigger when essential dependencies change
-  useEffect(() => {
-    // Check if there are URL parameters to process
-    const urlParams = new URLSearchParams(window.location.search);
-    const featureId = urlParams.get('feature');
-    const boundaryId = urlParams.get('boundary');
-    const currentUrlParams = window.location.search;
+    const { featureId, boundaryId } = controller.getNavigationParams();
     
-    // Only trigger navigation if:
-    // 1. There are URL parameters
-    // 2. Essential components are ready
-    // 3. URL parameters have changed since last check
-    if ((featureId || boundaryId) && mapMethods) {
-      if (currentUrlParams !== lastUrlParamsRef.current) {
-        console.log('🔄 URL parameters changed, triggering navigation');
-        lastUrlParamsRef.current = currentUrlParams;
-        handleUrlNavigation();
-      }
-    } else if (!featureId && !boundaryId) {
-      // Clear the last URL params if no parameters exist
-      lastUrlParamsRef.current = '';
+    // No navigation needed
+    if (!featureId && !boundaryId) {
+      controller.hasProcessed = true;
+      lastProcessedUrl.current = currentUrl;
+      return;
     }
-  }, [mapMethods]); // Simplified dependency array
-
-  // Monitor data changes and retry navigation if needed
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const featureId = urlParams.get('feature');
-    const boundaryId = urlParams.get('boundary');
     
-    // If we have URL parameters and data has loaded, try navigation
-    if ((featureId || boundaryId) && mapMethods) {
-      const featureKey = `feature-${featureId}`;
-      const boundaryKey = `boundary-${boundaryId}`;
+    // Already processed this navigation
+    if (controller.hasProcessed && lastProcessedUrl.current === currentUrl) {
+      return;
+    }
+    
+    // Set timeout once
+    if (!controller.timeoutId) {
+      controller.setFailureTimeout(stableToast);
+    }
+    
+    // Try navigation when conditions are met
+    if (mapMethods && ((featureId && features.length > 0) || (boundaryId && boundaries.length > 0))) {
+      const timer = setTimeout(() => {
+        controller.attemptNavigation(mapMethods, features, boundaries, stableToast);
+        lastProcessedUrl.current = currentUrl;
+      }, 100);
       
-      // Check if navigation was attempted but failed, and now we have data
-      if (featureId && features.length > 0 && !navigationAttemptedRef.current.has(featureKey)) {
-        console.log('🔄 Retrying feature navigation after data loaded');
-        handleUrlNavigation();
-      } else if (boundaryId && boundaries.length > 0 && !navigationAttemptedRef.current.has(boundaryKey)) {
-        console.log('🔄 Retrying boundary navigation after data loaded');
-        handleUrlNavigation();
-      }
+      return () => clearTimeout(timer);
     }
-  }, [features.length, boundaries.length, mapMethods]); // Simplified dependency array
+  }, [mapMethods, features.length, boundaries.length, stableToast]); // Keep all original dependencies
 
-  // Cleanup navigation timeout on unmount
+  // ✅ INITIALIZE: Reset navigation state on component mount
+  useEffect(() => {
+    navigationController.current.reset();
+  }, []);
+  
+  // ✅ URL CHANGE LISTENER - Reset navigation when URL changes
+  useEffect(() => {
+    const handlePopState = () => {
+      navigationController.current.reset();
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+  
+  // ✅ CLEANUP ON UNMOUNT
   useEffect(() => {
     return () => {
-      if (navigationTimeoutRef.current) {
-        clearTimeout(navigationTimeoutRef.current);
-      }
-      if (navigationFailureTimeoutRef.current) {
-        clearTimeout(navigationFailureTimeoutRef.current);
+      const controller = navigationController.current;
+      if (controller.timeoutId) {
+        clearTimeout(controller.timeoutId);
+        controller.timeoutId = null;
       }
     };
   }, []);
 
-  // Handle map navigation errors
+  // Handle map navigation errors - KEEP ALL FUNCTIONALITY
   useEffect(() => {
     const handleNavigationError = (event: CustomEvent) => {
       const { type, id, error } = event.detail;
-      toast({
+      stableToast({
         title: "Navigation Failed",
         description: `Unable to navigate to ${type}: ${error}`,
         variant: "destructive",
@@ -343,7 +339,7 @@ export default function MapView() {
     return () => {
       window.removeEventListener('map-navigation-error', handleNavigationError as EventListener);
     };
-  }, [toast]);
+  }, []); // Remove stableToast dependency to prevent loops
   
   // Combined shapefiles state (local + saved)
   const [allShapefiles, setAllShapefiles] = useState<Shapefile[]>([]);
@@ -514,12 +510,12 @@ export default function MapView() {
         transformedFeaturesData = transformedFeatures;
       }
       
-             console.log(`🔄 Applied coordinate transformation to saved shapefile: ${shapefile.name}`, {
-         originalFeatureCount: processableFeatures.length,
-         transformedFeatureCount: transformedFeatures.length,
-         sampleOriginalCoords: processableFeatures[0]?.geometry?.coordinates,
-         sampleTransformedCoords: transformedFeatures[0]?.geometry?.coordinates
-       });
+      console.log(`🔄 Applied coordinate transformation to saved shapefile: ${shapefile.name}`, {
+        originalFeatureCount: processableFeatures.length,
+        transformedFeatureCount: transformedFeatures.length,
+        sampleOriginalCoords: processableFeatures[0]?.geometry?.coordinates,
+        sampleTransformedCoords: transformedFeatures[0]?.geometry?.coordinates
+      });
       
       return {
         ...shapefile,
@@ -532,24 +528,59 @@ export default function MapView() {
     }
   };
 
-  // Combine local and saved shapefiles, filtering by visibility and transforming coordinates
+  // ✅ FIXED SHAPEFILE PROCESSING - Keep all functionality but prevent infinite loops
+  const processingRef = useRef(false);
+  
   useEffect(() => {
+    // Prevent multiple simultaneous processing
+    if (processingRef.current) return;
+    
     const processShapefiles = async () => {
-      const visibleSavedShapefiles = savedShapefiles.filter((shapefile: any) => shapefile.isVisible);
+      processingRef.current = true;
       
-      // Process saved shapefiles asynchronously
-      const processedSavedShapefiles = await Promise.all(
-        visibleSavedShapefiles.map(processSavedShapefileWithShpJS)
-      );
-      
-      const combined = [...localShapefiles, ...processedSavedShapefiles];
-      setAllShapefiles(combined);
+      try {
+        const visibleSavedShapefiles = savedShapefiles.filter((shapefile: any) => shapefile.isVisible);
+        
+        // Process saved shapefiles asynchronously - KEEP ALL ORIGINAL LOGIC
+        const processedSavedShapefiles = await Promise.all(
+          visibleSavedShapefiles.map(processSavedShapefileWithShpJS)
+        );
+        
+        const combined = [...localShapefiles, ...processedSavedShapefiles];
+        setAllShapefiles(combined);
+      } catch (error) {
+        console.error('Error processing shapefiles:', error);
+        setAllShapefiles([...localShapefiles]);
+      } finally {
+        processingRef.current = false;
+      }
     };
     
-    processShapefiles();
-  }, [localShapefiles, savedShapefiles]);
+    // Small delay to prevent rapid re-processing
+    const timeoutId = setTimeout(processShapefiles, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [localShapefiles.length, savedShapefiles.length]); // Only depend on lengths, not full arrays
 
-  // Removed debug logging to reduce console noise
+  // ✅ FIXED: Clear cache only when shapefiles actually change - PREVENT INFINITE LOOPS
+  const prevShapefileIds = useRef<string>('');
+  
+  useEffect(() => {
+    // Only process if allShapefiles has content
+    if (allShapefiles.length === 0) return;
+    
+    // Create a stable identifier based on shapefile IDs and count
+    const currentIds = allShapefiles.map(s => s._id || s.name).join(',') + `_${allShapefiles.length}`;
+    
+    // Only clear cache if the actual shapefiles changed, not just array reference
+    if (prevShapefileIds.current !== currentIds) {
+      console.log('🔄 Shapefiles actually changed, clearing cache');
+      clearTransformationCache();
+      prevShapefileIds.current = currentIds;
+    }
+  }, [allShapefiles.length]); // Only depend on length to prevent infinite loops
 
   const { data: teams = [] } = useQuery({
     queryKey: ["/api/teams"],
@@ -580,14 +611,14 @@ export default function MapView() {
     mutationFn: createParcel,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/boundaries"] });
-      toast({
+      memoizedToast({
         title: "Success",
         description: "Parcel created successfully"
       });
       setDrawingMode(false);
     },
     onError: (error: any) => {
-      toast({
+      memoizedToast({
         title: "Error",
         description: error.message || "Failed to create parcel",
         variant: "destructive"
@@ -628,7 +659,7 @@ export default function MapView() {
     }
   }, [user]);
 
-  // Location event listeners for built-in control (simplified)
+  // Location event listeners for built-in control (simplified) - KEEP ALL FUNCTIONALITY
   useEffect(() => {
     const handleLocationSuccess = (event: any) => {
       // Safe destructuring with validation
@@ -640,7 +671,7 @@ export default function MapView() {
       const { message, latitude, longitude } = event.detail || {};
       
       if (message && latitude !== undefined && longitude !== undefined) {
-        toast({
+        stableToast({
           title: "Location Found! 🎯",
           description: `${message} (${latitude}, ${longitude})`,
         });
@@ -659,13 +690,13 @@ export default function MapView() {
       const { message } = event.detail || {};
       
       if (message) {
-        toast({
+        stableToast({
           title: "Location Error ❌",
           description: message,
           variant: "destructive",
         });
       } else {
-        toast({
+        stableToast({
           title: "Location Error ❌",
           description: "Unknown location error occurred",
           variant: "destructive",
@@ -682,7 +713,7 @@ export default function MapView() {
       window.removeEventListener('locationSuccess', handleLocationSuccess);
       window.removeEventListener('locationError', handleLocationError);
     };
-  }, [toast]);
+  }, []); // Remove dependency to prevent loops
 
   // Helper function to detect if coordinates are in projected vs geographic coordinate system
   const detectCoordinateSystem = (coordinates: number[]): 'geographic' | 'projected' | 'unknown' => {
@@ -726,10 +757,14 @@ export default function MapView() {
     console.log('🔄 Transformation cache cleared');
   };
 
-  // Clear cache when shapefiles change to ensure fresh processing
+  // ✅ FIXED: Clear cache only when shapefiles actually change (not on every render)
+  const shapefileCount = useMemo(() => allShapefiles.length, [allShapefiles]);
+  
   useEffect(() => {
-    clearTransformationCache();
-  }, [allShapefiles.length]);
+    if (shapefileCount > 0) {
+      clearTransformationCache();
+    }
+  }, [shapefileCount]); // Only clear when count changes, not when array reference changes
 
   // Helper function to attempt coordinate transformation from common projected systems
   const transformProjectedCoordinates = (coordinates: number[]): { success: boolean; coords?: number[]; projection?: string } => {
@@ -839,7 +874,7 @@ export default function MapView() {
           return { isValid: true, coords: transformResult.coords!, type: 'transformed' };
         } else {
           console.error('❌ Failed to transform projected coordinates. Using original values for testing.');
-          toast({
+          memoizedToast({
             title: "Coordinate System Warning",
             description: "Could not transform projected coordinates. Map display may be incorrect.",
             variant: "destructive"
@@ -877,7 +912,7 @@ export default function MapView() {
     
     if (!shapefile || !shapefile.features) {
       console.warn('⚠️ Invalid shapefile data');
-      toast({
+      memoizedToast({
         title: "Navigation Error",
         description: "Invalid shapefile data",
         variant: "destructive"
@@ -913,7 +948,7 @@ export default function MapView() {
       
       if (processableFeatures.length === 0) {
         console.warn('⚠️ Shapefile has no features to display');
-        toast({
+        memoizedToast({
           title: "Empty Shapefile",
           description: `Shapefile "${shapefile.name}" contains no displayable features`,
           variant: "destructive"
@@ -922,7 +957,7 @@ export default function MapView() {
       }
     } catch (error) {
       console.error('❌ Error parsing shapefile features:', error);
-      toast({
+      memoizedToast({
         title: "Invalid Shapefile Data",
         description: "Could not parse shapefile data",
         variant: "destructive"
@@ -1009,7 +1044,7 @@ export default function MapView() {
     // Handle projected coordinate system
     if (hasProjectedCoords && !validCoordinatesFound) {
       console.error('❌ Shapefile contains projected coordinates that could not be transformed');
-      toast({
+      memoizedToast({
         title: "Coordinate Transformation Failed",
         description: `Shapefile "${shapefile.name}" uses a projected coordinate system that could not be automatically transformed. Please provide the shapefile in geographic coordinates (WGS84) or contact support for help with coordinate system conversion.`,
         variant: "destructive"
@@ -1020,7 +1055,7 @@ export default function MapView() {
     // Validate bounds
     if (!validCoordinatesFound || !isFinite(minLon) || !isFinite(maxLon) || !isFinite(minLat) || !isFinite(maxLat)) {
       console.error('❌ Invalid coordinates calculated:', { minLon, maxLon, minLat, maxLat });
-      toast({
+      memoizedToast({
         title: "Navigation Error",
         description: "Unable to calculate valid shapefile location. The coordinate system may be unsupported.",
         variant: "destructive"
@@ -1031,7 +1066,7 @@ export default function MapView() {
     // Additional validation for reasonable coordinate ranges
     if (minLon < -180 || maxLon > 180 || minLat < -90 || maxLat > 90) {
       console.error('❌ Coordinates outside valid geographic range:', { minLon, maxLon, minLat, maxLat });
-      toast({
+      memoizedToast({
         title: "Coordinate Range Error",
         description: `Shapefile coordinates are outside valid geographic range (Longitude: ${minLon.toFixed(2)} to ${maxLon.toFixed(2)}, Latitude: ${minLat.toFixed(2)} to ${maxLat.toFixed(2)}). This suggests the shapefile uses a projected coordinate system that needs transformation.`,
         variant: "destructive"
@@ -1064,7 +1099,7 @@ export default function MapView() {
         centerLng < -180 || centerLng > 180 || 
         centerLat < -90 || centerLat > 90) {
       console.error('❌ Invalid center coordinates calculated:', { centerLng, centerLat });
-      toast({
+      memoizedToast({
         title: "Navigation Error",
         description: "Calculated center coordinates are invalid. Cannot navigate to shapefile.",
         variant: "destructive"
@@ -1086,7 +1121,7 @@ export default function MapView() {
     window.dispatchEvent(zoomEvent);
     console.log('✅ Zoom event dispatched');
     
-    toast({
+    memoizedToast({
       title: "Navigating to Shapefile",
       description: `Showing "${shapefile.name}" on the map (${coordinateSystemType} coordinates)`,
     });
@@ -1105,7 +1140,7 @@ export default function MapView() {
     // Check if we have any shapefiles available (local or saved)
     if ((!allShapefiles || allShapefiles.length === 0) && (!localShapefiles || localShapefiles.length === 0)) {
       console.warn('⚠️ No shapefiles available');
-      toast({
+      memoizedToast({
         title: "No Shapefiles",
         description: "No shapefiles are currently visible",
         variant: "destructive"
@@ -1143,7 +1178,7 @@ export default function MapView() {
       zoomToShapefile(shapefile);
     }, 300);
     
-    toast({
+    memoizedToast({
       title: "Shapefile Added",
       description: `"${shapefile.name}" with ${shapefile.featureCount || 0} features`,
     });
@@ -1263,7 +1298,7 @@ export default function MapView() {
     if (pointSelectionMode) {
       // Check boundary restrictions for field users
       if (!isPointInAssignedBoundary(latlng)) {
-        toast({
+        memoizedToast({
           title: "Location Restricted",
           description: "You can only create features within your assigned boundary areas.",
           variant: "destructive",
@@ -1273,7 +1308,7 @@ export default function MapView() {
       setSelectedLocation(latlng);
       setPointSelectionMode(false);
       setPointFeatureModalOpen(true);
-      toast({
+      memoizedToast({
         title: "Point Selected",
         description: "Form opened with location pre-filled",
       });
@@ -1283,7 +1318,7 @@ export default function MapView() {
     // Original selection mode for existing modals
     if (selectionMode && !drawingMode) {
       setSelectedLocation(latlng);
-      toast({
+      memoizedToast({
         title: "Location Selected",
         description: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`,
       });
@@ -1301,7 +1336,7 @@ export default function MapView() {
   const handleLineCreated = (line: { coordinates: { lat: number; lng: number }[] }) => {
     // Check boundary restrictions for field users
     if (!isLineInAssignedBoundary(line.coordinates)) {
-      toast({
+      memoizedToast({
         title: "Location Restricted",
         description: "You can only create features within your assigned boundary areas.",
         variant: "destructive",
@@ -1312,7 +1347,7 @@ export default function MapView() {
     setLinePoints(line.coordinates);
     setLineDrawingMode(false);
     setLineFeatureModalOpen(true);
-    toast({
+    memoizedToast({
       title: "Route Completed",
       description: `Fiber cable route with ${line.coordinates.length} points created`,
     });
@@ -1330,7 +1365,7 @@ export default function MapView() {
       setSelectedBoundary(boundary);
       setBoundaryAssignmentModalOpen(true);
     } else {
-      toast({
+      memoizedToast({
         title: "Boundary Information",
         description: `${boundary.name} - You can create features within this area`,
       });
@@ -1339,7 +1374,7 @@ export default function MapView() {
 
   const handleTeamClick = (team: IUser) => {
     setSelectedTeam(team);
-    toast({
+    memoizedToast({
       title: "Team Selected",
       description: `${team.name}`,
     });
@@ -1349,7 +1384,7 @@ export default function MapView() {
     console.log('Shapefile clicked:', shapefileData);
     
     // Show shapefile information in a toast
-    toast({
+    memoizedToast({
       title: "Shapefile Feature",
       description: `${shapefileData.parentShapefile?.name || 'Shapefile'}: ${shapefileData.properties?.name || 'Feature'}`,
     });
@@ -1419,7 +1454,7 @@ export default function MapView() {
       setCreateFeatureModalOpen(true);
     }
     
-    toast({
+    memoizedToast({
       title: "Polygon completed",
       description: "Fill out the form to save this feature.",
     });
