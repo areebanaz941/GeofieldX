@@ -130,12 +130,12 @@ export async function getMyTasks() {
   return await res.json();
 }
 
-export async function updateTaskStatus(taskId: number, status: string) {
+export async function updateTaskStatus(taskId: string, status: string) {
   const res = await apiRequest('PUT', `/api/tasks/${taskId}/status`, { status });
   return await res.json();
 }
 
-export async function assignTask(taskId: number, assignedTo: number) {
+export async function assignTask(taskId: string, assignedTo: number) {
   const res = await apiRequest('PUT', `/api/tasks/${taskId}/assign`, { assignedTo });
   return await res.json();
 }
@@ -146,7 +146,7 @@ export async function deleteTask(taskId: string) {
 }
 
 // Task Updates API
-export async function createTaskUpdate(taskId: number, comment: string, oldStatus?: string, newStatus?: string) {
+export async function createTaskUpdate(taskId: string, comment: string, oldStatus?: string, newStatus?: string) {
   const res = await apiRequest('POST', `/api/tasks/${taskId}/updates`, {
     comment,
     oldStatus,
@@ -155,13 +155,13 @@ export async function createTaskUpdate(taskId: number, comment: string, oldStatu
   return await res.json();
 }
 
-export async function getTaskUpdates(taskId: number) {
+export async function getTaskUpdates(taskId: string) {
   const res = await apiRequest('GET', `/api/tasks/${taskId}/updates`);
   return await res.json();
 }
 
 // Task Evidence API
-export async function addTaskEvidence(taskId: number, formData: FormData) {
+export async function addTaskEvidence(taskId: string, formData: FormData) {
   // Use fetch directly for file uploads
   const res = await fetch(`/api/tasks/${taskId}/evidence`, {
     method: 'POST',
@@ -176,7 +176,7 @@ export async function addTaskEvidence(taskId: number, formData: FormData) {
   return await res.json();
 }
 
-export async function getTaskEvidence(taskId: number) {
+export async function getTaskEvidence(taskId: string) {
   const res = await apiRequest('GET', `/api/tasks/${taskId}/evidence`);
   return await res.json();
 }
