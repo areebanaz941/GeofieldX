@@ -705,7 +705,7 @@ export const insertFeatureSchema = z.object({
   feaType: z.enum(FEATURE_TYPES),
   specificType: z.enum(SPECIFIC_FEATURE_TYPES),
   maintenance: z.enum(MAINTENANCE_STATUSES).default("None"),
-  maintenanceDate: z.date().optional(),
+  maintenanceDate: z.coerce.date().optional(),
   geometry: z.object({
     type: z.enum(["Point", "LineString", "Polygon"]),
     coordinates: z.union([

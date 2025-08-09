@@ -716,6 +716,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       
       // Debug logging to check if images are being received
+      // Normalize JSON-stringified fields (geometry) when sent as FormData
+      if (typeof req.body.geometry === 'string') {
+        try { req.body.geometry = JSON.parse(req.body.geometry); } catch {}
+      }
       console.log("🎯 Feature creation request body:", req.body);
       console.log("📸 Images array received:", req.body.images);
       console.log("📸 Uploaded files:", req.files);
@@ -737,6 +741,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
+        // If supervisor is creating, skip boundary restriction
+      }
         // Get all boundaries assigned to the user's team
         const allBoundaries = await storage.getAllBoundaries();
         const assignedBoundaries = allBoundaries.filter(boundary => 
