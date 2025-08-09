@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ITask, IUser } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getFieldUsers } from "@/lib/api";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TaskPanelProps {
   tasks: ITask[];
@@ -13,6 +14,7 @@ interface TaskPanelProps {
   onTaskSelect: (task: ITask) => void;
   expanded: boolean;
   onExpandToggle: () => void;
+  onLocateTask?: (task: ITask) => void;
 }
 
 export default function TaskPanel({
@@ -21,6 +23,7 @@ export default function TaskPanel({
   onTaskSelect,
   expanded,
   onExpandToggle,
+  onLocateTask,
 }: TaskPanelProps) {
   const { t } = useTranslation();
   const { data: users = [] } = useQuery({
@@ -28,10 +31,13 @@ export default function TaskPanel({
     queryFn: getFieldUsers,
   });
 
+  const [sortBy, setSortBy] = useState<"updatedAt" | "dueDate" | "title">("updatedAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
   // Get user name by id
   const getUserName = (userId?: any) => {
     if (!userId) return t('taskPanel.unassigned');
-    const user = users.find((u: any) => u._id === userId);
+    const user = users.find((u: any) => u._id === userId || u._id?.toString?.() === userId?.toString?.());
     return user ? user.name : t('common.unknown');
   };
 
@@ -63,12 +69,10 @@ export default function TaskPanel({
   // Format due date
   const formatDueDate = (date: string | Date) => {
     if (!date) return "";
-    
     const dueDate = new Date(date);
     const now = new Date();
     const diffMs = dueDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    
     if (diffDays < 0) return t('taskPanel.overdue');
     if (diffDays === 0) return t('taskPanel.dueToday');
     if (diffDays === 1) return t('taskPanel.dueTomorrow');
@@ -76,10 +80,23 @@ export default function TaskPanel({
     return t('taskPanel.dueDate', { date: dueDate.toLocaleDateString() });
   };
 
-  // Sort tasks by updated date (newest first)
-  const sortedTasks = [...tasks].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  // Sort tasks with UI controls
+  const sortedTasks = [...tasks].sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === "title") {
+      cmp = (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+    } else if (sortBy === "dueDate") {
+      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      cmp = aDate - bDate; // earliest first
+    } else {
+      // updatedAt default
+      const aDate = new Date(a.updatedAt).getTime();
+      const bDate = new Date(b.updatedAt).getTime();
+      cmp = aDate - bDate; // oldest first
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   return (
     <div
@@ -95,6 +112,27 @@ export default function TaskPanel({
           </span>
         </div>
         <div className="flex items-center space-x-1 lg:space-x-2">
+          <div className="hidden sm:flex items-center space-x-1">
+            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+              <SelectTrigger className="h-8 w-[140px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updatedAt">Updated date</SelectItem>
+                <SelectItem value="dueDate">Due date</SelectItem>
+                <SelectItem value="title">Task name</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
+              className="text-neutral-500 hover:text-neutral-700 h-8 w-8 lg:h-10 lg:w-10"
+              title={sortDir === "asc" ? "Ascending" : "Descending"}
+            >
+              <i className={`ri-sort-${sortDir === 'asc' ? 'asc' : 'desc'}-2`}></i>
+            </Button>
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -111,7 +149,6 @@ export default function TaskPanel({
           >
             <i className="ri-refresh-line text-base lg:text-lg"></i>
           </Button>
-
         </div>
       </div>
 
@@ -121,9 +158,9 @@ export default function TaskPanel({
             {sortedTasks.length > 0 ? (
               sortedTasks.map((task) => (
                 <Card
-                  key={task.id}
+                  key={task._id?.toString?.() || String(Math.random())}
                   className={`hover:shadow-md transition-shadow duration-200 cursor-pointer border ${
-                    selectedTask?.id === task.id
+                    (selectedTask?._id?.toString?.() || "") === (task._id?.toString?.() || "")
                       ? "ring-2 ring-primary-500"
                       : "border-neutral-200"
                   }`}
@@ -143,6 +180,8 @@ export default function TaskPanel({
                         variant="ghost"
                         size="icon"
                         className="text-neutral-400 hover:text-primary-500 hover:bg-primary-50 h-7 w-7"
+                        onClick={(e) => { e.stopPropagation(); onLocateTask?.(task); }}
+                        title="Locate on map"
                       >
                         <i className="ri-map-pin-line"></i>
                       </Button>
@@ -179,7 +218,7 @@ export default function TaskPanel({
                       <span className="text-xs">{getUserName(task.assignedTo)}</span>
                     </div>
                     <div className="text-xs text-neutral-500">
-                      {formatRelativeTime(task.updatedAt)}
+                      {formatRelativeTime(task.updatedAt as unknown as string)}
                     </div>
                   </div>
                 </Card>
