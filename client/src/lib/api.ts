@@ -163,10 +163,17 @@ export async function getTaskUpdates(taskId: string) {
 // Task Evidence API
 export async function addTaskEvidence(taskId: string, formData: FormData) {
   // Use fetch directly for file uploads
+  const authToken = localStorage.getItem('auth_token');
+  const headers: HeadersInit = {};
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
   const res = await fetch(`/api/tasks/${taskId}/evidence`, {
     method: 'POST',
     body: formData,
-    credentials: 'include'
+    credentials: 'include',
+    headers
   });
   
   if (!res.ok) {
