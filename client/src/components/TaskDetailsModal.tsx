@@ -27,9 +27,11 @@ import {
   getTaskEvidence, 
   addTaskEvidence,
   getAllTeams,
-  getFieldUsers
+  getFieldUsers,
+  getAllBoundaries
 } from "@/lib/api";
 import { ITask, ITaskUpdate, ITeam, IUser } from "@shared/schema";
+import BoundaryAssignmentModal from "@/components/BoundaryAssignmentModal";
 
 interface TaskDetailsModalProps {
   open: boolean;
@@ -52,6 +54,9 @@ export default function TaskDetailsModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
+  // Boundary assignment modal state
+  const [isBoundaryModalOpen, setBoundaryModalOpen] = useState(false);
+
   // Fetch task updates
   const { data: updates = [] } = useQuery({
     queryKey: ["/api/tasks", task._id, "updates"],
@@ -78,6 +83,14 @@ export default function TaskDetailsModal({
     queryKey: ["/api/users"],
     enabled: open,
   });
+
+  // Fetch linked boundary when opening boundary modal
+  const { data: allBoundaries = [] } = useQuery({
+    queryKey: ["/api/boundaries"],
+    queryFn: getAllBoundaries,
+    enabled: isBoundaryModalOpen && !!task.boundaryId,
+  });
+  const boundaryData = allBoundaries.find((b: any) => b._id?.toString() === task.boundaryId?.toString()) || null;
 
   // Helper function to get assignee display name
   const getAssigneeDisplay = () => {
@@ -367,6 +380,24 @@ export default function TaskDetailsModal({
                     <p className="text-xs text-neutral-500">Last Updated</p>
                     <p className="text-sm">{new Date(task.updatedAt).toLocaleString()}</p>
                   </div>
+
+                  {user?.role === "Supervisor" && task.boundaryId ? (
+                    <div className="pt-2">
+                      <p className="text-xs text-neutral-500">Boundary</p>
+                      <Button
+                        size="sm"
+                        className="mt-1 bg-primary-500 hover:bg-primary-600"
+                        onClick={() => setBoundaryModalOpen(true)}
+                      >
+                        Manage Boundary
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="pt-2">
+                      <p className="text-xs text-neutral-500">Boundary</p>
+                      <p className="text-sm text-neutral-600">No boundary linked</p>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -472,6 +503,15 @@ export default function TaskDetailsModal({
             </div>
           </div>
         </div>
+        
+        {/* Boundary Assignment Modal (opens when clicking Manage Boundary) */}
+        {user?.role === "Supervisor" && task.boundaryId && (
+          <BoundaryAssignmentModal
+            open={isBoundaryModalOpen}
+            onOpenChange={setBoundaryModalOpen}
+            boundary={boundaryData || null}
+          />
+        )}
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
