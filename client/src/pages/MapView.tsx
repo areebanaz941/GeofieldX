@@ -1641,6 +1641,31 @@ export default function MapView() {
         }}
         expanded={taskPanelExpanded}
         onExpandToggle={() => setTaskPanelExpanded(!taskPanelExpanded)}
+        onLocateTask={(task) => {
+          if (!mapMethods) return;
+          const featureId = task.featureId?.toString?.();
+          const boundaryId = task.boundaryId?.toString?.();
+          if (featureId) {
+            const ok = mapMethods.zoomToFeature(featureId);
+            if (!ok && task.location?.type === 'Point') {
+              const [lng, lat] = task.location.coordinates as [number, number];
+              mapMethods.panTo(lat, lng, 16);
+            }
+            return;
+          }
+          if (boundaryId) {
+            const ok = mapMethods.zoomToBoundary(boundaryId);
+            if (!ok && task.location?.type === 'Point') {
+              const [lng, lat] = task.location.coordinates as [number, number];
+              mapMethods.panTo(lat, lng, 15);
+            }
+            return;
+          }
+          if (task.location?.type === 'Point') {
+            const [lng, lat] = task.location.coordinates as [number, number];
+            mapMethods.panTo(lat, lng, 16);
+          }
+        }}
       />
       
       {/* Supervisor Polygon Modal - for parcel/boundary creation */}
