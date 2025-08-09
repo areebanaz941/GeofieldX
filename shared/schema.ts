@@ -752,7 +752,7 @@ export const insertTaskUpdateSchema = z.object({
 export const insertTaskEvidenceSchema = z.object({
   taskId: z.string(),
   userId: z.string(),
-  imageUrl: z.string().url(),
+  imageUrl: z.string().min(1),
   description: z.string().optional(),
 });
 
