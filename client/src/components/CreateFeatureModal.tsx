@@ -130,7 +130,7 @@ export default function CreateFeatureModal({
         feaType: drawnPolygon ? "Parcel" : "Tower", // Will be cleared below
         specificType: "",
         feaState: "Plan",
-        feaStatus: "UnAssigned",
+        feaStatus: "New",
         assignedTo: "",
         maintenance: "None",
         maintenanceDate: "",

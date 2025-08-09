@@ -230,17 +230,13 @@ export default function PointFeatureModal({
 
   const createFeatureMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/features", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to create feature");
+      // Use shared API client to include auth token/cookies
+      const res = await apiRequest('POST', '/api/features', data);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Failed to create feature');
       }
-      return response.json();
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/features"] });
