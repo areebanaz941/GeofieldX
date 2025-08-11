@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>London Postcodes Map (Demo with Dummy Data)</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    :root {
+      --panel-width: 360px;
+      --panel-bg: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0ea5e9;
+      --accent-contrast: #ffffff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --chip: #f3f4f6;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: #f8fafc;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+    }
+
+    header .title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    header .title .h1 {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+
+    header .title .sub {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    header .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      height: 34px;
+      padding: 0 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      border-color: var(--accent);
+    }
+
+    .btn.success { background: var(--success); color: #fff; border-color: var(--success); }
+    .btn.warning { background: var(--warning); color: #fff; border-color: var(--warning); }
+    .btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+    .map-wrap {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+      min-height: 0;
+    }
+
+    #map {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 64px);
+    }
+
+    .legend {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+      padding: 10px 12px;
+      font-size: 12px;
+      max-width: 280px;
+    }
+
+    .legend .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .legend .swatch { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
+    .legend .muted { color: var(--muted); }
+
+    .panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: var(--panel-width);
+      max-width: 100vw;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--border);
+      box-shadow: -8px 0 30px rgba(0,0,0,0.06);
+      transform: translateX(100%);
+      transition: transform 200ms ease;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      z-index: 2;
+    }
+
+    .panel.open { transform: translateX(0); }
+
+    .panel header {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      background: #fff;
+    }
+
+    .panel .content {
+      padding: 12px 16px;
+      overflow: auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .field { display: grid; gap: 6px; }
+    .field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    .text, .textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    .textarea { min-height: 96px; resize: vertical; }
+
+    .switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .switch input { display: none; }
+
+    .switch .track {
+      width: 40px; height: 24px; background: #e5e7eb; border-radius: 999px; position: relative; transition: background 120ms ease;
+    }
+    .switch .thumb {
+      position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 999px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); transition: transform 120ms ease;
+    }
+    .switch input:checked + .track { background: var(--success); }
+    .switch input:checked + .track .thumb { transform: translateX(16px); }
+
+    .panel .footer {
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #fff;
+    }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--chip); border-radius: 999px; padding: 6px 10px; font-size: 12px; color: var(--muted);
+    }
+
+    .toast {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      background: #111827;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0; transform: translateY(8px);
+      transition: all 160ms ease;
+      z-index: 3;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    .mapboxgl-popup { max-width: 320px; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system; }
+    .mapboxgl-popup-content { border-radius: 10px; }
+
+    @media (max-width: 860px) {
+      #map { height: calc(100vh - 104px); }
+      header { flex-wrap: wrap; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="title">
+        <div class="h1">London Postcodes – Interactive Map (Demo)</div>
+        <div class="sub">Click a postcode to open its page. Toggle Edit Mode to manage data.</div>
+      </div>
+      <div class="controls">
+        <input id="basePath" class="text" placeholder="Base page path, e.g. /postcodes/" style="width: 240px;" />
+        <button id="toggleEdit" class="btn">Edit mode</button>
+        <button id="exportBtn" class="btn">Export JSON</button>
+        <button id="importBtn" class="btn">Import JSON</button>
+      </div>
+    </header>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+
+      <div class="legend" id="legend"></div>
+
+      <aside class="panel" id="editPanel" aria-hidden="true">
+        <header>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div style="font-weight:800;">Edit Postcode</div>
+            <span class="chip"><span id="selectedCode">None</span></span>
+          </div>
+        </header>
+        <div class="content">
+          <div class="field">
+            <label>Postcode code</label>
+            <input id="f_code" class="text" disabled />
+          </div>
+          <div class="field">
+            <label>Postcode group</label>
+            <input id="f_group" class="text" disabled />
+          </div>
+          <div class="field">
+            <label>Name (optional)</label>
+            <input id="f_name" class="text" placeholder="Friendly name" />
+          </div>
+          <div class="field">
+            <label class="switch">
+              <input id="f_hasInfo" type="checkbox" />
+              <span class="track"><span class="thumb"></span></span>
+              <span>Has page/info</span>
+            </label>
+          </div>
+          <div class="field">
+            <label>Page URL (relative or absolute)</label>
+            <input id="f_link" class="text" placeholder="/postcodes/SW1 or https://..." />
+          </div>
+          <div class="field">
+            <label>Short description</label>
+            <textarea id="f_desc" class="textarea" placeholder="Optional blurb for popup"></textarea>
+          </div>
+        </div>
+        <div class="footer">
+          <button id="saveBtn" class="btn success">Save</button>
+          <button id="resetBtn" class="btn warning">Reset</button>
+          <button id="closeBtn" class="btn" style="margin-left:auto;">Close</button>
+        </div>
+      </aside>
+
+      <div class="toast" id="toast">Copied!</div>
+    </div>
+  </div>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+  <script>
+    const MAPBOX_ACCESS_TOKEN = "REPLACE_WITH_YOUR_MAPBOX_ACCESS_TOKEN";
+
+    const STORAGE_KEY = "postcodeMapConfig_v1";
+
+    const groupColors = {
+      SW: "#0ea5a5",   // teal
+      SE: "#22c55e",   // green
+      E:  "#f97316",   // orange
+      N:  "#3b82f6",   // blue
+      NW: "#8b5cf6",   // purple
+      W:  "#f59e0b",   // amber
+      EC: "#ef4444",   // red
+      WC: "#ec4899"    // pink
+    };
+
+    const baseConfig = {
+      pageBasePath: "/postcodes/",
+      features: [
+        // SW group
+        f("SW1", "SW", 51.497, -0.139, { name: "Westminster", hasInfo: true }),
+        f("SW2", "SW", 51.450, -0.123, { name: "Brixton", hasInfo: false }),
+        // SE group
+        f("SE1", "SE", 51.504, -0.086, { name: "Southwark", hasInfo: true }),
+        f("SE2", "SE", 51.490, 0.124,  { name: "Abbey Wood", hasInfo: false }),
+        // E group
+        f("E1",  "E",  51.515, -0.058, { name: "Whitechapel", hasInfo: true }),
+        f("E2",  "E",  51.532, -0.063, { name: "Bethnal Green", hasInfo: false }),
+        // N group
+        f("N1",  "N",  51.536, -0.104, { name: "Islington", hasInfo: true }),
+        f("N2",  "N",  51.590, -0.165, { name: "East Finchley", hasInfo: false }),
+        // NW, W, EC, WC
+        f("NW1", "NW", 51.536, -0.143, { name: "Camden Town", hasInfo: true }),
+        f("W1",  "W",  51.515, -0.146, { name: "Mayfair", hasInfo: false }),
+        f("EC1", "EC", 51.524, -0.107, { name: "Clerkenwell", hasInfo: true }),
+        f("WC1", "WC", 51.522, -0.123, { name: "Bloomsbury", hasInfo: false })
+      ]
+    };
+
+    function f(code, group, lat, lon, opts = {}) {
+      const sizeLat = 0.012; // ~1.3 km
+      const sizeLon = 0.018; // ~1.2 km (varies by latitude)
+      const poly = square(lat, lon, sizeLat, sizeLon);
+      return {
+        id: code,
+        code,
+        group,
+        name: opts.name || code,
+        hasInfo: Boolean(opts.hasInfo),
+        link: opts.link || null,
+        description: opts.description || "",
+        geometry: poly
+      };
+    }
+
+    function square(lat, lon, dLat, dLon) {
+      const c = [lon, lat];
+      const poly = [
+        [c[0] - dLon/2, c[1] - dLat/2],
+        [c[0] + dLon/2, c[1] - dLat/2],
+        [c[0] + dLon/2, c[1] + dLat/2],
+        [c[0] - dLon/2, c[1] + dLat/2],
+        [c[0] - dLon/2, c[1] - dLat/2]
+      ];
+      return { type: "Polygon", coordinates: [poly] };
+    }
+
+    function hexToRgb(hex) {
+      const h = hex.replace("#", "");
+      const bigint = parseInt(h, 16);
+      return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+    }
+
+    function rgbToHex(r, g, b) {
+      const toHex = (v) => v.toString(16).padStart(2, "0");
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function lighten(hex, amount = 0.35) {
+      const { r, g, b } = hexToRgb(hex);
+      const rn = Math.round(r + (255 - r) * amount);
+      const gn = Math.round(g + (255 - g) * amount);
+      const bn = Math.round(b + (255 - b) * amount);
+      return rgbToHex(rn, gn, bn);
+    }
+
+    function deriveFillColor(group, hasInfo) {
+      const base = groupColors[group] || "#999999";
+      return hasInfo ? base : lighten(base, 0.45);
+    }
+
+    function toGeoJSON(config) {
+      return {
+        type: "FeatureCollection",
+        features: config.features.map((p) => ({
+          type: "Feature",
+          id: p.id,
+          geometry: p.geometry,
+          properties: {
+            id: p.id,
+            code: p.code,
+            group: p.group,
+            name: p.name,
+            hasInfo: p.hasInfo,
+            link: p.link,
+            description: p.description,
+            fillColor: deriveFillColor(p.group, p.hasInfo)
+          }
+        }))
+      };
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 1600);
+    }
+
+    function getSavedConfig() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.features)) return null;
+        return parsed;
+      } catch { return null; }
+    }
+
+    function saveConfig(config) {
+      const toSave = { pageBasePath: config.pageBasePath, features: config.features.map(({ id, code, group, name, hasInfo, link, description }) => ({ id, code, group, name, hasInfo, link, description })) };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+
+    function exportConfig(config) {
+      const payload = {
+        pageBasePath: config.pageBasePath,
+        features: config.features.map(({ id, code, group, name, hasInfo, link, description }) => ({ id, code, group, name, hasInfo, link, description }))
+      };
+      const text = JSON.stringify(payload, null, 2);
+      navigator.clipboard.writeText(text).then(() => showToast("Config copied to clipboard"));
+    }
+
+    function importConfigFromUser(currentConfig) {
+      const text = prompt("Paste config JSON (pageBasePath + features)");
+      if (!text) return null;
+      try {
+        const parsed = JSON.parse(text);
+        if (!parsed || !Array.isArray(parsed.features)) throw new Error("Malformed config");
+        const mapById = new Map(currentConfig.features.map(f => [f.id, f]));
+        for (const pf of parsed.features) {
+          const base = mapById.get(pf.id);
+          if (base) {
+            base.name = pf.name ?? base.name;
+            base.hasInfo = Boolean(pf.hasInfo);
+            base.link = pf.link ?? base.link;
+            base.description = pf.description ?? base.description;
+          }
+        }
+        if (typeof parsed.pageBasePath === "string") currentConfig.pageBasePath = parsed.pageBasePath;
+        return currentConfig;
+      } catch (e) {
+        alert("Import failed: " + e.message);
+        return null;
+      }
+    }
+
+    function buildLegend(container, config) {
+      container.innerHTML = "";
+      const header = document.createElement("div");
+      header.style.fontWeight = "800";
+      header.style.marginBottom = "6px";
+      header.textContent = "Legend";
+      container.appendChild(header);
+
+      const tip = document.createElement("div");
+      tip.className = "muted";
+      tip.textContent = "Solid = has page/info, Light = coming soon";
+      container.appendChild(tip);
+
+      Object.keys(groupColors).forEach(group => {
+        const row = document.createElement("div");
+        row.className = "row";
+        const swSolid = document.createElement("div");
+        swSolid.className = "swatch";
+        swSolid.style.background = groupColors[group];
+        const swLight = document.createElement("div");
+        swLight.className = "swatch";
+        swLight.style.background = lighten(groupColors[group], 0.45);
+        const label = document.createElement("div");
+        label.textContent = group;
+        label.style.minWidth = "28px";
+        row.appendChild(swSolid);
+        row.appendChild(swLight);
+        row.appendChild(label);
+        container.appendChild(row);
+      });
+    }
+
+    function fitToAll(map, geojson) {
+      const bbox = requireBBox(geojson);
+      map.fitBounds(bbox, { padding: 40, duration: 0 });
+    }
+
+    function requireBBox(geojson) {
+      let minX =  180, minY =  90, maxX = -180, maxY = -90;
+      for (const f of geojson.features) {
+        const coords = f.geometry.coordinates[0];
+        for (const [x, y] of coords) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+      return [[minX, minY], [maxX, maxY]];
+    }
+
+    let map, config, geojson;
+    let selectedId = null;
+
+    function init() {
+      const saved = getSavedConfig();
+      config = saved ? mergeSavedIntoBase(baseConfig, saved) : structuredClone(baseConfig);
+      geojson = toGeoJSON(config);
+
+      document.getElementById("basePath").value = config.pageBasePath;
+
+      mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+      map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-0.12, 51.507],
+        zoom: 10.3,
+        cooperativeGestures: true,
+        attributionControl: true
+      });
+
+      map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
+      map.addControl(new mapboxgl.FullscreenControl());
+
+      map.on("load", () => {
+        map.addSource("postcodes", { type: "geojson", data: geojson, promoteId: "id" });
+
+        map.addLayer({
+          id: "pc-fills",
+          type: "fill",
+          source: "postcodes",
+          paint: {
+            "fill-color": ["get", "fillColor"],
+            "fill-opacity": 0.7
+          }
+        });
+
+        map.addLayer({
+          id: "pc-borders",
+          type: "line",
+          source: "postcodes",
+          paint: {
+            "line-color": "#111827",
+            "line-width": 1.2,
+            "line-opacity": 0.4
+          }
+        });
+
+        fitToAll(map, geojson);
+      });
+
+      map.on("mousemove", "pc-fills", (e) => {
+        map.getCanvas().style.cursor = e.features?.length ? "pointer" : "";
+      });
+
+      map.on("click", "pc-fills", (e) => {
+        const feat = e.features && e.features[0];
+        if (!feat) return;
+        const p = feat.properties;
+        const code = p.code;
+        selectedId = code;
+        const name = p.name || code;
+        const desc = p.description || "";
+        const hasInfo = String(p.hasInfo) === "true" || p.hasInfo === true;
+        const targetUrl = resolveLinkFor(code);
+
+        const actions = hasInfo ? `<div style="margin-top:8px;display:flex;gap:8px;">
+            <a class=\"btn primary\" style=\"text-decoration:none;\" href=\"${targetUrl}\">Open page</a>
+          </div>` : `<div class=\"muted\" style=\"margin-top:8px;\">Page coming soon</div>`;
+
+        new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
+          .setLngLat(e.lngLat)
+          .setHTML(`
+            <div style="font-weight:800;margin-bottom:4px;">${name} (${code})</div>
+            <div style="font-size:12px;color:#6b7280;">Group: ${p.group}</div>
+            ${desc ? `<div style=\"margin-top:6px;\">${escapeHtml(desc)}</div>` : ""}
+            ${actions}
+          `)
+          .addTo(map);
+      });
+
+      document.getElementById("legend").innerHTML = "";
+      buildLegend(document.getElementById("legend"), config);
+
+      wireUi();
+    }
+
+    function resolveLinkFor(code) {
+      const item = config.features.find(f => f.id === code);
+      const base = (document.getElementById("basePath").value || config.pageBasePath || "/").trim();
+      if (item && item.link) return item.link;
+      const normalized = base.endsWith("/") ? base : base + "/";
+      return normalized + code.toLowerCase();
+    }
+
+    function mergeSavedIntoBase(base, saved) {
+      const merged = structuredClone(base);
+      const byId = new Map(merged.features.map(f => [f.id, f]));
+      for (const s of saved.features) {
+        const tgt = byId.get(s.id);
+        if (tgt) {
+          tgt.name = s.name ?? tgt.name;
+          tgt.hasInfo = Boolean(s.hasInfo);
+          tgt.link = s.link ?? tgt.link;
+          tgt.description = s.description ?? tgt.description;
+        }
+      }
+      if (typeof saved.pageBasePath === "string") merged.pageBasePath = saved.pageBasePath;
+      return merged;
+    }
+
+    function refreshMapData() {
+      geojson = toGeoJSON(config);
+      const src = map.getSource("postcodes");
+      if (src) src.setData(geojson);
+    }
+
+    function openPanelFor(code) {
+      const item = config.features.find(f => f.id === code) || null;
+      if (!item) return;
+      selectedId = code;
+      document.getElementById("selectedCode").textContent = code;
+      document.getElementById("f_code").value = item.code;
+      document.getElementById("f_group").value = item.group;
+      document.getElementById("f_name").value = item.name || item.code;
+      document.getElementById("f_hasInfo").checked = Boolean(item.hasInfo);
+      document.getElementById("f_link").value = item.link || "";
+      document.getElementById("f_desc").value = item.description || "";
+      setPanelOpen(true);
+    }
+
+    function setPanelOpen(open) {
+      const el = document.getElementById("editPanel");
+      el.classList.toggle("open", open);
+      el.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
+    function wireUi() {
+      const editBtn = document.getElementById("toggleEdit");
+      const exportBtn = document.getElementById("exportBtn");
+      const importBtn = document.getElementById("importBtn");
+      const basePathInput = document.getElementById("basePath");
+
+      let editMode = false;
+
+      editBtn.addEventListener("click", () => {
+        editMode = !editMode;
+        editBtn.classList.toggle("primary", editMode);
+        editBtn.textContent = editMode ? "Editing… (click a postcode)" : "Edit mode";
+        if (!editMode) setPanelOpen(false);
+      });
+
+      map.on("click", "pc-fills", (e) => {
+        if (!editMode) return;
+        const feat = e.features && e.features[0];
+        if (!feat) return;
+        openPanelFor(feat.properties.code);
+      });
+
+      document.getElementById("saveBtn").addEventListener("click", () => {
+        if (!selectedId) return;
+        const item = config.features.find(f => f.id === selectedId);
+        if (!item) return;
+        item.name = document.getElementById("f_name").value.trim() || item.code;
+        item.hasInfo = document.getElementById("f_hasInfo").checked;
+        item.link = (document.getElementById("f_link").value || null);
+        item.description = document.getElementById("f_desc").value || "";
+        saveConfig(config);
+        refreshMapData();
+        showToast("Saved");
+      });
+
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        if (!selectedId) return;
+        const base = baseConfig.features.find(f => f.id === selectedId);
+        const item = config.features.find(f => f.id === selectedId);
+        if (base && item) {
+          item.name = base.name;
+          item.hasInfo = base.hasInfo;
+          item.link = base.link;
+          item.description = base.description;
+          saveConfig(config);
+          openPanelFor(selectedId);
+          refreshMapData();
+          showToast("Reset to defaults");
+        }
+      });
+
+      document.getElementById("closeBtn").addEventListener("click", () => setPanelOpen(false));
+
+      exportBtn.addEventListener("click", () => exportConfig(config));
+      importBtn.addEventListener("click", () => {
+        const next = importConfigFromUser(structuredClone(config));
+        if (next) {
+          config = next;
+          basePathInput.value = config.pageBasePath;
+          saveConfig(config);
+          refreshMapData();
+          buildLegend(document.getElementById("legend"), config);
+          showToast("Imported config");
+        }
+      });
+
+      basePathInput.addEventListener("change", () => {
+        config.pageBasePath = basePathInput.value.trim();
+        saveConfig(config);
+        showToast("Base path saved");
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"]/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[s]));
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      if (!MAPBOX_ACCESS_TOKEN || MAPBOX_ACCESS_TOKEN.includes("REPLACE_WITH")) {
+        console.warn("Remember to set your Mapbox access token in MAPBOX_ACCESS_TOKEN.");
+      }
+      init();
+    });
+  </script>
+</body>
+</html>
