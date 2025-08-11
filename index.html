@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>London Postcode Map - Interactive Explorer</title>
+    
+    <!-- Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1><i class="fas fa-map-marked-alt"></i> London Postcode Explorer</h1>
+            <div class="header-controls">
+                <button id="edit-mode-btn" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> Edit Mode
+                </button>
+                <button id="legend-toggle" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Legend
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Map Container -->
+            <div id="map" class="map-container"></div>
+            
+            <!-- Sidebar -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h3>Postcode Information</h3>
+                    <button id="close-sidebar" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sidebar-content" id="sidebar-content">
+                    <p>Click on a postcode area to view detailed information.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" id="legend">
+            <h4><i class="fas fa-palette"></i> Postcode Areas</h4>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <span class="legend-color sw"></span>
+                    <span>SW - South West London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color se"></span>
+                    <span>SE - South East London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color nw"></span>
+                    <span>NW - North West London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color ne"></span>
+                    <span>NE - North East London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color w"></span>
+                    <span>W - West London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color e"></span>
+                    <span>E - East London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color n"></span>
+                    <span>N - North London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color ec-wc"></span>
+                    <span>EC/WC - Central London</span>
+                </div>
+                <div class="legend-note">
+                    <small><i class="fas fa-info-circle"></i> Lighter shades indicate areas with limited information</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal" id="edit-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Postcode Information</h3>
+                    <button class="close-btn" id="close-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-form">
+                        <div class="form-group">
+                            <label for="postcode-name">Postcode Area:</label>
+                            <input type="text" id="postcode-name" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="area-description">Description:</label>
+                            <textarea id="area-description" rows="4" placeholder="Enter description for this postcode area..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="key-features">Key Features:</label>
+                            <textarea id="key-features" rows="3" placeholder="Enter key features (one per line)..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="average-price">Average Property Price:</label>
+                            <input type="text" id="average-price" placeholder="e.g., £650,000">
+                        </div>
+                        <div class="form-group">
+                            <label for="has-info">Has Detailed Information:</label>
+                            <input type="checkbox" id="has-info">
+                            <small>Uncheck to use lighter shade (limited information)</small>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-edit">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

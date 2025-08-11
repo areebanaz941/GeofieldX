@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>London Postcode Map - Interactive Explorer (Demo)</title>
+    
+    <!-- Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .header h1 i {
+            color: #3498db;
+            margin-right: 0.5rem;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .btn.active {
+            background: #e74c3c;
+        }
+
+        .btn.active:hover {
+            background: #c0392b;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 500;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2c3e50;
+            color: white;
+        }
+
+        .sidebar-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Postcode Info Styles */
+        .postcode-info h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.4rem;
+        }
+
+        .info-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .info-section h4 {
+            color: #34495e;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .info-section p {
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .features-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+
+        .features-list li i {
+            color: #3498db;
+            margin-right: 0.5rem;
+            width: 20px;
+        }
+
+        .price-tag {
+            background: #e8f4fd;
+            color: #2980b9;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .no-info-message {
+            background: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 1rem 0;
+        }
+
+        .edit-btn {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            min-width: 250px;
+            transform: translateX(-120%);
+            transition: transform 0.3s ease;
+        }
+
+        .legend.open {
+            transform: translateX(0);
+        }
+
+        .legend h4 {
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Postcode Area Colors */
+        .legend-color.sw { background: #e74c3c; }
+        .legend-color.se { background: #3498db; }
+        .legend-color.nw { background: #2ecc71; }
+        .legend-color.ne { background: #f39c12; }
+        .legend-color.w { background: #9b59b6; }
+        .legend-color.e { background: #1abc9c; }
+        .legend-color.n { background: #e67e22; }
+        .legend-color.ec-wc { background: #34495e; }
+
+        .legend-note {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            color: #7f8c8d;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.open {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: #2c3e50;
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.5rem;
+        }
+
+        .form-group small {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        /* Notification Styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification-success {
+            border-left: 4px solid #2ecc71;
+            color: #27ae60;
+        }
+
+        .notification-error {
+            border-left: 4px solid #e74c3c;
+            color: #c0392b;
+        }
+
+        .notification-info {
+            border-left: 4px solid #3498db;
+            color: #2980b9;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+            
+            .legend {
+                position: relative;
+                top: auto;
+                left: auto;
+                transform: none;
+                margin: 1rem;
+                width: calc(100% - 2rem);
+            }
+            
+            .legend.open {
+                transform: none;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 1rem;
+            }
+            
+            .modal-body {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1><i class="fas fa-map-marked-alt"></i> London Postcode Explorer</h1>
+            <div class="header-controls">
+                <button id="edit-mode-btn" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> Edit Mode
+                </button>
+                <button id="legend-toggle" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Legend
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Map Container -->
+            <div id="map" class="map-container"></div>
+            
+            <!-- Sidebar -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h3>Postcode Information</h3>
+                    <button id="close-sidebar" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sidebar-content" id="sidebar-content">
+                    <p>Click on a postcode area to view detailed information.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" id="legend">
+            <h4><i class="fas fa-palette"></i> Postcode Areas</h4>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <span class="legend-color sw"></span>
+                    <span>SW - South West London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color se"></span>
+                    <span>SE - South East London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color nw"></span>
+                    <span>NW - North West London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color ne"></span>
+                    <span>NE - North East London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color w"></span>
+                    <span>W - West London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color e"></span>
+                    <span>E - East London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color n"></span>
+                    <span>N - North London</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color ec-wc"></span>
+                    <span>EC/WC - Central London</span>
+                </div>
+                <div class="legend-note">
+                    <small><i class="fas fa-info-circle"></i> Lighter shades indicate areas with limited information</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal" id="edit-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Postcode Information</h3>
+                    <button class="close-btn" id="close-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-form">
+                        <div class="form-group">
+                            <label for="postcode-name">Postcode Area:</label>
+                            <input type="text" id="postcode-name" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="area-description">Description:</label>
+                            <textarea id="area-description" rows="4" placeholder="Enter description for this postcode area..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="key-features">Key Features:</label>
+                            <textarea id="key-features" rows="3" placeholder="Enter key features (one per line)..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="average-price">Average Property Price:</label>
+                            <input type="text" id="average-price" placeholder="e.g., £650,000">
+                        </div>
+                        <div class="form-group">
+                            <label for="has-info">Has Detailed Information:</label>
+                            <input type="checkbox" id="has-info">
+                            <small>Uncheck to use lighter shade (limited information)</small>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-edit">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // London Postcode Areas Data
+        const POSTCODE_DATA = {
+            'SW1': {
+                name: 'SW1 - Westminster/Belgravia',
+                description: 'Prime central London location featuring Westminster, Belgravia, and Pimlico. Home to Buckingham Palace, Westminster Abbey, and the Houses of Parliament.',
+                features: [
+                    'Buckingham Palace nearby',
+                    'Excellent transport links',
+                    'Historic architecture',
+                    'High-end shopping at Victoria',
+                    'Green spaces including St. James\'s Park'
+                ],
+                averagePrice: '£1,200,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.1419, 51.4945], [-0.1419, 51.5045], [-0.1219, 51.5045], [-0.1219, 51.4945], [-0.1419, 51.4945]]
+            },
+            'SW3': {
+                name: 'SW3 - Chelsea',
+                description: 'Affluent area known for the King\'s Road, Chelsea FC, and high-end boutiques. Popular with celebrities and professionals.',
+                features: [
+                    'King\'s Road shopping',
+                    'Chelsea FC stadium',
+                    'Riverside location',
+                    'Michelin-starred restaurants',
+                    'Designer boutiques'
+                ],
+                averagePrice: '£1,500,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.1819, 51.4845], [-0.1819, 51.4945], [-0.1519, 51.4945], [-0.1519, 51.4845], [-0.1819, 51.4845]]
+            },
+            'SW7': {
+                name: 'SW7 - South Kensington',
+                description: 'Cultural heart of London with world-class museums, Imperial College, and elegant Victorian architecture.',
+                features: [
+                    'Natural History Museum',
+                    'Victoria & Albert Museum',
+                    'Imperial College London',
+                    'Hyde Park access',
+                    'Excellent restaurants'
+                ],
+                averagePrice: '£950,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.1919, 51.4945], [-0.1919, 51.5045], [-0.1719, 51.5045], [-0.1719, 51.4945], [-0.1919, 51.4945]]
+            },
+            'SW11': {
+                name: 'SW11 - Battersea',
+                description: 'Rapidly developing area with new luxury developments, Battersea Power Station, and excellent riverside walks.',
+                features: [
+                    'Battersea Power Station',
+                    'New developments',
+                    'Riverside walks',
+                    'Good transport links',
+                    'Family-friendly parks'
+                ],
+                averagePrice: '£650,000',
+                hasDetailedInfo: false,
+                coordinates: [[-0.1719, 51.4645], [-0.1719, 51.4845], [-0.1419, 51.4845], [-0.1419, 51.4645], [-0.1719, 51.4645]]
+            },
+            'SE1': {
+                name: 'SE1 - Southwark/Borough',
+                description: 'Dynamic area featuring London Bridge, Borough Market, and the South Bank cultural quarter.',
+                features: [
+                    'Borough Market',
+                    'London Bridge station',
+                    'South Bank attractions',
+                    'The Shard nearby',
+                    'Riverside dining'
+                ],
+                averagePrice: '£750,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.1119, 51.4945], [-0.1119, 51.5145], [-0.0819, 51.5145], [-0.0819, 51.4945], [-0.1119, 51.4945]]
+            },
+            'SE10': {
+                name: 'SE10 - Greenwich',
+                description: 'Historic maritime district with the Royal Observatory, Cutty Sark, and beautiful riverside views.',
+                features: [
+                    'Royal Observatory',
+                    'Cutty Sark',
+                    'Greenwich Park',
+                    'Maritime Museum',
+                    'University of Greenwich'
+                ],
+                averagePrice: '£520,000',
+                hasDetailedInfo: false,
+                coordinates: [[-0.0219, 51.4745], [-0.0219, 51.4945], [0.0181, 51.4945], [0.0181, 51.4745], [-0.0219, 51.4745]]
+            },
+            'NW1': {
+                name: 'NW1 - Camden/Regent\'s Park',
+                description: 'Vibrant area combining the elegance of Regent\'s Park with the eclectic energy of Camden Market.',
+                features: [
+                    'Camden Market',
+                    'Regent\'s Park',
+                    'London Zoo',
+                    'Alternative music scene',
+                    'Excellent nightlife'
+                ],
+                averagePrice: '£800,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.1619, 51.5345], [-0.1619, 51.5545], [-0.1319, 51.5545], [-0.1319, 51.5345], [-0.1619, 51.5345]]
+            },
+            'NW3': {
+                name: 'NW3 - Hampstead',
+                description: 'Prestigious village-like area with Hampstead Heath, historic pubs, and stunning city views.',
+                features: [
+                    'Hampstead Heath',
+                    'Village atmosphere',
+                    'Historic pubs',
+                    'Excellent schools',
+                    'Celebrity residents'
+                ],
+                averagePrice: '£1,100,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.1819, 51.5545], [-0.1819, 51.5745], [-0.1519, 51.5745], [-0.1519, 51.5545], [-0.1819, 51.5545]]
+            },
+            'W1': {
+                name: 'W1 - Mayfair/Marylebone',
+                description: 'Ultra-premium central London featuring Mayfair\'s luxury shopping and Marylebone\'s village charm.',
+                features: [
+                    'Bond Street shopping',
+                    'Michelin-starred dining',
+                    'Private members\' clubs',
+                    'Hyde Park access',
+                    'World-class hotels'
+                ],
+                averagePrice: '£1,800,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.1619, 51.5045], [-0.1619, 51.5245], [-0.1319, 51.5245], [-0.1319, 51.5045], [-0.1619, 51.5045]]
+            },
+            'E1': {
+                name: 'E1 - Whitechapel/Spitalfields',
+                description: 'Historic East End area undergoing regeneration, with excellent curry houses and proximity to the City.',
+                features: [
+                    'Spitalfields Market',
+                    'Brick Lane curry houses',
+                    'Close to the City',
+                    'Rich history',
+                    'Affordable options'
+                ],
+                averagePrice: '£550,000',
+                hasDetailedInfo: true,
+                coordinates: [[-0.0719, 51.5145], [-0.0719, 51.5245], [-0.0519, 51.5245], [-0.0519, 51.5145], [-0.0719, 51.5145]]
+            }
+        };
+
+        // Mapbox access token (demo token - replace with your own)
+        mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+
+        class LondonPostcodeMap {
+            constructor() {
+                this.map = null;
+                this.editMode = false;
+                this.currentPostcode = null;
+                this.init();
+            }
+
+            init() {
+                this.initMap();
+                this.setupEventListeners();
+            }
+
+            initMap() {
+                // Initialize the map centered on London
+                this.map = new mapboxgl.Map({
+                    container: 'map',
+                    style: 'mapbox://styles/mapbox/light-v11',
+                    center: [-0.1276, 51.5074],
+                    zoom: 10,
+                    pitch: 0,
+                    bearing: 0
+                });
+
+                this.map.on('load', () => {
+                    this.addPostcodeAreas();
+                });
+
+                // Add navigation controls
+                this.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+            }
+
+            addPostcodeAreas() {
+                // Create GeoJSON features
+                const features = Object.keys(POSTCODE_DATA).map(postcode => {
+                    const data = POSTCODE_DATA[postcode];
+                    return {
+                        type: 'Feature',
+                        properties: {
+                            postcode: postcode,
+                            name: data.name,
+                            hasInfo: data.hasDetailedInfo
+                        },
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [data.coordinates]
+                        }
+                    };
+                });
+
+                const geojsonData = {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+
+                // Add source
+                this.map.addSource('postcodes', {
+                    type: 'geojson',
+                    data: geojsonData
+                });
+
+                // Add fill layer with conditional coloring
+                this.map.addLayer({
+                    id: 'postcode-fills',
+                    type: 'fill',
+                    source: 'postcodes',
+                    paint: {
+                        'fill-color': [
+                            'case',
+                            ['get', 'hasInfo'],
+                            [
+                                'match',
+                                ['substr', ['get', 'postcode'], 0, 2],
+                                'SW', 'rgba(231, 76, 60, 0.8)',
+                                'SE', 'rgba(52, 152, 219, 0.8)',
+                                'NW', 'rgba(46, 204, 113, 0.8)',
+                                'NE', 'rgba(243, 156, 18, 0.8)',
+                                'E', 'rgba(26, 188, 156, 0.8)',
+                                'N', 'rgba(230, 126, 34, 0.8)',
+                                'W', 'rgba(155, 89, 182, 0.8)',
+                                'rgba(52, 73, 94, 0.8)'
+                            ],
+                            [
+                                'match',
+                                ['substr', ['get', 'postcode'], 0, 2],
+                                'SW', 'rgba(231, 76, 60, 0.4)',
+                                'SE', 'rgba(52, 152, 219, 0.4)',
+                                'NW', 'rgba(46, 204, 113, 0.4)',
+                                'NE', 'rgba(243, 156, 18, 0.4)',
+                                'E', 'rgba(26, 188, 156, 0.4)',
+                                'N', 'rgba(230, 126, 34, 0.4)',
+                                'W', 'rgba(155, 89, 182, 0.4)',
+                                'rgba(52, 73, 94, 0.4)'
+                            ]
+                        ],
+                        'fill-opacity': 1
+                    }
+                });
+
+                // Add border layer
+                this.map.addLayer({
+                    id: 'postcode-borders',
+                    type: 'line',
+                    source: 'postcodes',
+                    paint: {
+                        'line-color': [
+                            'match',
+                            ['substr', ['get', 'postcode'], 0, 2],
+                            'SW', '#e74c3c',
+                            'SE', '#3498db',
+                            'NW', '#2ecc71',
+                            'NE', '#f39c12',
+                            'E', '#1abc9c',
+                            'N', '#e67e22',
+                            'W', '#9b59b6',
+                            '#34495e'
+                        ],
+                        'line-width': 2,
+                        'line-opacity': 1
+                    }
+                });
+
+                // Add labels
+                this.map.addLayer({
+                    id: 'postcode-labels',
+                    type: 'symbol',
+                    source: 'postcodes',
+                    layout: {
+                        'text-field': ['get', 'postcode'],
+                        'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                        'text-size': 14,
+                        'text-anchor': 'center'
+                    },
+                    paint: {
+                        'text-color': '#2c3e50',
+                        'text-halo-color': 'rgba(255, 255, 255, 0.8)',
+                        'text-halo-width': 2
+                    }
+                });
+
+                this.setupMapEventHandlers();
+            }
+
+            setupMapEventHandlers() {
+                // Hover effects
+                this.map.on('mouseenter', 'postcode-fills', (e) => {
+                    this.map.getCanvas().style.cursor = 'pointer';
+                });
+
+                this.map.on('mouseleave', 'postcode-fills', () => {
+                    this.map.getCanvas().style.cursor = '';
+                });
+
+                // Click handler
+                this.map.on('click', 'postcode-fills', (e) => {
+                    const postcode = e.features[0].properties.postcode;
+                    this.showPostcodeInfo(postcode);
+                });
+            }
+
+            setupEventListeners() {
+                // Edit mode toggle
+                document.getElementById('edit-mode-btn').addEventListener('click', () => {
+                    this.toggleEditMode();
+                });
+
+                // Legend toggle
+                document.getElementById('legend-toggle').addEventListener('click', () => {
+                    document.getElementById('legend').classList.toggle('open');
+                });
+
+                // Sidebar close
+                document.getElementById('close-sidebar').addEventListener('click', () => {
+                    document.getElementById('sidebar').classList.remove('open');
+                });
+
+                // Modal handlers
+                document.getElementById('close-modal').addEventListener('click', () => {
+                    this.closeEditModal();
+                });
+
+                document.getElementById('cancel-edit').addEventListener('click', () => {
+                    this.closeEditModal();
+                });
+
+                document.getElementById('edit-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.savePostcodeChanges();
+                });
+
+                // Close modal when clicking outside
+                document.getElementById('edit-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'edit-modal') {
+                        this.closeEditModal();
+                    }
+                });
+            }
+
+            showPostcodeInfo(postcode) {
+                const data = POSTCODE_DATA[postcode];
+                if (!data) return;
+
+                this.currentPostcode = postcode;
+                const sidebar = document.getElementById('sidebar');
+                const sidebarContent = document.getElementById('sidebar-content');
+
+                let content = `<div class="postcode-info"><h3>${data.name}</h3>`;
+
+                if (data.hasDetailedInfo) {
+                    content += `
+                        <div class="info-section">
+                            <h4><i class="fas fa-info-circle"></i> Description</h4>
+                            <p>${data.description}</p>
+                        </div>
+                        
+                        <div class="info-section">
+                            <h4><i class="fas fa-star"></i> Key Features</h4>
+                            <ul class="features-list">
+                                ${data.features.map(feature => `
+                                    <li><i class="fas fa-check"></i> ${feature}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div class="price-tag">
+                            <i class="fas fa-pound-sign"></i> Average Price: ${data.averagePrice}
+                        </div>
+                    `;
+                } else {
+                    content += `
+                        <div class="no-info-message">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Limited Information Available</strong>
+                            <p>This postcode area currently has limited detailed information.</p>
+                        </div>
+                        
+                        <div class="info-section">
+                            <h4><i class="fas fa-map-marker-alt"></i> Basic Information</h4>
+                            <p>${data.description || 'General information about this area.'}</p>
+                        </div>
+                    `;
+                }
+
+                content += `
+                    <button class="btn btn-primary edit-btn" onclick="app.openEditModal('${postcode}')">
+                        <i class="fas fa-edit"></i> Edit Information
+                    </button>
+                </div>`;
+
+                sidebarContent.innerHTML = content;
+                sidebar.classList.add('open');
+
+                // Zoom to area
+                const coordinates = data.coordinates;
+                const bounds = new mapboxgl.LngLatBounds();
+                coordinates.forEach(coord => bounds.extend(coord));
+                this.map.fitBounds(bounds, { padding: 50, maxZoom: 13 });
+            }
+
+            openEditModal(postcode) {
+                const data = POSTCODE_DATA[postcode];
+                const modal = document.getElementById('edit-modal');
+                
+                document.getElementById('postcode-name').value = data.name;
+                document.getElementById('area-description').value = data.description || '';
+                document.getElementById('key-features').value = data.features ? data.features.join('\n') : '';
+                document.getElementById('average-price').value = data.averagePrice || '';
+                document.getElementById('has-info').checked = data.hasDetailedInfo;
+                
+                modal.classList.add('open');
+            }
+
+            closeEditModal() {
+                document.getElementById('edit-modal').classList.remove('open');
+            }
+
+            savePostcodeChanges() {
+                const postcode = this.currentPostcode;
+                if (!postcode) return;
+
+                const description = document.getElementById('area-description').value;
+                const features = document.getElementById('key-features').value.split('\n').filter(f => f.trim());
+                const averagePrice = document.getElementById('average-price').value;
+                const hasInfo = document.getElementById('has-info').checked;
+
+                // Update data
+                POSTCODE_DATA[postcode] = {
+                    ...POSTCODE_DATA[postcode],
+                    description: description,
+                    features: features,
+                    averagePrice: averagePrice,
+                    hasDetailedInfo: hasInfo
+                };
+
+                // Update map
+                this.updateMapData();
+                this.showPostcodeInfo(postcode);
+                this.closeEditModal();
+                this.showNotification('Postcode information updated successfully!', 'success');
+            }
+
+            updateMapData() {
+                const features = Object.keys(POSTCODE_DATA).map(postcode => {
+                    const data = POSTCODE_DATA[postcode];
+                    return {
+                        type: 'Feature',
+                        properties: {
+                            postcode: postcode,
+                            name: data.name,
+                            hasInfo: data.hasDetailedInfo
+                        },
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [data.coordinates]
+                        }
+                    };
+                });
+
+                this.map.getSource('postcodes').setData({
+                    type: 'FeatureCollection',
+                    features: features
+                });
+            }
+
+            toggleEditMode() {
+                this.editMode = !this.editMode;
+                const btn = document.getElementById('edit-mode-btn');
+                
+                if (this.editMode) {
+                    btn.classList.add('active');
+                    btn.innerHTML = '<i class="fas fa-save"></i> Exit Edit Mode';
+                    this.showNotification('Edit mode enabled. Click on postcode areas to edit.', 'info');
+                } else {
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="fas fa-edit"></i> Edit Mode';
+                    this.showNotification('Edit mode disabled.', 'info');
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    ${message}
+                `;
+
+                document.body.appendChild(notification);
+                setTimeout(() => notification.classList.add('show'), 100);
+
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+        }
+
+        // Initialize the application
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new LondonPostcodeMap();
+        });
+    </script>
+</body>
+</html>
