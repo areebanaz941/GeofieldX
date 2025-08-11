@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { getAllFeatures } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ const FEATURE_TYPES = [
 
 export default function FeaturesTab() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
   const { data: features = [] } = useQuery({
@@ -77,6 +79,15 @@ export default function FeaturesTab() {
                     <p className="text-sm text-gray-600">ID: {feature.feaNo}</p>
                   </div>
                   <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setLocation(`/map?feature=${feature._id}`)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <MapPin className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
                     <Button variant="outline" size="sm">
                       <Edit className="h-4 w-4" />
                     </Button>

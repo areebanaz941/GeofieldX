@@ -148,11 +148,16 @@ export default function Dashboard() {
     }
   }, [activeTab]);
 
-  // When tab changes, update the URL query param (without reloading)
+  // When tab changes, update the URL query param (without reloading) with throttling
   useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', activeTab);
-    window.history.replaceState({}, '', url.toString());
+    // Throttle URL changes to prevent browser navigation throttling
+    const timeoutId = setTimeout(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', activeTab);
+      window.history.replaceState({}, '', url.toString());
+    }, 100); // Small delay to prevent rapid changes
+    
+    return () => clearTimeout(timeoutId);
   }, [activeTab]);
 
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
