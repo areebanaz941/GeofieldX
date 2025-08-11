@@ -19,13 +19,25 @@ import FeatureDetails from "./pages/FeatureDetails";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AuthenticatedRoutes } from "./components/AuthenticatedRoutes";
 import { SupervisorRoutes } from "./components/SupervisorRoutes";
+import { protectFromScriptInjection, detectKnoweeAI } from "./lib/utils";
+import { useEffect } from "react";
+import ExtensionProtection from "./components/ExtensionProtection";
 
 function App() {
+  // Initialize script injection protection on app start
+  useEffect(() => {
+    protectFromScriptInjection();
+    
+    if (detectKnoweeAI()) {
+      console.warn('[Extension] knowee-ai extension detected - protection measures active');
+    }
+  }, []);
   return (
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
+            <ExtensionProtection />
             <Toaster />
           <Switch>
             <Route path="/login" component={Login} />

@@ -23,16 +23,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if user is already logged in
     const checkAuth = async () => {
       try {
+        // Wait a moment for extensions to settle
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const userData = await getCurrentUser();
         // Add null check and validation
         if (userData && typeof userData === 'object') {
+          console.log('[Auth] User authenticated successfully');
           setUser(userData);
         } else {
-          console.warn('getCurrentUser returned invalid data:', userData);
+          console.warn('[Auth] getCurrentUser returned invalid data:', userData);
           setUser(null);
         }
-      } catch (error) {
-        console.warn('Auth check failed:', error);
+      } catch (error: any) {
+        // Check if this might be extension interference
+        if (error?.message?.includes('401') || error?.message?.includes('Not authenticated')) {
+          console.warn('[Auth] Authentication failed - user not logged in');
+        } else if (error?.stack?.includes('knowee-ai') || error?.stack?.includes('extension://')) {
+          console.warn('[Extension] Auth check may have been interfered with by extension:', error);
+        } else {
+          console.warn('[Auth] Auth check failed:', error);
+        }
         // If error, user is not logged in
         setUser(null);
       } finally {

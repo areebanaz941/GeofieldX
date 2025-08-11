@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>GeoFieldX - Field Operations Management</title>
     <meta name="description" content="GeoFieldX is a streamlined workflow system for field operations management, enabling supervisors to track team locations, assign tasks, and monitor completion." />
+    <!-- Content Security Policy to help protect against malicious script injection -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://replit.com; object-src 'none';" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha384-o/2yZuJZWGJ4s/adjxVW71R+EO/LyCwdQfP5UWSgX/w87iiTXuvDZaejd3TsN7mf" crossorigin="anonymous" />
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shpjs/3.6.3/shp.min.js"></script>
@@ -12,7 +14,7 @@
   <body>
     <div id="root"></div>
     
-    <!-- Defensive script to handle browser extension interference -->
+    <!-- Enhanced defensive script to handle browser extension interference -->
     <script>
       // Global error handler for unhandled promise rejections
       window.addEventListener('unhandledrejection', function(event) {
@@ -32,6 +34,44 @@
         }
       });
       
+      // Specific protection against knowee-ai extension
+      (function() {
+        // Monitor for knowee-ai extension injection
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node;
+                // Check for knowee-ai specific elements
+                if (element.tagName === 'SCRIPT' || 
+                    element.className?.includes('knowee') ||
+                    element.id?.includes('knowee') ||
+                    element.getAttribute?.('data-extension') === 'knowee-ai') {
+                  console.warn('[Extension] knowee-ai script injection detected:', element);
+                  // Isolate the extension script
+                  try {
+                    element.style.isolation = 'isolate';
+                    element.setAttribute('data-isolated', 'true');
+                  } catch (e) {
+                    console.warn('[Extension] Could not isolate knowee-ai element:', e);
+                  }
+                }
+              }
+            });
+          });
+        });
+        
+        // Start observing
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+        
+        // Store original methods before extension can override them
+        window.__originalFetch = window.fetch;
+        window.__originalXMLHttpRequest = window.XMLHttpRequest;
+      })();
+      
       // Defensive wrapper for console methods to prevent extension interference
       (function() {
         const originalConsole = { ...console };
@@ -42,9 +82,15 @@
             try {
               // Check if this is likely from an extension
               const stack = new Error().stack;
-              if (stack && (stack.includes('extension://') || stack.includes('chrome-extension://'))) {
-                // Prefix extension logs
-                originalConsole[method]('[Extension]', ...args);
+              if (stack && (stack.includes('extension://') || 
+                          stack.includes('chrome-extension://') ||
+                          stack.includes('knowee-ai'))) {
+                // Prefix extension logs and reduce noise
+                if (!args[0]?.includes?.('FloatTool') && 
+                    !args[0]?.includes?.('选区为空') &&
+                    !args[0]?.includes?.('messageSubscribe')) {
+                  originalConsole[method]('[Extension]', ...args);
+                }
               } else {
                 originalConsole[method](...args);
               }
@@ -56,20 +102,51 @@
         });
       })();
       
-      // Prevent extensions from overriding critical global functions
+      // Enhanced protection for critical global functions
       (function() {
-        const protectedGlobals = ['fetch', 'XMLHttpRequest', 'Promise'];
+        const protectedGlobals = ['fetch', 'XMLHttpRequest', 'Promise', 'addEventListener', 'removeEventListener'];
         
         protectedGlobals.forEach(globalName => {
           const original = window[globalName];
           if (original) {
-            Object.defineProperty(window, globalName, {
-              value: original,
-              writable: false,
-              configurable: false
-            });
+            // Store backup
+            window[`__original${globalName}`] = original;
+            
+            // Create protected wrapper
+            try {
+              Object.defineProperty(window, globalName, {
+                value: original,
+                writable: false,
+                configurable: false
+              });
+            } catch (e) {
+              console.warn(`[Extension] Could not protect global: ${globalName}`, e);
+            }
           }
         });
+      })();
+      
+      // Prevent extension from interfering with DOM ready state
+      (function() {
+        let isAppReady = false;
+        const originalReady = document.readyState;
+        
+        // Mark app as ready after a short delay
+        setTimeout(() => {
+          isAppReady = true;
+        }, 100);
+        
+        // Override document.readyState getter if needed
+        try {
+          Object.defineProperty(document, 'readyState', {
+            get: function() {
+              return isAppReady ? 'complete' : originalReady;
+            },
+            configurable: false
+          });
+        } catch (e) {
+          // Silently fail if we can't override readyState
+        }
       })();
     </script>
     
