@@ -228,10 +228,7 @@ export default function SideNavigation() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-left p-2 h-auto hover:bg-gray-50 border-t border-gray-100 mt-2 pt-3"
-                    onClick={() => toast({
-                      title: "Boundaries Management",
-                      description: "View all boundary assignments and details",
-                    })}
+                    onClick={() => handleNavClick('/dashboard?tab=boundaries')}
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center space-x-2">
