@@ -432,6 +432,9 @@ const OpenLayersMap = ({
   const accuracyLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const locationControlRef = useRef<LocationControl | null>(null);
 
+  // State for triggering shapefile re-processing on zoom changes
+  // Removed shapefileUpdateTrigger state as it was causing excessive re-renders
+
   // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -941,29 +944,18 @@ const OpenLayersMap = ({
       });
     }
 
-    // ✅ FIX: THROTTLED ZOOM CHANGE LISTENER - This was causing the throttling issue
-    let zoomChangeTimeout: NodeJS.Timeout | null = null;
-    
+    // Add zoom change listener to update icon sizes
     map.getView().on('change:resolution', () => {
-      // Clear previous timeout to throttle the updates
-      if (zoomChangeTimeout) {
-        clearTimeout(zoomChangeTimeout);
+      // Trigger layer re-render when zoom changes
+      if (featuresLayerRef.current) {
+        featuresLayerRef.current.changed();
       }
-      
-      // Set new timeout with throttling - only trigger after zoom stabilizes
-      zoomChangeTimeout = setTimeout(() => {
-        // Only update layers if they exist and the map is still valid
-        if (mapRef.current && featuresLayerRef.current) {
-          featuresLayerRef.current.changed();
-        }
-        if (mapRef.current && teamsLayerRef.current) {
-          teamsLayerRef.current.changed();
-        }
-        if (mapRef.current && tasksLayerRef.current) {
-          tasksLayerRef.current.changed();
-        }
-        zoomChangeTimeout = null;
-      }, 250); // 250ms throttle delay
+      if (teamsLayerRef.current) {
+        teamsLayerRef.current.changed();
+      }
+      if (tasksLayerRef.current) {
+        tasksLayerRef.current.changed();
+      }
     });
 
     // Add event listener for zoom-to-location functionality
@@ -1017,11 +1009,6 @@ const OpenLayersMap = ({
     window.addEventListener('zoomToLocation', handleZoomToLocation);
 
     return () => {
-      // Clear zoom timeout on cleanup
-      if (zoomChangeTimeout) {
-        clearTimeout(zoomChangeTimeout);
-      }
-      
       window.removeEventListener('zoomToLocation', handleZoomToLocation);
       
       // Clean up geolocation
