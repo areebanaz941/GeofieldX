@@ -599,7 +599,7 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-shadow">
+            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-2">
                     <p className="text-xs sm:text-sm text-[#1E5CB3] font-medium">Field Users</p>
