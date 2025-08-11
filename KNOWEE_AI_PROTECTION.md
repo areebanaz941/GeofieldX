@@ -133,6 +133,22 @@ The protection system is designed to be:
 - **Extensible**: Easy to add protection for other problematic extensions
 - **Debuggable**: Comprehensive logging for troubleshooting
 
+## Recent Fixes (Latest)
+
+### TypeError: element.className?.includes is not a function
+**Issue**: The `className` property can be either a string or a `DOMTokenList` object (especially for SVG elements), causing TypeError when calling `.includes()` directly.
+
+**Solution**: 
+- Added safe property access using `.toString()` method
+- Implemented robust error handling in DOM mutation observers
+- Created `safeElementCheck` utility function for consistent element property checking
+- Updated both `extensionBlocker.ts` and `index.html` protection scripts
+
+**Files Modified**:
+- `client/src/lib/extensionBlocker.ts`: Enhanced `isKnoweeAIElement()` method
+- `client/index.html`: Fixed className checking in MutationObserver
+- `client/src/lib/utils.ts`: Added `safeElementCheck()` utility function
+
 ## Future Enhancements
 
 Potential improvements:

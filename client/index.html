@@ -40,22 +40,29 @@
         const observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
             mutation.addedNodes.forEach(function(node) {
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                const element = node;
-                // Check for knowee-ai specific elements
-                if (element.tagName === 'SCRIPT' || 
-                    element.className?.includes('knowee') ||
-                    element.id?.includes('knowee') ||
-                    element.getAttribute?.('data-extension') === 'knowee-ai') {
-                  console.warn('[Extension] knowee-ai script injection detected:', element);
-                  // Isolate the extension script
-                  try {
-                    element.style.isolation = 'isolate';
-                    element.setAttribute('data-isolated', 'true');
-                  } catch (e) {
-                    console.warn('[Extension] Could not isolate knowee-ai element:', e);
+              try {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                  const element = node;
+                  // Check for knowee-ai specific elements
+                  const classNameStr = element.className?.toString() || '';
+                  const elementId = element.id || '';
+                  
+                  if (element.tagName === 'SCRIPT' || 
+                      classNameStr.includes('knowee') ||
+                      elementId.includes('knowee') ||
+                      element.getAttribute?.('data-extension') === 'knowee-ai') {
+                    console.warn('[Extension] knowee-ai script injection detected:', element);
+                    // Isolate the extension script
+                    try {
+                      element.style.isolation = 'isolate';
+                      element.setAttribute('data-isolated', 'true');
+                    } catch (e) {
+                      console.warn('[Extension] Could not isolate knowee-ai element:', e);
+                    }
                   }
                 }
+              } catch (error) {
+                console.warn('[Extension] Error processing DOM mutation:', error);
               }
             });
           });

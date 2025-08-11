@@ -1,4 +1,5 @@
 // Extension blocking utilities for knowee-ai and other interfering extensions
+import { safeElementCheck } from './utils';
 
 export class ExtensionBlocker {
   private static instance: ExtensionBlocker;
@@ -52,10 +53,27 @@ export class ExtensionBlocker {
         // Monitor script src changes
         const originalSetAttribute = script.setAttribute;
         script.setAttribute = function(name: string, value: string) {
-          if (name === 'src' && (value.includes('knowee') || value.includes('extension://'))) {
-            console.warn('[ExtensionBlocker] Blocked script injection:', value);
-            ExtensionBlocker.getInstance().blockedScripts.add(value);
-            return;
+          if (name === 'src') {
+            const suspiciousPatterns = [
+              'knowee',
+              'extension://',
+              'chrome-extension://',
+              'moz-extension://'
+            ];
+            
+            // Allow replit scripts but warn about them
+            if (value.includes('replit.com')) {
+              console.warn('[Extension] knowee-ai script injection detected:', `<script type="text/javascript" src="${value}" data-isolated="true" style="isolation: isolate;"></script>`);
+              script.setAttribute('data-isolated', 'true');
+              script.style.isolation = 'isolate';
+            }
+            
+            // Block other suspicious scripts
+            if (suspiciousPatterns.some(pattern => value.includes(pattern) && !value.includes('replit.com'))) {
+              console.warn('[ExtensionBlocker] Blocked script injection:', value);
+              ExtensionBlocker.getInstance().blockedScripts.add(value);
+              return;
+            }
           }
           return originalSetAttribute.call(this, name, value);
         };
@@ -69,21 +87,25 @@ export class ExtensionBlocker {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const element = node as Element;
-            
-            // Check for knowee-ai elements
-            if (this.isKnoweeAIElement(element)) {
-              this.isolateElement(element);
-            }
-            
-            // Check for script injections
-            if (element.tagName === 'SCRIPT') {
-              const script = element as HTMLScriptElement;
-              if (this.isSuspiciousScript(script)) {
-                this.blockScript(script);
+          try {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              
+              // Check for knowee-ai elements
+              if (this.isKnoweeAIElement(element)) {
+                this.isolateElement(element);
+              }
+              
+              // Check for script injections
+              if (element.tagName === 'SCRIPT') {
+                const script = element as HTMLScriptElement;
+                if (this.isSuspiciousScript(script)) {
+                  this.blockScript(script);
+                }
               }
             }
+          } catch (error) {
+            console.warn('[ExtensionBlocker] Error processing DOM node:', error);
           }
         });
       });
@@ -154,22 +176,36 @@ export class ExtensionBlocker {
   }
 
   private isKnoweeAIElement(element: Element): boolean {
-    return element.className?.includes('knowee') ||
-           element.id?.includes('knowee') ||
-           element.getAttribute('data-extension') === 'knowee-ai' ||
-           element.className?.includes('FloatTool') ||
-           element.tagName === 'KNOWEE-AI';
+    return safeElementCheck(element, {
+      className: ['knowee', 'FloatTool'],
+      id: ['knowee'],
+      tagName: ['KNOWEE-AI'],
+      attributes: { 'data-extension': 'knowee-ai' }
+    });
   }
 
   private isSuspiciousScript(script: HTMLScriptElement): boolean {
-    const src = script.src || '';
-    const content = script.textContent || '';
-    
-    return src.includes('knowee') ||
-           src.includes('extension://') ||
-           content.includes('knowee-ai') ||
-           content.includes('FloatTool') ||
-           content.includes('messageSubscribe');
+    try {
+      const src = script.src || '';
+      const content = script.textContent || '';
+      
+      const suspiciousPatterns = [
+        'knowee',
+        'extension://',
+        'knowee-ai',
+        'FloatTool',
+        'messageSubscribe',
+        'localPdfTips',
+        'selection.js'
+      ];
+      
+      return suspiciousPatterns.some(pattern => 
+        src.includes(pattern) || content.includes(pattern)
+      );
+    } catch (error) {
+      console.warn('[ExtensionBlocker] Error checking script:', error);
+      return false;
+    }
   }
 
   private isolateElement(element: Element): void {
