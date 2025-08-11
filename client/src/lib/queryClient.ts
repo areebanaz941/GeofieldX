@@ -46,7 +46,10 @@ export async function apiRequest(
   
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url, {
+      // Use original fetch if available to avoid extension interference
+      const fetchFn = (window as any).__originalFetch || fetch;
+      
+      const res = await fetchFn(url, {
         method,
         headers,
         body: data ? JSON.stringify(data) : undefined,
@@ -56,6 +59,14 @@ export async function apiRequest(
       await throwIfResNotOk(res);
       return res;
     } catch (error) {
+      // Check if this might be extension interference
+      if (error instanceof Error) {
+        const stack = error.stack || '';
+        if (stack.includes('knowee-ai') || stack.includes('extension://')) {
+          console.warn('[Extension] API request may have been interfered with by extension:', error.message);
+        }
+      }
+      
       // If this is the last attempt or it's not a network error, throw
       if (attempt === retries || (error instanceof Error && !error.message.includes('Failed to fetch') && !error.message.includes('ERR_HTTP2_PROTOCOL_ERROR'))) {
         throw error;
@@ -87,7 +98,10 @@ export const getQueryFn: <T>(options: {
       headers.Authorization = `Bearer ${authToken}`;
     }
     
-    const res = await fetch(queryKey[0] as string, {
+    // Use original fetch if available to avoid extension interference
+    const fetchFn = (window as any).__originalFetch || fetch;
+    
+    const res = await fetchFn(queryKey[0] as string, {
       credentials: "include",
       headers,
     });
