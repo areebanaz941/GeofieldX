@@ -139,23 +139,63 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'teams' | 'boundaries'>('overview');
 
-  // Sync tab with query param ?tab=
+  // Read tab from URL on mount and handle browser navigation
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get('tab') as 'overview' | 'features' | 'teams' | 'boundaries' | null;
-    if (tabParam && tabParam !== activeTab) {
-      setActiveTab(tabParam);
-    }
-  }, [activeTab]);
+    const getTabFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      
+      // Validate tab parameter
+      if (tabParam && ['overview', 'features', 'teams', 'boundaries'].includes(tabParam)) {
+        return tabParam as 'overview' | 'features' | 'teams' | 'boundaries';
+      }
+      return 'overview'; // Default tab
+    };
 
-  // When tab changes, update the URL query param (without reloading)
+    // Set initial tab from URL
+    const urlTab = getTabFromUrl();
+    setActiveTab(urlTab);
+
+    // Listen for browser back/forward navigation
+    const handlePopState = () => {
+      const urlTab = getTabFromUrl();
+      setActiveTab(urlTab);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []); // Only run on mount
+
+  // Listen for dashboard tab change events from sidebar
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.get('tab') !== activeTab) {
-      url.searchParams.set('tab', activeTab);
-      window.history.replaceState({}, '', url.toString());
+    const handleTabChangeEvent = (event: CustomEvent) => {
+      const { tab } = event.detail;
+      if (tab && ['overview', 'features', 'teams', 'boundaries'].includes(tab)) {
+        setActiveTab(tab);
+      }
+    };
+
+    window.addEventListener('dashboard-tab-change', handleTabChangeEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('dashboard-tab-change', handleTabChangeEvent as EventListener);
+    };
+  }, []);
+
+  // Update URL when tab changes (without causing loops)
+  const handleTabChange = (newTab: 'overview' | 'features' | 'teams' | 'boundaries') => {
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
+      
+      // Update URL without reloading
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', newTab);
+      window.history.pushState({}, '', url.toString());
     }
-  }, [activeTab]);
+  };
 
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
   const { data: features = [] } = useQuery({ queryKey: ['/api/features'] });
@@ -498,7 +538,7 @@ export default function Dashboard() {
           <div className="flex gap-2 sm:gap-4 overflow-x-auto">
             <Button 
               variant={activeTab === "overview" ? "default" : "outline"}
-              onClick={() => setActiveTab("overview")}
+              onClick={() => handleTabChange("overview")}
               size="sm"
               className="whitespace-nowrap"
             >
@@ -506,7 +546,7 @@ export default function Dashboard() {
             </Button>
             <Button 
               variant={activeTab === "features" ? "default" : "outline"}
-              onClick={() => setActiveTab("features")}
+              onClick={() => handleTabChange("features")}
               size="sm"
               className="whitespace-nowrap"
             >
@@ -514,7 +554,7 @@ export default function Dashboard() {
             </Button>
             <Button 
               variant={activeTab === "boundaries" ? "default" : "outline"}
-              onClick={() => setActiveTab("boundaries")}
+              onClick={() => handleTabChange("boundaries")}
               size="sm"
               className="whitespace-nowrap"
             >
@@ -559,7 +599,6 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-              
               <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-2">
