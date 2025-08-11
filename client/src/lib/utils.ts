@@ -155,3 +155,50 @@ export function safePropertyAccess<T>(
     return defaultValue;
   }
 }
+
+// Safe element property checking for DOM elements
+export function safeElementCheck(element: Element, checks: {
+  className?: string[];
+  id?: string[];
+  tagName?: string[];
+  attributes?: { [key: string]: string };
+}): boolean {
+  try {
+    // Safely check className (can be string or DOMTokenList)
+    if (checks.className) {
+      const classNameStr = element.className?.toString() || '';
+      if (checks.className.some(cls => classNameStr.includes(cls))) {
+        return true;
+      }
+    }
+    
+    // Safely check id
+    if (checks.id) {
+      const elementId = element.id || '';
+      if (checks.id.some(id => elementId.includes(id))) {
+        return true;
+      }
+    }
+    
+    // Check tagName
+    if (checks.tagName) {
+      if (checks.tagName.includes(element.tagName)) {
+        return true;
+      }
+    }
+    
+    // Check attributes
+    if (checks.attributes) {
+      for (const [attr, value] of Object.entries(checks.attributes)) {
+        if (element.getAttribute(attr) === value) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.warn('[Extension] Error checking element properties:', error);
+    return false;
+  }
+}
