@@ -100,38 +100,105 @@ export default function MapView() {
   
   const memoizedToast = useMemo(() => stableToast, [stableToast]);
 
-  // ✅ EMERGENCY URL PARAMETER CLEANUP - Run this FIRST
+  // Handle URL parameters for navigation to features and boundaries
   useEffect(() => {
     const url = new URL(window.location.href);
-    let shouldClear = false;
+    const featureId = url.searchParams.get('feature');
+    const boundaryId = url.searchParams.get('boundary');
+    const editFeature = url.searchParams.get('editFeature');
     
-    // Check for problematic parameters that might be causing loops
-    if (url.searchParams.has('boundary') || url.searchParams.has('feature')) {
-      console.log('🚨 EMERGENCY: Found problematic URL parameters, cleaning up...');
-      console.log('🚨 Current URL:', window.location.href);
-      
-      const boundaryId = url.searchParams.get('boundary');
-      const featureId = url.searchParams.get('feature');
-      
-      // Clear the parameters
-      url.searchParams.delete('boundary');
-      url.searchParams.delete('feature');
-      
-      // Update URL without reloading
-      window.history.replaceState({}, '', url.toString());
-      
-      console.log('🚨 Cleaned URL:', url.toString());
-      console.log('🚨 Removed parameters:', { boundaryId, featureId });
-      
-      // Show a toast about the cleanup
+    // Wait for map methods and data to be available
+    if (!mapMethods || features.length === 0) return;
+    
+    if (featureId) {
+      console.log('🎯 Navigating to feature from URL:', featureId);
+      // Add a small delay to ensure features are fully loaded on the map
       setTimeout(() => {
-        toast({
-          title: "Navigation Parameters Cleared",
-          description: "Removed problematic URL parameters to prevent navigation loops.",
-        });
-      }, 1000);
+        const success = mapMethods.zoomToFeature(featureId);
+        if (success) {
+          // Clear the URL parameter after successful navigation
+          url.searchParams.delete('feature');
+          window.history.replaceState({}, '', url.toString());
+          toast({
+            title: "Feature Located",
+            description: "Zoomed to feature on map",
+          });
+        } else {
+          // Retry once after a longer delay if features might still be loading
+          setTimeout(() => {
+            const retrySuccess = mapMethods.zoomToFeature(featureId);
+            if (retrySuccess) {
+              url.searchParams.delete('feature');
+              window.history.replaceState({}, '', url.toString());
+              toast({
+                title: "Feature Located",
+                description: "Zoomed to feature on map",
+              });
+            } else {
+              toast({
+                title: "Feature Not Found",
+                description: "Unable to locate the specified feature on the map",
+                variant: "destructive",
+              });
+              // Clear the parameter even on failure to prevent loops
+              url.searchParams.delete('feature');
+              window.history.replaceState({}, '', url.toString());
+            }
+          }, 1000);
+        }
+      }, 500);
+    } else if (boundaryId) {
+      console.log('🎯 Navigating to boundary from URL:', boundaryId);
+      setTimeout(() => {
+        const success = mapMethods.zoomToBoundary(boundaryId);
+        if (success) {
+          // Clear the URL parameter after successful navigation
+          url.searchParams.delete('boundary');
+          window.history.replaceState({}, '', url.toString());
+          toast({
+            title: "Boundary Located",
+            description: "Zoomed to boundary on map",
+          });
+        } else {
+          // Retry once
+          setTimeout(() => {
+            const retrySuccess = mapMethods.zoomToBoundary(boundaryId);
+            if (retrySuccess) {
+              url.searchParams.delete('boundary');
+              window.history.replaceState({}, '', url.toString());
+              toast({
+                title: "Boundary Located",
+                description: "Zoomed to boundary on map",
+              });
+            } else {
+              toast({
+                title: "Boundary Not Found",
+                description: "Unable to locate the specified boundary on the map",
+                variant: "destructive",
+              });
+              url.searchParams.delete('boundary');
+              window.history.replaceState({}, '', url.toString());
+            }
+          }, 1000);
+        }
+      }, 500);
+    } else if (editFeature) {
+      console.log('🎯 Opening edit modal for feature:', editFeature);
+      // Find the feature to edit
+      const feature = features.find(f => f._id.toString() === editFeature);
+      if (feature) {
+        setFeatureToEdit(feature);
+        setEditFeatureModalOpen(true);
+        // Also zoom to the feature
+        setTimeout(() => {
+          mapMethods.zoomToFeature(editFeature);
+        }, 500);
+        // Clear the URL parameter
+        url.searchParams.delete('editFeature');
+        window.history.replaceState({}, '', url.toString());
+      }
     }
-  }, []); // Run only once on mount
+  }, [mapMethods, features, boundaries]); // Depend on mapMethods and data being available
 
   // Fetch data
   const { data: features = [] } = useQuery({
@@ -154,27 +221,7 @@ export default function MapView() {
     queryFn: getAllBoundaries,
   });
 
-  // ✅ COMPLETELY DISABLED NAVIGATION CONTROLLER
-  const navigationController = useRef({
-    hasProcessed: true, // Always true = completely disabled
-    timeoutId: null,
-    
-    // All methods are no-ops (do nothing)
-    logState: () => {},
-    isDashboardNavigation: () => true,
-    getNavigationParams: () => ({ featureId: null, boundaryId: null }),
-    clearUrlParams: () => {},
-    attemptNavigation: () => {},
-    setFailureTimeout: () => {},
-    reset: () => {},
-    setEnabled: () => {}
-  });
 
-  // ✅ DISABLED NAVIGATION EFFECTS - Replace all navigation effects with this
-  useEffect(() => {
-    console.log('🛑 All navigation effects DISABLED');
-    return; // Early return - do absolutely nothing
-  }, []); // Empty dependencies - no re-runs
 
   // Handle map navigation errors - KEEP THIS ONE
   useEffect(() => {
