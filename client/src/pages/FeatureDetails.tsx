@@ -81,7 +81,10 @@ export default function FeatureDetails() {
   // Handle view on map
   const handleViewOnMap = () => {
     if (!feature?._id) return;
-    setLocation(`/map?feature=${feature._id}`);
+    try {
+      sessionStorage.setItem('mapNavigation', JSON.stringify({ type: 'feature', id: feature._id.toString() }));
+    } catch {}
+    setLocation('/map');
   };
 
   // Fetch team details if feature has a teamId

@@ -107,7 +107,12 @@ function BoundaryManagement() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocation(`/map?boundary=${boundary._id}`)}
+                      onClick={() => {
+                        try {
+                          sessionStorage.setItem('mapNavigation', JSON.stringify({ type: 'boundary', id: boundary._id.toString() }));
+                        } catch {}
+                        setLocation('/map');
+                      }}
                       className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                     >
                       <MapPin className="h-4 w-4 mr-1" />
@@ -454,7 +459,12 @@ export default function Dashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setLocation(`/map?boundary=${boundary._id}`)}
+                          onClick={() => {
+                            try {
+                              sessionStorage.setItem('mapNavigation', JSON.stringify({ type: 'boundary', id: boundary._id.toString() }));
+                            } catch {}
+                            setLocation('/map');
+                          }}
                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
                           <MapPin className="h-4 w-4 mr-1" />

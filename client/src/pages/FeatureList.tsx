@@ -225,7 +225,13 @@ export default function FeatureList() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => setLocation(`/map?${feature.feaType === 'Parcel' ? 'boundary' : 'feature'}=${feature._id}`)}
+                      onClick={() => {
+                        try {
+                          const type = feature.feaType === 'Parcel' ? 'boundary' : 'feature';
+                          sessionStorage.setItem('mapNavigation', JSON.stringify({ type, id: feature._id.toString() }));
+                        } catch {}
+                        setLocation('/map');
+                      }}
                       className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                     >
                       <MapPin className="h-4 w-4 mr-1" />

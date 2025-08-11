@@ -113,6 +113,17 @@ export default function MapView() {
       const boundaryId = url.searchParams.get('boundary');
       const featureId = url.searchParams.get('feature');
       
+      // Before clearing, convert into session-driven navigation so we still zoom correctly
+      try {
+        if (featureId) {
+          sessionStorage.setItem('mapNavigation', JSON.stringify({ type: 'feature', id: featureId }));
+        } else if (boundaryId) {
+          sessionStorage.setItem('mapNavigation', JSON.stringify({ type: 'boundary', id: boundaryId }));
+        }
+      } catch (err) {
+        console.error('Failed to write pending mapNavigation to sessionStorage', err);
+      }
+      
       // Clear the parameters
       url.searchParams.delete('boundary');
       url.searchParams.delete('feature');
@@ -176,6 +187,38 @@ export default function MapView() {
     return; // Early return - do absolutely nothing
   }, []); // Empty dependencies - no re-runs
 
+  // When the map is ready, process any pending navigation request from sessionStorage
+  useEffect(() => {
+    if (!mapMethods) return;
+    try {
+      const pending = sessionStorage.getItem('mapNavigation');
+      if (!pending) return;
+      sessionStorage.removeItem('mapNavigation');
+      const parsed = JSON.parse(pending || '{}');
+      const { type, id, lat, lng, zoom } = parsed || {};
+
+      if (type === 'feature' && id) {
+        const ok = mapMethods.zoomToFeature(id);
+        if (!ok && lat != null && lng != null) {
+          mapMethods.panTo(lat, lng, zoom || 16);
+        }
+        return;
+      }
+      if (type === 'boundary' && id) {
+        const ok = mapMethods.zoomToBoundary(id);
+        if (!ok && lat != null && lng != null) {
+          mapMethods.panTo(lat, lng, zoom || 14);
+        }
+        return;
+      }
+      if (lat != null && lng != null) {
+        mapMethods.panTo(lat, lng, zoom || 16);
+      }
+    } catch (err) {
+      console.error('Failed to process pending map navigation', err);
+    }
+  }, [mapMethods]);
+  
   // Handle map navigation errors - KEEP THIS ONE
   useEffect(() => {
     const handleNavigationError = (event: CustomEvent) => {
