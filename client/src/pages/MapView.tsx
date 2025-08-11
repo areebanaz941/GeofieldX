@@ -124,6 +124,28 @@ export default function MapView() {
     hasProcessed: false, // Changed from hasAttempted to hasProcessed
     timeoutId: null as NodeJS.Timeout | null,
     
+    // Check if this is dashboard navigation that should be ignored by map controller
+    isDashboardNavigation(): boolean {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      
+      // If we have a tab parameter (like ?tab=boundaries), this is dashboard navigation
+      // and should not be processed by the map navigation controller
+      if (tabParam !== null) {
+        console.log('🔍 Dashboard navigation detected with tab:', tabParam);
+        return true;
+      }
+      
+      // Additional check: if we're not on the map route, don't process map navigation
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/map' && currentPath !== '/map-view') {
+        console.log('🔍 Non-map route detected:', currentPath);
+        return true;
+      }
+      
+      return false;
+    },
+    
     // Simple check for navigation params
     getNavigationParams(): { featureId: string | null; boundaryId: string | null } {
       const params = new URLSearchParams(window.location.search);
@@ -154,6 +176,13 @@ export default function MapView() {
     attemptNavigation(mapMethods: any, features: any[], boundaries: any[], toastCallback: Function) {
       // Skip if already processed
       if (this.hasProcessed) {
+        return;
+      }
+      
+      // Skip if this is dashboard navigation (e.g., ?tab=boundaries)
+      if (this.isDashboardNavigation()) {
+        console.log('🚫 Skipping map navigation - detected dashboard navigation');
+        this.hasProcessed = true;
         return;
       }
       
@@ -225,6 +254,9 @@ export default function MapView() {
     setFailureTimeout(toastCallback: Function) {
       if (this.timeoutId || this.hasProcessed) return;
       
+      // Skip timeout for dashboard navigation
+      if (this.isDashboardNavigation()) return;
+      
       const { featureId, boundaryId } = this.getNavigationParams();
       if (!featureId && !boundaryId) return;
       
@@ -263,6 +295,14 @@ export default function MapView() {
     
     // Skip if we already processed this exact URL
     if (lastProcessedUrl.current === currentUrl && controller.hasProcessed) {
+      return;
+    }
+    
+    // Skip if this is dashboard navigation (e.g., ?tab=boundaries)
+    if (controller.isDashboardNavigation()) {
+      console.log('🚫 Navigation effect skipping - detected dashboard navigation');
+      controller.hasProcessed = true;
+      lastProcessedUrl.current = currentUrl;
       return;
     }
     
