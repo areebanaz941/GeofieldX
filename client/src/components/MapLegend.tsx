@@ -1,7 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { MapPin, Home, Layers, Users } from 'lucide-react';
 
-const MapLegend: React.FC = () => {
+interface MapLegendProps {
+  onBoundariesClick?: () => void;
+}
+
+const MapLegend: React.FC<MapLegendProps> = ({ onBoundariesClick }) => {
   const statusItems = [
     { status: 'assigned', label: 'Assigned', color: '#3B82F6' },
     { status: 'unassigned', label: 'Unassigned', color: '#000000' },
@@ -63,6 +69,24 @@ const MapLegend: React.FC = () => {
     { type: 'Parcel', label: 'Land Parcel' }
   ];
 
+  // ✅ SAFE NAVIGATION HANDLERS - Direct window navigation to avoid routing conflicts
+  const handleDashboardNavigation = (tab: string) => {
+    console.log(`🚀 Navigating to dashboard ${tab} section`);
+    // Use direct window navigation to avoid any routing conflicts
+    window.location.href = `/dashboard?tab=${tab}`;
+  };
+
+  // ✅ BOUNDARIES BUTTON HANDLER - Uses prop or fallback
+  const handleBoundariesClick = () => {
+    if (onBoundariesClick) {
+      console.log('🎯 Using provided onBoundariesClick handler');
+      onBoundariesClick();
+    } else {
+      console.log('🎯 Using fallback navigation for boundaries');
+      handleDashboardNavigation('boundaries');
+    }
+  };
+
   return (
     <Card className="w-64 bg-white/95 backdrop-blur-sm shadow-lg border-0">
       <CardHeader className="pb-3">
@@ -100,7 +124,54 @@ const MapLegend: React.FC = () => {
           </div>
         </div>
 
-        {/* Additional Info */}
+        {/* ✅ NAVIGATION SECTION - Added while keeping your existing design */}
+        <div className="pt-3 border-t border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Quick Navigation</h4>
+          <div className="space-y-2">
+            <Button
+              onClick={() => handleDashboardNavigation('overview')}
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs h-8 border-gray-300 hover:bg-[#1E5CB3] hover:text-white hover:border-[#1E5CB3] transition-colors"
+            >
+              <Home className="h-3 w-3 mr-2" />
+              Dashboard
+            </Button>
+            
+            <Button
+              onClick={() => handleDashboardNavigation('features')}
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs h-8 border-gray-300 hover:bg-[#1E5CB3] hover:text-white hover:border-[#1E5CB3] transition-colors"
+            >
+              <Layers className="h-3 w-3 mr-2" />
+              Features
+            </Button>
+            
+            {/* ✅ BOUNDARIES BUTTON - The main button that was causing issues */}
+            <Button
+              onClick={handleBoundariesClick}
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs h-8 border-gray-300 hover:bg-[#1E5CB3] hover:text-white hover:border-[#1E5CB3] transition-colors"
+            >
+              <MapPin className="h-3 w-3 mr-2" />
+              Boundaries
+            </Button>
+            
+            <Button
+              onClick={() => handleDashboardNavigation('teams')}
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs h-8 border-gray-300 hover:bg-[#1E5CB3] hover:text-white hover:border-[#1E5CB3] transition-colors"
+            >
+              <Users className="h-3 w-3 mr-2" />
+              Teams
+            </Button>
+          </div>
+        </div>
+
+        {/* Additional Info - Kept your existing style */}
         <div className="pt-2 border-t border-gray-200">
           <p className="text-xs text-gray-500">
             Feature colors change based on assignment and completion status
