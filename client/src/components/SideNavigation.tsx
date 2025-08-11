@@ -147,6 +147,38 @@ export default function SideNavigation() {
     }
   };
 
+  // Special handler for Boundaries navigation
+  const handleBoundariesClick = () => {
+    // Check if we're already on the dashboard
+    if (location === "/" || location === "/dashboard") {
+      // If on dashboard, just update the tab parameter
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', 'boundaries');
+      window.history.pushState({}, '', url.toString());
+      
+      // Dispatch a custom event to notify the Dashboard component
+      window.dispatchEvent(new CustomEvent('dashboard-tab-change', { 
+        detail: { tab: 'boundaries' } 
+      }));
+    } else {
+      // If not on dashboard, navigate to dashboard with boundaries tab
+      setLocation('/dashboard?tab=boundaries');
+    }
+    
+    // Close mobile sidebar after navigation
+    const sidebar = document.getElementById("side-nav");
+    const overlay = document.getElementById("mobile-nav-overlay");
+    
+    if (sidebar && window.innerWidth < 768) { // md breakpoint
+      sidebar.classList.add("hidden");
+      sidebar.classList.remove("block");
+      
+      if (overlay && overlay.parentNode) {
+        document.body.removeChild(overlay);
+      }
+    }
+  };
+
   return (
     <div 
       id="side-nav" 
@@ -223,12 +255,12 @@ export default function SideNavigation() {
                   </Button>
                 ))}
                 
-                {/* Boundaries Section */}
+                {/* Boundaries Section - FIXED WITH SPECIAL HANDLER */}
                 {boundaryFeatures.length > 0 && (
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-left p-2 h-auto hover:bg-gray-50 border-t border-gray-100 mt-2 pt-3"
-                    onClick={() => handleNavClick('/dashboard?tab=boundaries')}
+                    onClick={handleBoundariesClick}
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center space-x-2">
