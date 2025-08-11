@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>London Postcode Map</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+  <link href="./styles.css" rel="stylesheet" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="branding">
+      <h1>London Postcode Map</h1>
+      <p>Interactive postcode areas with clickable pages</p>
+    </div>
+    <div class="header-actions">
+      <button id="toggleEditBtn" class="btn">Edit mode</button>
+      <button id="exportConfigBtn" class="btn secondary">Export JSON</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <aside class="sidebar" id="sidebar">
+      <section class="legend" id="legend">
+        <h3>Legend</h3>
+        <div class="legend-items" id="legendItems"></div>
+        <div class="legend-note">
+          <span class="legend-swatch swatch-missing"></span>
+          <span>Shaded = Missing info</span>
+        </div>
+      </section>
+
+      <section class="editor" id="editor" hidden>
+        <h3>Edit Postcode</h3>
+        <form id="editForm">
+          <div class="form-row">
+            <label>Code</label>
+            <input id="fieldCode" type="text" readonly />
+          </div>
+          <div class="form-row">
+            <label>Title</label>
+            <input id="fieldTitle" type="text" placeholder="Display title" />
+          </div>
+          <div class="form-row">
+            <label>URL</label>
+            <input id="fieldUrl" type="url" placeholder="/pages/SW1.html or full URL" />
+          </div>
+          <div class="form-row checkbox">
+            <label>
+              <input id="fieldHasInfo" type="checkbox" /> Has information page
+            </label>
+          </div>
+          <div class="form-row">
+            <label>Notes</label>
+            <textarea id="fieldNotes" rows="3" placeholder="Optional notes"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn">Save</button>
+            <button type="button" id="resetBtn" class="btn secondary">Reset</button>
+          </div>
+        </form>
+        <p class="help-text">Changes are kept in-memory. Use "Export JSON" to download the updated config to upload to your site.</p>
+      </section>
+    </aside>
+
+    <section class="map-wrap">
+      <div id="map"></div>
+      <div id="tooltip" class="tooltip" hidden></div>
+    </section>
+  </main>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+  <script>
+    window.MAPBOX_TOKEN = 'pk.eyJ1Ijoia2FsaWJlMjAiLCJhIjoiY2x5bXZtZDkxMDF6NjJqc2RwcDYwdzBsOCJ9.sM2piYvs-KRuVtcvNflmvQ';
+  </script>
+  <script src="./app.js"></script>
+</body>
+</html>
