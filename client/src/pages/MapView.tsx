@@ -123,6 +123,8 @@ export default function MapView() {
   const navigationController = useRef({
     hasProcessed: false, // Changed from hasAttempted to hasProcessed
     timeoutId: null as NodeJS.Timeout | null,
+    lastUrlChangeTime: null as number | null, // Add throttling for URL changes
+    lastAttemptTime: null as number | null, // Add throttling for navigation attempts
     
     // Simple check for navigation params
     getNavigationParams(): { featureId: string | null; boundaryId: string | null } {
@@ -133,8 +135,14 @@ export default function MapView() {
       };
     },
     
-    // Clear URL params after successful navigation
+    // Clear URL params after successful navigation with throttling
     clearUrlParams(featureId?: string, boundaryId?: string) {
+      // Throttle URL changes to prevent browser hanging
+      if (this.lastUrlChangeTime && Date.now() - this.lastUrlChangeTime < 500) {
+        console.log('🔄 Throttling URL change to prevent browser hanging');
+        return;
+      }
+      
       const url = new URL(window.location.href);
       let changed = false;
       if (featureId) {
@@ -146,16 +154,26 @@ export default function MapView() {
         changed = true;
       }
       if (changed) {
+        this.lastUrlChangeTime = Date.now();
         window.history.replaceState({}, '', url.toString());
+        console.log('🔄 URL params cleared successfully');
       }
     },
     
-    // ✅ SIMPLIFIED: One-time navigation attempt
+    // ✅ SIMPLIFIED: One-time navigation attempt with throttling
     attemptNavigation(mapMethods: any, features: any[], boundaries: any[], toastCallback: Function) {
       // Skip if already processed
       if (this.hasProcessed) {
         return;
       }
+      
+      // Throttle navigation attempts to prevent browser hanging
+      const now = Date.now();
+      if (this.lastAttemptTime && now - this.lastAttemptTime < 1000) {
+        console.log('🔄 Throttling navigation attempt to prevent browser hanging');
+        return;
+      }
+      this.lastAttemptTime = now;
       
       const { featureId, boundaryId } = this.getNavigationParams();
       
@@ -194,6 +212,8 @@ export default function MapView() {
           if (success) {
             console.log('✅ Boundary navigation successful');
             this.clearUrlParams(undefined, boundaryId);
+          } else {
+            console.log('❌ Boundary navigation failed - boundary not found');
           }
         } catch (error) {
           console.error('❌ Boundary navigation error:', error);
@@ -247,6 +267,8 @@ export default function MapView() {
     reset() {
       console.log('🔄 Resetting navigation controller');
       this.hasProcessed = false;
+      this.lastUrlChangeTime = null;
+      this.lastAttemptTime = null;
       if (this.timeoutId) {
         clearTimeout(this.timeoutId);
         this.timeoutId = null;
@@ -285,12 +307,16 @@ export default function MapView() {
       controller.setFailureTimeout(stableToast);
     }
     
-    // Try navigation when conditions are met
+    // Try navigation when conditions are met (with additional throttling)
     if (mapMethods && ((featureId && features.length > 0) || (boundaryId && boundaries.length > 0))) {
+      // Add extra delay to prevent rapid navigation attempts
       const timer = setTimeout(() => {
-        controller.attemptNavigation(mapMethods, features, boundaries, stableToast);
-        lastProcessedUrl.current = currentUrl;
-      }, 100);
+        // Double-check we haven't already processed this URL
+        if (!controller.hasProcessed && lastProcessedUrl.current !== currentUrl) {
+          controller.attemptNavigation(mapMethods, features, boundaries, stableToast);
+          lastProcessedUrl.current = currentUrl;
+        }
+      }, 200); // Increased delay to prevent browser throttling
       
       return () => clearTimeout(timer);
     }
