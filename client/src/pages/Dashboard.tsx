@@ -151,8 +151,10 @@ export default function Dashboard() {
   // When tab changes, update the URL query param (without reloading)
   useEffect(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('tab', activeTab);
-    window.history.replaceState({}, '', url.toString());
+    if (url.searchParams.get('tab') !== activeTab) {
+      url.searchParams.set('tab', activeTab);
+      window.history.replaceState({}, '', url.toString());
+    }
   }, [activeTab]);
 
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
@@ -412,7 +414,7 @@ export default function Dashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setLocation(`/map?feature=${boundary._id}`)}
+                          onClick={() => setLocation(`/map?boundary=${boundary._id}`)}
                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
                           <MapPin className="h-4 w-4 mr-1" />
