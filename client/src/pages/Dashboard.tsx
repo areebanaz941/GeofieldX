@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -138,6 +138,22 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'teams' | 'boundaries'>('overview');
+
+  // Sync tab with query param ?tab=
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab') as 'overview' | 'features' | 'teams' | 'boundaries' | null;
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [activeTab]);
+
+  // When tab changes, update the URL query param (without reloading)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', activeTab);
+    window.history.replaceState({}, '', url.toString());
+  }, [activeTab]);
 
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
   const { data: features = [] } = useQuery({ queryKey: ['/api/features'] });
