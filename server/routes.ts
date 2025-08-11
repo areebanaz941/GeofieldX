@@ -742,7 +742,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
         // If supervisor is creating, skip boundary restriction
-      }
         // Get all boundaries assigned to the user's team
         const allBoundaries = await storage.getAllBoundaries();
         const assignedBoundaries = allBoundaries.filter(boundary => 
@@ -803,6 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Add team ID to feature for proper filtering
         req.body.teamId = user.teamId?.toString();
       }
+      // end Field-only block
       // Supervisors can create features anywhere without boundary restrictions
       
       const featureData = insertFeatureSchema.parse({
