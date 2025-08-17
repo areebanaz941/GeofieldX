@@ -84,7 +84,7 @@ function BoundaryManagement() {
                     {boundary.description && (
                       <p className="text-sm text-gray-600 mt-1">{boundary.description}</p>
                     )}
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
                         boundary.status === 'New' ? 'bg-blue-100 text-blue-800' :
@@ -96,6 +96,12 @@ function BoundaryManagement() {
                         <div className="flex items-center gap-1">
                           <Users className="h-3 w-3" />
                           <span>Assigned to: {boundary.assignedTo.name || boundary.assignedTo.username}</span>
+                        </div>
+                      )}
+                      {boundary.createdAt && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>Created: {new Date(boundary.createdAt).toLocaleDateString()}</span>
                         </div>
                       )}
                       {boundary.geometry && (
@@ -198,7 +204,11 @@ export default function Dashboard() {
   };
 
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
-  const { data: features = [] } = useQuery({ queryKey: ['/api/features'] });
+  const { data: features = [], refetch: refetchFeatures } = useQuery({ 
+    queryKey: ['/api/features'],
+    staleTime: 0, // Override the global staleTime for features to ensure fresh data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+  });
   const { data: teams = [] } = useQuery({ queryKey: ['/api/teams'] });
   const { data: fieldUsers = [] } = useQuery({ queryKey: ['/api/users/field'] });
   const { data: allUsers = [] } = useQuery({ queryKey: ['/api/users'] });
@@ -220,6 +230,12 @@ export default function Dashboard() {
     fiberCables: (features as any[]).filter((feature: any) => feature.feaType === 'FiberCable').length,
     parcels: (features as any[]).filter((feature: any) => feature.feaType === 'Parcel').length
   };
+
+  // Debug logging for towers issue
+  console.log('Dashboard - Features data:', features);
+  console.log('Dashboard - Total features:', (features as any[]).length);
+  console.log('Dashboard - Tower features:', featureStats.towers);
+  console.log('Dashboard - Current user:', user);
 
   // Loading state for field users only
   if (!user) {

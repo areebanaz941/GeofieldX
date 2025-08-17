@@ -801,9 +801,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Add team ID to feature for proper filtering
         req.body.teamId = user.teamId?.toString();
+      } else {
+        // Supervisors can create features anywhere without boundary restrictions
+        // But still assign their teamId if they have one for proper filtering
+        if (user.teamId) {
+          req.body.teamId = user.teamId.toString();
+        }
       }
-      // end Field-only block
-      // Supervisors can create features anywhere without boundary restrictions
       
       const featureData = insertFeatureSchema.parse({
         ...req.body,

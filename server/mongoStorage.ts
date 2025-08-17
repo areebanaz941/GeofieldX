@@ -461,7 +461,7 @@ export class MongoStorage implements IStorage {
 
   async getAllBoundaries(): Promise<IBoundary[]> {
     try {
-      return await Boundary.find();
+      return await Boundary.find().populate("assignedTo", "name username");
     } catch (error) {
       console.error("Error getting all boundaries:", error);
       return [];
