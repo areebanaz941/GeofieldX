@@ -30,14 +30,15 @@ export default function FeatureList() {
 
   // Filter features based on type and search criteria
   const filteredFeatures = features?.filter((feature: IFeature) => {
-    const matchesType = featureType === 'all' || feature.feaType.toLowerCase() === featureType?.toLowerCase();
+    // If there's a search query, ignore the type filter and search across all features by name or number
+    const matchesType = !searchQuery && (featureType === 'all' || feature.feaType.toLowerCase() === featureType?.toLowerCase());
     const matchesSearch = !searchQuery || 
       feature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       feature.feaNo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || feature.feaStatus === statusFilter;
     const matchesState = stateFilter === 'all' || feature.feaState === stateFilter;
     
-    return matchesType && matchesSearch && matchesStatus && matchesState;
+    return (matchesType || !!searchQuery) && matchesSearch && matchesStatus && matchesState;
   }) || [];
 
   const getStatusColor = (status: string) => {

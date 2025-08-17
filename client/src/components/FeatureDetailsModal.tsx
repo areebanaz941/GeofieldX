@@ -36,9 +36,15 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
   const { data: freshFeature } = useQuery<IFeature>({
     queryKey: ['/api/features', feature?._id],
     queryFn: async () => {
-      const response = await fetch(`/api/features/${feature?._id}`);
-      if (!response.ok) throw new Error('Failed to fetch feature details');
-      return response.json();
+      const res = await fetch(`/api/features/${feature?._id}`, {
+        credentials: 'include',
+        headers: (() => {
+          const token = localStorage.getItem('auth_token');
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        })()
+      });
+      if (!res.ok) throw new Error('Failed to fetch feature details');
+      return res.json();
     },
     enabled: !!feature?._id && open,
   });

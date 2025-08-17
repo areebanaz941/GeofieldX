@@ -92,10 +92,10 @@ function BoundaryManagement() {
                       }`}>
                         {boundary.status}
                       </span>
-                      {boundary.assignedTo && (
+                                            {boundary.assignedTo && (
                         <div className="flex items-center gap-1">
                           <Users className="h-3 w-3" />
-                          <span>Assigned to: {boundary.assignedTo.name || boundary.assignedTo.username}</span>
+                          <span>Assigned to: {typeof boundary.assignedTo === 'object' ? (boundary.assignedTo.name || boundary.assignedTo.username) : boundary.assignedTo}</span>
                         </div>
                       )}
                       {boundary.geometry && (
