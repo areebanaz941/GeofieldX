@@ -22,6 +22,7 @@ import { SupervisorRoutes } from "./components/SupervisorRoutes";
 import { protectFromScriptInjection, detectKnoweeAI } from "./lib/utils";
 import { useEffect } from "react";
 import ExtensionProtection from "./components/ExtensionProtection";
+import AuthErrorBoundary from "./components/AuthErrorBoundary";
 
 function App() {
   // Initialize script injection protection on app start
@@ -39,6 +40,7 @@ function App() {
           <TooltipProvider>
             <ExtensionProtection />
             <Toaster />
+            <AuthErrorBoundary>
           <Switch>
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
@@ -98,6 +100,7 @@ function App() {
             </Route>
             <Route component={NotFound} />
           </Switch>
+            </AuthErrorBoundary>
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>

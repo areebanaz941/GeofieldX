@@ -11,9 +11,19 @@ if (typeof window !== 'undefined') {
 export const setAuthToken = (token: string | null) => {
   authToken = token;
   if (token) {
-    localStorage.setItem('auth_token', token);
+    try {
+      localStorage.setItem('auth_token', token);
+      console.log('[Auth] JWT token stored successfully');
+    } catch (error) {
+      console.error('[Auth] Failed to store JWT token:', error);
+    }
   } else {
-    localStorage.removeItem('auth_token');
+    try {
+      localStorage.removeItem('auth_token');
+      console.log('[Auth] JWT token removed from storage');
+    } catch (error) {
+      console.error('[Auth] Failed to remove JWT token:', error);
+    }
   }
 };
 

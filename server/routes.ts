@@ -164,8 +164,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "geowhats-secret-key-production-2024",
-      resave: true, // Changed to true for production stability
-      saveUninitialized: true, // Changed to true to ensure session creation
+      resave: false, // Changed back to false to prevent unnecessary saves
+      saveUninitialized: false, // Changed back to false to prevent creating sessions for unauthenticated users
       store: new MemoryStore({
         checkPeriod: 86400000, // prune expired entries every 24h
       }),
@@ -173,9 +173,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: process.env.NODE_ENV === "production", // Re-enabled for proper HTTPS handling
         httpOnly: true, // Re-enabled for security
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: process.env.NODE_ENV === "production" ? 'strict' : false, // Strict for same-origin
+        sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax', // More permissive for cross-origin in production
       },
       name: 'geofieldx.session',
+      rolling: true, // Extend session on each request
     }),
   );
 
@@ -220,9 +221,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   passport.deserializeUser(async (id: string, done) => {
     try {
+      console.log(`🔍 Deserializing user with ID: ${id}`);
       const user = await storage.getUser(id);
-      done(null, user);
+      if (user) {
+        console.log(`✅ User deserialized successfully: ${user.username} (role: ${user.role})`);
+        done(null, user);
+      } else {
+        console.log(`❌ User not found during deserialization: ${id}`);
+        done(null, false);
+      }
     } catch (error) {
+      console.error(`❌ Error during user deserialization for ID ${id}:`, error);
       done(error);
     }
   });
@@ -248,18 +257,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
     
     if (token) {
+      console.log(`🔍 Attempting JWT authentication for ${req.path}`);
       const decoded = verifyJWTToken(token);
       if (decoded && typeof decoded === 'object' && 'userId' in decoded) {
         try {
           const user = await storage.getUser(decoded.userId as string);
           if (user) {
             (req as any).user = user;
-            console.log(`✅ JWT auth success for ${req.path}: User=${user._id}`);
+            console.log(`✅ JWT auth success for ${req.path}: User=${user.username} (role: ${user.role})`);
             return next();
+          } else {
+            console.log(`❌ JWT auth failed - user not found: ${decoded.userId}`);
           }
         } catch (error) {
-          console.log(`❌ JWT user lookup failed:`, error);
+          console.log(`❌ JWT user lookup failed for ${decoded.userId}:`, error);
         }
+      } else {
+        console.log(`❌ JWT token invalid or malformed for ${req.path}`);
       }
     }
     
@@ -362,6 +376,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/current-user", isAuthenticated, (req, res) => {
     const user = { ...(req.user as any) };
     delete user.password; // Don't send password to client
+    
+    // Ensure critical fields are present
+    if (!user.role) {
+      console.error('❌ User role missing in current-user response:', user);
+      return res.status(500).json({ message: "User data incomplete - missing role" });
+    }
+    
+    console.log(`✅ Current user response: ${user.username} (role: ${user.role})`);
     res.json(user);
   });
 
@@ -801,9 +823,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Add team ID to feature for proper filtering
         req.body.teamId = user.teamId?.toString();
+      } else {
+        // Supervisors can create features anywhere without boundary restrictions
+        // But still assign their teamId if they have one for proper filtering
+        if (user.teamId) {
+          req.body.teamId = user.teamId.toString();
+        }
       }
-      // end Field-only block
-      // Supervisors can create features anywhere without boundary restrictions
       
       const featureData = insertFeatureSchema.parse({
         ...req.body,

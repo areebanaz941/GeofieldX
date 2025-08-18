@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = await getCurrentUser();
         // Add null check and validation
         if (userData && typeof userData === 'object') {
-          console.log('[Auth] User authenticated successfully');
+          console.log('[Auth] User authenticated successfully:', userData.username, 'Role:', userData.role);
           setUser(userData);
         } else {
           console.warn('[Auth] getCurrentUser returned invalid data:', userData);
@@ -39,20 +39,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check if this might be extension interference
         if (error?.message?.includes('401') || error?.message?.includes('Not authenticated')) {
           console.warn('[Auth] Authentication failed - user not logged in');
+          setUser(null);
         } else if (error?.stack?.includes('knowee-ai') || error?.stack?.includes('extension://')) {
           console.warn('[Extension] Auth check may have been interfered with by extension:', error);
+          // Don't clear user for extension interference - keep existing state
         } else {
-          console.warn('[Auth] Auth check failed:', error);
+          console.warn('[Auth] Auth check failed with non-auth error:', error);
+          // For other errors (network, server issues), don't clear user state
+          // The user might still be authenticated, just having connectivity issues
+          if (error?.message?.includes('500') || error?.message?.includes('Failed to fetch')) {
+            console.warn('[Auth] Keeping user state due to potential connectivity issue');
+          } else {
+            // Only clear user for actual authentication failures
+            console.warn('[Auth] Clearing user state due to unknown error');
+            setUser(null);
+          }
         }
-        // If error, user is not logged in
-        setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
+    
+    // Set up periodic auth validation (every 5 minutes)
+    const authValidationInterval = setInterval(() => {
+      if (user) {
+        console.log('[Auth] Periodic validation check for user:', user.username);
+        checkAuth();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => {
+      clearInterval(authValidationInterval);
+    };
+  }, [user]);
 
   const login = async (username: string, password: string) => {
     try {

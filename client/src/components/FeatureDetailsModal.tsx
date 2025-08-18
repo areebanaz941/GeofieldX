@@ -133,12 +133,17 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                       // Debug each image path
                       console.log(`Image ${index + 1}:`, imagePath);
                       
-                      // Handle different path formats
+                      // Handle different path formats - ensure proper URL construction
                       let imageUrl = imagePath;
-                      if (!imagePath.startsWith('http') && !imagePath.startsWith('/')) {
-                        imageUrl = `/uploads/${imagePath}`;
-                      } else if (!imagePath.startsWith('http') && !imagePath.startsWith('/uploads/')) {
-                        imageUrl = `/uploads/${imagePath}`;
+                      if (typeof imagePath === 'string') {
+                        if (!imagePath.startsWith('http') && !imagePath.startsWith('/uploads/')) {
+                          // Remove leading slash if present and prepend /uploads/
+                          const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+                          imageUrl = `/uploads/${cleanPath}`;
+                        } else if (imagePath.startsWith('uploads/')) {
+                          // Add leading slash if missing
+                          imageUrl = `/${imagePath}`;
+                        }
                       }
                       
                       console.log(`Final image URL ${index + 1}:`, imageUrl);
@@ -154,7 +159,12 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                             }}
                             onError={(e) => {
                               console.error(`Failed to load image ${index + 1}:`, imageUrl);
-                              (e.target as HTMLImageElement).style.display = 'none';
+                              console.error('Original path:', imagePath);
+                              console.error('Constructed URL:', imageUrl);
+                              // Show a placeholder instead of hiding
+                              const img = e.target as HTMLImageElement;
+                              img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA5QzEwLjMgOSA5IDEwLjMgOSAxMkM5IDEzLjcgMTAuMyAxNSAxMiAxNUMxMy43IDE1IDE1IDEzLjcgMTUgMTJDMTUgMTAuMyAxMy43IDkgMTIgOVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTEyIDdDMTQuMiA3IDE2IDguOCAxNiAxMUMxNiAxMy4yIDE0LjIgMTUgMTIgMTVDOS44IDE1IDggMTMuMiA4IDExQzggOC44IDkuOCA3IDEyIDdaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4K';
+                              img.alt = 'Image failed to load';
                             }}
                             onLoad={() => {
                               console.log(`Successfully loaded image ${index + 1}:`, imageUrl);
