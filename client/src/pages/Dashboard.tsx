@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { getAllBoundaries, deleteBoundary } from '@/lib/api';
 import FeatureIcon, { FeatureType } from '@/components/FeatureIcon';
-import { Trash2, MapPin, Users } from 'lucide-react';
+import { Trash2, MapPin, Users, Calendar } from 'lucide-react';
 
 // Boundary Management Component
 function BoundaryManagement() {
