@@ -206,8 +206,27 @@ export default function Dashboard() {
   const { data: tasks = [] } = useQuery({ queryKey: ['/api/tasks'] });
   const { data: features = [], refetch: refetchFeatures } = useQuery({ 
     queryKey: ['/api/features'],
-    staleTime: 0, // Override the global staleTime for features to ensure fresh data
-    refetchOnWindowFocus: true, // Refetch when window gains focus
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    select: (serverFeatures: any[]) => {
+      // Ensure field users always see features they created OR assigned to their team OR within their assigned boundaries
+      if (!user || user.role === 'Supervisor') return serverFeatures;
+      try {
+        const teamId = user.teamId?.toString();
+        if (!teamId) return serverFeatures;
+        // Pre-calc boundary ids from parcels assigned to team (already present in list)
+        const teamParcels = serverFeatures.filter((f: any) => f.feaType === 'Parcel' && f.assignedTo?.toString() === teamId);
+        const teamBoundaryIds = new Set(teamParcels.map((p: any) => p._id?.toString()).filter(Boolean));
+        return serverFeatures.filter((f: any) => {
+          const createdByTeam = f.teamId?.toString() === teamId;
+          const assignedToTeam = f.assignedTo?.toString() === teamId;
+          const inTeamBoundary = f.boundaryId && teamBoundaryIds.has(f.boundaryId.toString());
+          return createdByTeam || assignedToTeam || inTeamBoundary;
+        });
+      } catch {
+        return serverFeatures;
+      }
+    }
   });
   const { data: teams = [] } = useQuery({ queryKey: ['/api/teams'] });
   const { data: fieldUsers = [] } = useQuery({ queryKey: ['/api/users/field'] });
@@ -353,7 +372,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <Card 
                   className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
-                  onClick={() => setLocation('/features/Tower')}
+                  onClick={() => setLocation('/map?type=Tower')}
                 >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
@@ -371,7 +390,7 @@ export default function Dashboard() {
 
                 <Card 
                   className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
-                  onClick={() => setLocation('/features/Manhole')}
+                  onClick={() => setLocation('/map?type=Manhole')}
                 >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
@@ -389,7 +408,7 @@ export default function Dashboard() {
 
                 <Card 
                   className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
-                  onClick={() => setLocation('/features/FiberCable')}
+                  onClick={() => setLocation('/map?type=FiberCable')}
                 >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
@@ -407,7 +426,7 @@ export default function Dashboard() {
 
                 <Card 
                   className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-all cursor-pointer" 
-                  onClick={() => setLocation('/features/Parcel')}
+                  onClick={() => setLocation('/map?type=Parcel')}
                 >
                   <CardContent className="p-4 text-center">
                     <div className="w-8 h-8 mx-auto mb-2">
@@ -484,7 +503,7 @@ export default function Dashboard() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => setLocation('/features/Parcel')}
+                        onClick={() => setLocation('/map?type=Parcel')}
                         className="text-[#1E5CB3] hover:text-[#0D2E5A]"
                       >
                         View all {assignedBoundaries.length} boundaries

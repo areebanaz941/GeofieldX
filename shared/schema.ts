@@ -283,7 +283,7 @@ const boundarySchema = new Schema<IBoundary>(
     },
     assignedTo: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Team",
     },
   },
   {
