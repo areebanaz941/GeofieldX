@@ -347,6 +347,14 @@ export default function MapView() {
   // Feature selection dialog state
   const [featureSelectionOpen, setFeatureSelectionOpen] = useState(false);
   const [selectedFeatureType, setSelectedFeatureType] = useState<string>('');
+  // Read type filter from query to support navigation like /map?type=Tower
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get('type');
+    if (type) {
+      setSelectedFeatureType(type);
+    }
+  }, []);
   const [supervisorPolygonModalOpen, setSupervisorPolygonModalOpen] = useState(false);
 
   // Fetch saved shapefiles from database
