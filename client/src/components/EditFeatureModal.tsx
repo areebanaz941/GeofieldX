@@ -122,20 +122,11 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
     setSpecificTypeOptions(options);
   }, [feaType]);
 
-  // Update feature mutation
+  // Update feature mutation (uses centralized API helper which handles JWT/session and FormData)
   const updateFeatureMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch(`/api/features/${feature?._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update feature');
-      }
-      return response.json();
+      const { updateFeature } = await import("@/lib/api");
+      return await updateFeature(String(feature?._id), data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/features'] });
@@ -145,7 +136,7 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
       });
       onClose();
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to update feature",
