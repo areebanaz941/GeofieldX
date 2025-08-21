@@ -569,7 +569,9 @@ const OpenLayersMap = ({
             })
           });
         }
-      }
+      },
+      // Ensure features render above shapefiles
+      zIndex: 500
     });
 
     teamsLayerRef.current = new VectorLayer({
@@ -592,7 +594,9 @@ const OpenLayersMap = ({
             font: 'bold 14px Arial'
           })
         });
-      }
+      },
+      // Keep teams above shapefiles but below user-location/accuracy
+      zIndex: 520
     });
 
     boundariesLayerRef.current = new VectorLayer({
@@ -628,7 +632,9 @@ const OpenLayersMap = ({
             lineDash: [8, 8] // More prominent dashed line for better visibility
           })
         });
-      }
+      },
+      // Ensure boundaries render above shapefiles and features if needed
+      zIndex: 550
     });
 
     tasksLayerRef.current = new VectorLayer({
@@ -652,7 +658,9 @@ const OpenLayersMap = ({
             font: 'bold 12px Arial'
           })
         });
-      }
+      },
+      // Ensure tasks are above shapefiles
+      zIndex: 530
     });
 
     selectedLocationLayerRef.current = new VectorLayer({
@@ -747,7 +755,8 @@ const OpenLayersMap = ({
             });
         }
       },
-      zIndex: 600 // Ensure it's above other layers but below selections
+      // Always keep shapefiles beneath features and boundaries
+      zIndex: 100
     });
 
     // Create location layers for user position with identifiable names
