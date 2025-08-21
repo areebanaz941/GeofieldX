@@ -298,7 +298,7 @@ export async function assignFeatureToTeam(featureId: string, teamId: string) {
   return await res.json();
 }
 
-export async function assignBoundaryToTeam(boundaryId: string, teamId: string | null) {
+export async function assignBoundaryToTeam(boundaryId: string, teamId: string) {
   const res = await apiRequest('PUT', `/api/boundaries/${boundaryId}/assign`, { teamId });
   return await res.json();
 }
