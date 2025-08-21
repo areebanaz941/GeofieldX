@@ -241,8 +241,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fs.mkdirSync(path.join(process.cwd(), "uploads"), { recursive: true });
   }
 
-  // Serve static uploads
-  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+  // Serve static uploads with no-cache to ensure fresh image reloads
+  app.use(
+    "/uploads",
+    express.static(path.join(process.cwd(), "uploads"), {
+      etag: true,
+      lastModified: true,
+      setHeaders: (res) => {
+        // Prevent aggressive caching by proxies/browsers during frequent updates
+        res.setHeader("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      },
+    }),
+  );
 
   // Hybrid authentication middleware: tries session first, then JWT
   const isAuthenticated = async (req: Request, res: Response, next: any) => {
