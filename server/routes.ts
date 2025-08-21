@@ -1333,6 +1333,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Unassign boundary from a team (set assignedTo to null)
+  app.delete(
+    "/api/boundaries/:id/assign",
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const boundaryId = req.params.id;
+        const boundary = await storage.getBoundary(boundaryId);
+        if (!boundary) {
+          return res.status(404).json({ message: "Boundary not found" });
+        }
+
+        // Use storage directly to update
+        const updated = await storage.updateBoundaryStatus(boundaryId, boundary.status);
+        // Manually clear assignment using mongoose to avoid adding a new interface method
+        const mongoose = await import('mongoose');
+        const { Boundary } = await import('@shared/schema');
+        await Boundary.updateOne({ _id: new mongoose.Types.ObjectId(boundaryId) }, { $unset: { assignedTo: 1 } });
+
+        const cleared = await storage.getBoundary(boundaryId);
+        res.json(cleared);
+      } catch (error) {
+        console.error("Unassign boundary error:", error);
+        res.status(500).json({ message: "Failed to unassign boundary" });
+      }
+    },
+  );
+
   // Delete boundary route
   app.delete(
     "/api/boundaries/:id",
