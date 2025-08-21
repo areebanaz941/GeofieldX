@@ -29,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/hooks/use-toast";
 import { featureStateEnum, featureStatusEnum, maintenanceEnum, IFeature } from "@shared/schema";
 
@@ -44,6 +45,7 @@ const formSchema = z.object({
   maintenanceDate: z.string().optional(),
   remarks: z.string().optional(),
   color: z.string().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 type FeatureFormValues = z.infer<typeof formSchema>;
@@ -72,6 +74,7 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
       maintenanceDate: "",
       remarks: "",
       color: "#3B82F6",
+      images: [],
     },
   });
 
@@ -92,6 +95,7 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
         maintenanceDate: feature.maintenanceDate ? new Date(feature.maintenanceDate).toISOString().split('T')[0] : "",
         remarks: feature.remarks || "",
         color: feature.color || "#3B82F6",
+        images: Array.isArray(feature.images) ? feature.images : [],
       });
     }
   }, [open, feature, form]);
@@ -164,6 +168,7 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
         maintenanceDate: new Date(values.maintenanceDate) 
       }),
       ...(values.color && { color: values.color }),
+      ...(values.images && values.images.length > 0 && { images: values.images }),
     };
 
     updateFeatureMutation.mutate(submitData);
@@ -409,6 +414,69 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
                       rows={3}
                       {...field}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Images - allow adding/replacing images during edit */}
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Feature Images</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      {/* Existing images preview (if any) */}
+                      {Array.isArray(feature?.images) && feature?.images.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2">
+                          {feature!.images!.map((img, idx) => {
+                            let url = img as string;
+                            if (typeof url === 'string') {
+                              if (!url.startsWith('http') && !url.startsWith('/uploads/')) {
+                                const clean = url.startsWith('/') ? url.slice(1) : url;
+                                url = `/uploads/${clean}`;
+                              } else if (url.startsWith('uploads/')) {
+                                url = `/${url}`;
+                              }
+                            }
+                            return (
+                              <img key={idx} src={url} alt={`image-${idx}`} className="w-full h-20 object-cover rounded border" />
+                            );
+                          })}
+                        </div>
+                      )}
+                      <ImageUpload
+                        maxFiles={10}
+                        maxFileSize={10}
+                        onFilesChange={async (files) => {
+                          if (!files || files.length === 0) return;
+                          try {
+                            const formData = new FormData();
+                            files.forEach(f => formData.append('images', f));
+                            const authToken = localStorage.getItem('auth_token');
+                            const headers: HeadersInit = {};
+                            if (authToken) headers.Authorization = `Bearer ${authToken}`;
+                            const resp = await fetch('/api/features/upload-images', {
+                              method: 'POST',
+                              body: formData,
+                              credentials: 'include',
+                              headers
+                            });
+                            if (!resp.ok) throw new Error('Failed to upload images');
+                            const result = await resp.json();
+                            const uploadedPaths: string[] = result.imagePaths || [];
+                            const current = Array.isArray(field.value) ? field.value : [];
+                            field.onChange([...current, ...uploadedPaths]);
+                          } catch (e) {
+                            console.error('Image upload failed:', e);
+                          }
+                        }}
+                        disabled={updateFeatureMutation.isPending}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
