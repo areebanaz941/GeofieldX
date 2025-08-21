@@ -84,51 +84,18 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
   // Populate form with feature data when modal opens
   useEffect(() => {
     if (open && feature) {
-      // Ensure images are properly formatted with full paths
-      let formattedImages: string[] = [];
-      if (Array.isArray(feature.images) && feature.images.length > 0) {
-        formattedImages = feature.images.map((img: string) => {
-          if (typeof img === 'string') {
-            // If image doesn't start with http or /uploads/, add /uploads/ prefix
-            if (!img.startsWith('http') && !img.startsWith('/uploads/')) {
-              const clean = img.startsWith('/') ? img.slice(1) : img;
-              return `/uploads/${clean}`;
-            } else if (img.startsWith('uploads/')) {
-              return `/${img}`;
-            }
-            return img;
-          }
-          return img;
-        });
-      }
-      
       form.reset({
         name: feature.name || "",
         feaNo: feature.feaNo || "",
-        feaType: feature.feaType as any || "Tower",
+        feaType: feature.feaType as any,
         specificType: feature.specificType || "",
-        feaState: feature.feaState as any || "Plan",
-        feaStatus: feature.feaStatus as any || "New",
-        maintenance: feature.maintenance as any || "None",
+        feaState: feature.feaState as any,
+        feaStatus: feature.feaStatus as any,
+        maintenance: feature.maintenance as any,
         maintenanceDate: feature.maintenanceDate ? new Date(feature.maintenanceDate).toISOString().split('T')[0] : "",
         remarks: feature.remarks || "",
         color: feature.color || "#3B82F6",
-        images: formattedImages, // Use formatted images
-      });
-    } else if (!open) {
-      // Reset form when modal closes
-      form.reset({
-        name: "",
-        feaNo: "",
-        feaType: "Tower",
-        specificType: "",
-        feaState: "Plan",
-        feaStatus: "New",
-        maintenance: "None",
-        maintenanceDate: "",
-        remarks: "",
-        color: "#3B82F6",
-        images: [],
+        images: Array.isArray(feature.images) ? feature.images : [],
       });
     }
   }, [open, feature, form]);
@@ -138,13 +105,13 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
     let options: string[] = [];
     switch (feaType) {
       case "Tower":
-        options = ["Mobillink", "Ptcl", "Telenor", "Zong", "Jazz", "Other"];
+        options = ["Mobillink", "Ptcl"];
         break;
       case "Manhole":
-        options = ["2-way", "3-way", "4-way", "T-Junction", "L-Junction", "Other"];
+        options = ["2-way", "4-way"];
         break;
       case "FiberCable":
-        options = ["4F", "6F", "8F", "10F", "12F", "24F", "48F", "96F", "144F", "Other"];
+        options = ["10F", "24F"];
         break;
       case "Parcel":
         options = ["Commercial", "Residential", "Water Body", "Vegetation", "Agricultural", "Industrial", "Recreational", "Government", "Mixed Use", "Vacant Land"];
@@ -153,13 +120,7 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
         options = [];
     }
     setSpecificTypeOptions(options);
-    
-    // Reset specific type if it's not in the new options
-    const currentSpecificType = form.getValues("specificType");
-    if (currentSpecificType && !options.includes(currentSpecificType)) {
-      form.setValue("specificType", options[0] || "");
-    }
-  }, [feaType, form]);
+  }, [feaType]);
 
   // Update feature mutation (uses centralized API helper which handles JWT/session and FormData)
   const updateFeatureMutation = useMutation({
@@ -235,33 +196,6 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
                   <FormControl>
                     <Input placeholder="Enter feature number" {...field} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="feaType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Feature Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select feature type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Tower">Tower</SelectItem>
-                      <SelectItem value="Manhole">Manhole</SelectItem>
-                      <SelectItem value="FiberCable">Fiber Cable</SelectItem>
-                      <SelectItem value="Parcel">Parcel</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -486,41 +420,23 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
                   <FormLabel>Feature Images</FormLabel>
                   <FormControl>
                     <div className="space-y-2">
-                      {/* Display current images from form state */}
-                      {field.value && field.value.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-sm text-gray-600">Current Images:</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            {field.value.map((img, idx) => (
-                              <div key={idx} className="relative group">
-                                <img 
-                                  src={img} 
-                                  alt={`image-${idx}`} 
-                                  className="w-full h-20 object-cover rounded border"
-                                  onError={(e) => {
-                                    // Handle image load error
-                                    console.error(`Failed to load image: ${img}`);
-                                    e.currentTarget.src = '/placeholder-image.png'; // Fallback image
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    // Remove image from the list
-                                    const newImages = field.value.filter((_, i) => i !== idx);
-                                    field.onChange(newImages);
-                                  }}
-                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Remove image"
-                                >
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                  </svg>
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                      {/* Existing images preview (if any) */}
+                      {Array.isArray(feature?.images) && feature?.images.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2">
+                          {feature!.images!.map((img, idx) => {
+                            let url = img as string;
+                            if (typeof url === 'string') {
+                              if (!url.startsWith('http') && !url.startsWith('/uploads/')) {
+                                const clean = url.startsWith('/') ? url.slice(1) : url;
+                                url = `/uploads/${clean}`;
+                              } else if (url.startsWith('uploads/')) {
+                                url = `/${url}`;
+                              }
+                            }
+                            return (
+                              <img key={idx} src={url} alt={`image-${idx}`} className="w-full h-20 object-cover rounded border" />
+                            );
+                          })}
                         </div>
                       )}
                       <ImageUpload
@@ -547,11 +463,6 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
                             field.onChange([...current, ...uploadedPaths]);
                           } catch (e) {
                             console.error('Image upload failed:', e);
-                            toast({
-                              title: "Upload Failed",
-                              description: "Failed to upload images. Please try again.",
-                              variant: "destructive",
-                            });
                           }
                         }}
                         disabled={updateFeatureMutation.isPending}

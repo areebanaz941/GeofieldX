@@ -26,41 +26,17 @@ export const TowerIcon: React.FC<FeatureIconProps> = ({ status, size = 24 }) => 
   
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Modern telecommunication tower design */}
       <path
-        d="M12 2L12 22"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      {/* Tower cross beams */}
-      <path
-        d="M7 6L17 6M8 10L16 10M9 14L15 14M10 18L14 18"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      {/* Diagonal support beams */}
-      <path
-        d="M9 6L12 10L15 6M9 10L12 14L15 10M9 14L12 18L15 14"
+        d="M12 2L8 6V10L10 12V22H14V12L16 10V6L12 2Z"
+        fill={color}
         stroke={color}
         strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
-      {/* Signal waves at top */}
+      <circle cx="12" cy="4" r="1" fill={color} />
       <path
-        d="M8 2C8 2 10 0 12 0C14 0 16 2 16 2"
+        d="M6 18H18M8 20H16"
         stroke={color}
         strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Base */}
-      <path
-        d="M6 22L18 22"
-        stroke={color}
-        strokeWidth="2"
         strokeLinecap="round"
       />
     </svg>
@@ -72,43 +48,36 @@ export const ManholeIcon: React.FC<FeatureIconProps> = ({ status, size = 24 }) =
   
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Outer circle with thick border */}
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        fill={color}
-        stroke={color}
-        strokeWidth="1"
-      />
-      {/* Inner circle */}
       <circle
         cx="12"
         cy="12"
         r="8"
-        fill="none"
-        stroke="white"
-        strokeWidth="1.5"
+        fill={color}
+        stroke={color}
+        strokeWidth="2"
       />
-      {/* Manhole cover pattern - diamond grid */}
-      <path
-        d="M12 4L20 12L12 20L4 12Z"
+      <circle
+        cx="12"
+        cy="12"
+        r="6"
         fill="none"
         stroke="white"
         strokeWidth="1"
       />
-      {/* Cross pattern */}
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill="none"
+        stroke="white"
+        strokeWidth="1"
+      />
       <path
-        d="M12 6V18M6 12H18"
+        d="M8 8L16 16M16 8L8 16"
         stroke="white"
         strokeWidth="1"
         strokeLinecap="round"
       />
-      {/* Corner dots for realistic manhole look */}
-      <circle cx="8" cy="8" r="0.5" fill="white" />
-      <circle cx="16" cy="8" r="0.5" fill="white" />
-      <circle cx="8" cy="16" r="0.5" fill="white" />
-      <circle cx="16" cy="16" r="0.5" fill="white" />
     </svg>
   );
 };
