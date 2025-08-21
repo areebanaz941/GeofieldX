@@ -46,12 +46,14 @@ export default function BoundaryAssignmentModal({
   });
 
   const assignMutation = useMutation({
-    mutationFn: ({ boundaryId, teamId }: { boundaryId: string; teamId: string }) =>
+    mutationFn: ({ boundaryId, teamId }: { boundaryId: string; teamId: string | null }) =>
       assignBoundaryToTeam(boundaryId, teamId),
     onSuccess: () => {
       toast({
-        title: "Area Assigned",
-        description: "Area has been successfully assigned to the team.",
+        title: selectedTeamId === "unassign" ? "Area Unassigned" : "Area Assigned",
+        description: selectedTeamId === "unassign" 
+          ? "Area has been successfully unassigned from the team."
+          : "Area has been successfully assigned to the team.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/boundaries"] });
       onOpenChange(false);
@@ -59,18 +61,23 @@ export default function BoundaryAssignmentModal({
     onError: (error: any) => {
       toast({
         title: "Assignment Failed",
-        description: error.message || "Failed to assign area to team.",
+        description: error.message || "Failed to update area assignment.",
         variant: "destructive",
       });
     },
   });
 
   const handleAssign = () => {
-    if (!boundary || !selectedTeamId) return;
+    if (!boundary) return;
+    
+    // If "unassign" is selected, pass null as teamId
+    const teamId = selectedTeamId === "unassign" ? null : selectedTeamId;
+    
+    if (!teamId && selectedTeamId !== "unassign") return;
     
     assignMutation.mutate({
       boundaryId: boundary._id.toString(),
-      teamId: selectedTeamId,
+      teamId: teamId,
     });
   };
 
@@ -125,6 +132,22 @@ export default function BoundaryAssignmentModal({
                 <SelectValue placeholder="Choose a team..." />
               </SelectTrigger>
               <SelectContent>
+                {/* Add Unassign option at the top */}
+                <SelectItem value="unassign">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium text-red-600">Unassign Team</span>
+                      <span className="text-xs text-gray-500">Remove current team assignment</span>
+                    </div>
+                    <Badge variant="destructive" className="text-xs ml-2">
+                      Remove
+                    </Badge>
+                  </div>
+                </SelectItem>
+                
+                {/* Separator */}
+                <div className="my-1 border-t border-gray-200" />
+                
                 {teams && teams.length > 0 ? (
                   teams
                     .filter((team: any) => team.status?.toLowerCase() === "approved")
@@ -179,10 +202,16 @@ export default function BoundaryAssignmentModal({
             </Button>
             <Button
               onClick={handleAssign}
-              disabled={!selectedTeamId || assignMutation.isPending}
-              className="bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] hover:from-[#0D2E5A] hover:to-[#1E5CB3]"
+              disabled={(!selectedTeamId || (selectedTeamId !== "unassign" && !selectedTeamId)) || assignMutation.isPending}
+              className={selectedTeamId === "unassign" 
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-gradient-to-r from-[#1E5CB3] to-[#0D2E5A] hover:from-[#0D2E5A] hover:to-[#1E5CB3]"
+              }
             >
-              {assignMutation.isPending ? "Assigning..." : "Assign Area"}
+              {assignMutation.isPending 
+                ? (selectedTeamId === "unassign" ? "Unassigning..." : "Assigning...") 
+                : (selectedTeamId === "unassign" ? "Unassign Area" : "Assign Area")
+              }
             </Button>
           </div>
         </div>

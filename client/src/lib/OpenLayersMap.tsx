@@ -383,6 +383,7 @@ interface MapProps {
     panTo: (lat: number, lng: number, zoom?: number) => void;
     zoomToFeature: (featureId: string) => boolean;
     zoomToBoundary: (boundaryId: string) => boolean;
+    getMapState: () => { center: [number, number]; zoom: number };
   }) => void;
 }
 
@@ -447,212 +448,193 @@ const OpenLayersMap = ({
     const shapefilesSource = new VectorSource();
     const selectedLocationSource = new VectorSource();
     selectedLocationSourceRef.current = selectedLocationSource;
-
-    // Create location-specific sources
+    
+    // Create sources for location tracking
     const locationSource = new VectorSource();
     const accuracySource = new VectorSource();
 
     // Create vector layers
-    featuresLayerRef.current = new VectorLayer({
-      source: featuresSource,
-      style: (feature, resolution) => {
-        const featureData = feature.get('featureData');
-        const featureType = featureData?.feaType || 'Tower';
+    // Create shapefile layer for uploaded shapefiles with enhanced styling
+    shapefilesLayerRef.current = new VectorLayer({
+      source: shapefilesSource,
+      style: function(feature) {
+        const geometry = feature.getGeometry()?.getType();
+        const properties = feature.getProperties();
         
-        // Calculate zoom-responsive scale (extremely small when zoomed out)
-        const zoom = mapRef.current?.getView().getZoom() || 13;
-        const baseScale = Math.max(0.05, Math.min(0.4, (zoom - 8) / 20));
-        const iconSize = Math.max(16, Math.min(32, zoom * 2));
-        
-        // FIXED: Changed feaState to feaStatus for proper color determination
-        const featureStatus = featureData?.feaStatus || featureData?.status || 'Unassigned';
-        
-        // Create SVG icon with status-based color using enhanced system
-        const svgIconSrc = createSVGIcon(featureType, featureStatus, iconSize);
-        
-        // Handle different geometry types
-        const geometry = feature.getGeometry();
-        const geometryType = geometry?.getType();
-        
-        if (geometryType === 'LineString' || featureType === 'FiberCable') {
-          // For line features (fiber cables), use stroke styling with status-based colors
-          const lineWidth = Math.max(2, Math.min(6, zoom / 3));
-          const standardStatus = mapToStandardStatus(featureStatus);
-          const statusColor = getStatusColor(standardStatus);
-          
+        // Default style for shapefiles
+        const defaultStyle = new Style({
+          stroke: new Stroke({
+            color: 'rgba(59, 130, 246, 0.8)', // Blue with transparency
+            width: 2
+          }),
+          fill: new Fill({
+            color: 'rgba(59, 130, 246, 0.1)' // Very light blue fill
+          })
+        });
+
+        // Check if feature has custom style properties
+        if (properties.fillColor || properties.strokeColor) {
           return new Style({
             stroke: new Stroke({
-              color: statusColor,
-              width: lineWidth
+              color: properties.strokeColor || 'rgba(59, 130, 246, 0.8)',
+              width: properties.strokeWidth || 2
             }),
-            text: new Text({
-              text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
-              placement: 'line',
-              fill: new Fill({ color: '#000' }),
-              stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: `${Math.max(10, Math.min(14, zoom))}px Arial`
-            })
-          });
-        } else if (geometryType === 'Polygon' || featureType === 'Parcel') {
-          // For polygon features (parcels), use blue fill and stroke with team assignment
-          const strokeWidth = Math.max(1, Math.min(3, zoom / 5));
-          const isParcel = featureType === 'Parcel';
-          
-          // Use custom colors for parcels if available, otherwise use assignment-based colors
-          let fillColor, strokeColor;
-          if (isParcel) {
-            // Check if parcel has a custom color
-            if (featureData?.color) {
-              // Use custom color with transparency for fill
-              fillColor = `${featureData.color}40`; // 25% opacity
-              strokeColor = featureData.color;
-            } else {
-              // Make boundaries hollow (no fill) with dashed outline for default parcels
-              fillColor = 'rgba(0, 0, 0, 0)'; // Completely transparent fill
-              if (featureData?.assignedTo) {
-                // Assigned boundary - blue dashed outline
-                strokeColor = '#2196F3';
-              } else {
-                // Unassigned boundary - green dashed outline
-                strokeColor = '#4CAF50';
-              }
-            }
-          } else {
-            // Other polygon types - original colors
-            fillColor = `${featureColors[featureType as keyof typeof featureColors] || '#009688'}40`;
-            strokeColor = featureColors[featureType as keyof typeof featureColors] || '#009688';
-          }
-          
-          // Get team assignment information for parcels
-          let labelText = featureData?.name || `${featureType} #${featureData?.feaNo}`;
-          if (isParcel && featureData?.assignedTo) {
-            // Add team assignment to the label - assignedTo contains team ID, need to find team name
-            const teamName = teams?.find((team: any) => team._id === featureData.assignedTo)?.name || 'Unknown Team';
-            labelText = `${labelText}\nAssigned to: ${teamName}`;
-          }
-          
-          return new Style({
             fill: new Fill({
-              color: fillColor
-            }),
-            stroke: new Stroke({
-              color: strokeColor,
-              width: strokeWidth,
-              lineDash: (isParcel && !featureData?.color) ? [8, 8] : undefined // Dashed only for boundaries without custom colors
-            }),
-            text: new Text({
-              text: labelText,
-              fill: new Fill({ color: '#000' }),
-              stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: `${Math.max(10, Math.min(14, zoom))}px Arial`,
-              textAlign: 'center',
-              textBaseline: 'middle'
-            })
-          });
-        } else {
-          // For point features (towers, manholes), use SVG icons with status-based colors
-          return new Style({
-            image: new Icon({
-              src: svgIconSrc,
-              scale: 1,
-              anchor: [0.5, 0.5],
-              anchorXUnits: 'fraction',
-              anchorYUnits: 'fraction'
-            }),
-            text: new Text({
-              text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
-              offsetY: iconSize + 10,
-              fill: new Fill({ color: '#000' }),
-              stroke: new Stroke({ color: '#fff', width: 2 }),
-              font: `${Math.max(10, Math.min(14, zoom))}px Arial`,
-              textAlign: 'center'
+              color: properties.fillColor || 'rgba(59, 130, 246, 0.1)'
             })
           });
         }
-      }
+
+        // Style based on geometry type
+        if (geometry === 'Point' || geometry === 'MultiPoint') {
+          return new Style({
+            image: new Circle({
+              radius: 6,
+              fill: new Fill({ color: 'rgba(59, 130, 246, 0.8)' }),
+              stroke: new Stroke({ color: '#ffffff', width: 2 })
+            })
+          });
+        } else if (geometry === 'LineString' || geometry === 'MultiLineString') {
+          return new Style({
+            stroke: new Stroke({
+              color: 'rgba(59, 130, 246, 0.8)',
+              width: 3,
+              lineDash: properties.lineDash ? [10, 10] : undefined
+            })
+          });
+        } else if (geometry === 'Polygon' || geometry === 'MultiPolygon') {
+          return defaultStyle;
+        }
+
+        // Add label if name property exists
+        const name = properties.name || properties.NAME || properties.label || properties.LABEL;
+        if (name) {
+          return [
+            defaultStyle,
+            new Style({
+              text: new Text({
+                text: String(name),
+                font: '12px sans-serif',
+                fill: new Fill({ color: '#000000' }),
+                stroke: new Stroke({ color: '#ffffff', width: 3 }),
+                overflow: true,
+                textAlign: 'center',
+                textBaseline: 'middle'
+              })
+            })
+          ];
+        }
+
+        return defaultStyle;
+      },
+      zIndex: 100 // Lowest z-index for shapefiles (was 600)
     });
 
-    teamsLayerRef.current = new VectorLayer({
-      source: teamsSource,
-      style: (feature) => {
-        const teamData = feature.get('teamData');
-        const isActive = teamData?.lastActive && 
-          (new Date().getTime() - new Date(teamData.lastActive).getTime() < 15 * 60 * 1000);
-        const statusColor = isActive ? '#4CAF50' : '#F44336';
-        
-        return new Style({
-          image: new Circle({
-            radius: 12,
-            fill: new Fill({ color: '#2196F3' }),
-            stroke: new Stroke({ color: statusColor, width: 3 })
-          }),
-          text: new Text({
-            text: teamData?.name?.slice(0, 1) || 'T',
-            fill: new Fill({ color: '#ffffff' }),
-            font: 'bold 14px Arial'
-          })
-        });
-      }
-    });
-
+    // Create boundaries layer with higher z-index than shapefiles
     boundariesLayerRef.current = new VectorLayer({
       source: boundariesSource,
       style: (feature) => {
-        const featureType = feature.get('type');
+        const assignedTeam = feature.get('assignedTeam');
+        const isSelected = feature.get('selected');
         
-        if (featureType === 'boundary-label') {
-          const labelText = feature.get('labelText');
+        const baseColor = assignedTeam ? '#10B981' : '#6B7280'; // Green if assigned, gray if not
+        const fillOpacity = isSelected ? 0.3 : 0.1;
+        const strokeWidth = isSelected ? 3 : 2;
+        
+        return new Style({
+          stroke: new Stroke({
+            color: baseColor,
+            width: strokeWidth,
+            lineDash: [5, 5]
+          }),
+          fill: new Fill({
+            color: `${baseColor}${Math.round(fillOpacity * 255).toString(16).padStart(2, '0')}`
+          })
+        });
+      },
+      zIndex: 200 // Higher than shapefiles (was not set)
+    });
+
+    // Create features layer with higher z-index
+    featuresLayerRef.current = new VectorLayer({
+      source: featuresSource,
+      style: (feature) => {
+        const featureType = feature.get('feaType');
+        const status = feature.get('feaStatus') || feature.get('status') || 'Unassigned';
+        const standardStatus = mapToStandardStatus(status);
+        
+        // Get the appropriate icon based on feature type
+        const iconSrc = getFeatureIcon(featureType, standardStatus);
+        
+        if (iconSrc) {
           return new Style({
-            text: new Text({
-              text: labelText,
-              font: 'bold 16px Arial',
-              fill: new Fill({ color: '#000000' }),
-              stroke: new Stroke({ color: '#ffffff', width: 4 }),
-              textAlign: 'center',
-              textBaseline: 'middle',
-              backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.9)' }),
-              backgroundStroke: new Stroke({ color: '#009688', width: 2 }),
-              padding: [8, 12, 8, 12],
-              offsetY: 0
+            image: new Icon({
+              src: iconSrc,
+              scale: 1,
+              anchor: [0.5, 1],
+              anchorXUnits: 'fraction',
+              anchorYUnits: 'fraction'
             })
           });
         }
         
+        // Fallback style if no icon is available
         return new Style({
-          fill: new Fill({
-            color: 'rgba(0, 0, 0, 0)' // Completely transparent fill (hollow)
-          }),
-          stroke: new Stroke({
-            color: '#009688',
-            width: 4,
-            lineDash: [8, 8] // More prominent dashed line for better visibility
+          image: new Circle({
+            radius: 8,
+            fill: new Fill({ color: getStatusColor(standardStatus) }),
+            stroke: new Stroke({ color: '#ffffff', width: 2 })
           })
         });
-      }
+      },
+      zIndex: 300 // Higher than boundaries and shapefiles (was not set)
     });
 
+    // Create tasks layer with even higher z-index
     tasksLayerRef.current = new VectorLayer({
       source: tasksSource,
       style: (feature) => {
-        const taskData = feature.get('taskData');
-        const status = taskData?.status || 'Unassigned';
-        // ENHANCED: Use improved status mapping system
-        const standardStatus = mapToStandardStatus(status);
-        const color = getStatusColor(standardStatus);
+        const status = feature.get('status') || 'Unassigned';
+        const color = statusColors[status] || '#000000';
         
         return new Style({
           image: new Circle({
-            radius: 10,
-            fill: new Fill({ color }),
+            radius: 6,
+            fill: new Fill({ color: color }),
             stroke: new Stroke({ color: '#ffffff', width: 2 })
           }),
           text: new Text({
-            text: 'T',
-            fill: new Fill({ color: '#ffffff' }),
-            font: 'bold 12px Arial'
+            text: feature.get('name') || '',
+            offsetY: -15,
+            font: '12px sans-serif',
+            fill: new Fill({ color: '#000000' }),
+            stroke: new Stroke({ color: '#ffffff', width: 3 })
           })
         });
-      }
+      },
+      zIndex: 400 // Higher than features (was not set)
+    });
+
+    // Create teams layer with appropriate z-index
+    teamsLayerRef.current = new VectorLayer({
+      source: teamsSource,
+      style: (feature) => {
+        return new Style({
+          image: new Circle({
+            radius: 10,
+            fill: new Fill({ color: '#3B82F6' }),
+            stroke: new Stroke({ color: '#ffffff', width: 2 })
+          }),
+          text: new Text({
+            text: feature.get('name') || '',
+            offsetY: -20,
+            font: 'bold 12px sans-serif',
+            fill: new Fill({ color: '#1E40AF' }),
+            stroke: new Stroke({ color: '#ffffff', width: 3 })
+          })
+        });
+      },
+      zIndex: 500 // Higher than tasks (was not set)
     });
 
     selectedLocationLayerRef.current = new VectorLayer({
@@ -663,94 +645,11 @@ const OpenLayersMap = ({
           fill: new Fill({ color: '#FF0000' }),
           stroke: new Stroke({ color: '#ffffff', width: 2 })
         })
-      })
+      }),
+      zIndex: 600
     });
-
-    // Create shapefile layer for uploaded shapefiles with enhanced styling
-    shapefilesLayerRef.current = new VectorLayer({
-      source: shapefilesSource,
-      style: function(feature) {
-        const geometry = feature.getGeometry()?.getType();
-        const properties = feature.getProperties();
-        const shapefileData = properties.shapefileData || {};
-        
-        // Use bright, distinctive colors for better visibility
-        const fillColor = 'rgba(255, 105, 180, 0.4)';  // Hot pink with transparency
-        const strokeColor = '#FF1493';                   // Deep pink
-        
-        // Get feature name from properties if available
-        let featureName = '';
-        if (shapefileData.properties) {
-          // Try common property names for feature naming
-          const nameProps = ['name', 'NAME', 'Name', 'title', 'TITLE', 'id', 'ID', 'label', 'LABEL'];
-          for (const prop of nameProps) {
-            if (shapefileData.properties[prop]) {
-              featureName = String(shapefileData.properties[prop]);
-              break;
-            }
-          }
-        }
-        
-        // Apply style based on geometry type
-        switch(geometry) {
-          case 'Point':
-            return new Style({
-              image: new Circle({
-                radius: 8,
-                fill: new Fill({ color: strokeColor }),
-                stroke: new Stroke({ color: '#fff', width: 2 })
-              }),
-              text: featureName ? new Text({
-                text: featureName,
-                offsetY: 25,
-                fill: new Fill({ color: '#000' }),
-                stroke: new Stroke({ color: '#fff', width: 3 }),
-                font: 'bold 12px Arial'
-              }) : undefined
-            });
-            
-          case 'LineString':
-          case 'MultiLineString':
-            return new Style({
-              stroke: new Stroke({
-                color: strokeColor,
-                width: 4
-              }),
-              text: featureName ? new Text({
-                text: featureName,
-                placement: 'line',
-                fill: new Fill({ color: '#000' }),
-                stroke: new Stroke({ color: '#fff', width: 3 }),
-                font: 'bold 12px Arial'
-              }) : undefined
-            });
-            
-          case 'Polygon':
-          case 'MultiPolygon':
-          default:
-            return new Style({
-              fill: new Fill({
-                color: fillColor
-              }),
-              stroke: new Stroke({
-                color: strokeColor,
-                width: 3
-              }),
-              text: featureName ? new Text({
-                text: featureName,
-                fill: new Fill({ color: '#000' }),
-                stroke: new Stroke({ color: '#fff', width: 3 }),
-                font: 'bold 12px Arial',
-                textAlign: 'center',
-                textBaseline: 'middle'
-              }) : undefined
-            });
-        }
-      },
-      zIndex: 600 // Ensure it's above other layers but below selections
-    });
-
-    // Create location layers for user position with identifiable names
+    
+    // Create location accuracy layer
     accuracyLayerRef.current = new VectorLayer({
       source: accuracySource,
       style: new Style({
@@ -764,37 +663,19 @@ const OpenLayersMap = ({
       }),
       zIndex: 700
     });
-    accuracyLayerRef.current.set('name', 'location-accuracy');
-
-    // Helper function to create location marker icon
-    const createLocationMarkerIcon = (): string => {
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
-        <svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
-          <!-- Marker background -->
-          <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12z" fill="#4CAF50"/>
-          <!-- White border -->
-          <path d="M12 2C6.486 2 2 6.486 2 12c0 7.5 10 17 10 17s10-9.5 10-17c0-5.514-4.486-10-10-10z" fill="#4CAF50" stroke="white" stroke-width="2"/>
-          <!-- Center dot -->
-          <circle cx="12" cy="12" r="4" fill="white"/>
-          <circle cx="12" cy="12" r="2" fill="#4CAF50"/>
-        </svg>
-      `)}`;
-    };
-
+    
+    // Create location marker layer
     locationLayerRef.current = new VectorLayer({
       source: locationSource,
       style: new Style({
-        image: new Icon({
-          src: createLocationMarkerIcon(),
-          scale: 1,
-          anchor: [0.5, 1],
-          anchorXUnits: 'fraction',
-          anchorYUnits: 'fraction'
+        image: new Circle({
+          radius: 10,
+          fill: new Fill({ color: '#4CAF50' }),
+          stroke: new Stroke({ color: '#ffffff', width: 3 })
         })
       }),
       zIndex: 800 // Highest priority for user location
     });
-    locationLayerRef.current.set('name', 'user-location');
 
     // Create map
     const persistedCenter = (() => {
@@ -822,15 +703,17 @@ const OpenLayersMap = ({
         new TileLayer({
           source: new OSM()
         }),
+
         // Ensure shapefiles are ALWAYS below features and boundaries
         shapefilesLayerRef.current,
         boundariesLayerRef.current,
         featuresLayerRef.current,
         teamsLayerRef.current,
         tasksLayerRef.current,
+
         selectedLocationLayerRef.current,
-        accuracyLayerRef.current, // Accuracy circle
-        locationLayerRef.current  // User location marker
+        accuracyLayerRef.current,       // Accuracy circle
+        locationLayerRef.current        // User location marker on top
       ],
       view: new View({
         center: fromLonLat(persistedCenter),
@@ -955,12 +838,24 @@ const OpenLayersMap = ({
     // Store map reference for later use
     mapRef.current = map;
 
+    // Create getMapState function to retrieve current map position
+    const getMapState = () => {
+      if (mapRef.current) {
+        const view = mapRef.current.getView();
+        const center = toLonLat(view.getCenter() || fromLonLat([67.0011, 24.8607]));
+        const zoom = view.getZoom() || 13;
+        return { center, zoom };
+      }
+      return { center: [67.0011, 24.8607], zoom: 13 };
+    };
+
     // Call onMapReady callback with map methods
     if (onMapReady) {
       onMapReady({
         panTo,
         zoomToFeature,
-        zoomToBoundary
+        zoomToBoundary,
+        getMapState
       });
     }
 
