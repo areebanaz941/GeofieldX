@@ -85,10 +85,26 @@ export default function MapView() {
     panTo: (lat: number, lng: number, zoom?: number) => void;
     zoomToFeature: (featureId: string) => boolean;
     zoomToBoundary: (boundaryId: string) => boolean;
+    getMapState?: () => { center: [number, number]; zoom: number };
   } | null>(null);
   
   // Local shapefiles state for frontend-only processing
   const [localShapefiles, setLocalShapefiles] = useState<Shapefile[]>([]);
+  
+  // Restore map position from sessionStorage
+  const [initialMapState] = useState(() => {
+    const savedMapState = sessionStorage.getItem('mapViewState');
+    if (savedMapState) {
+      try {
+        const state = JSON.parse(savedMapState);
+        console.log('📍 Restoring map position:', state);
+        return state;
+      } catch (e) {
+        console.error('Failed to parse saved map state:', e);
+      }
+    }
+    return null;
+  });
 
   // ✅ STABLE TOAST CALLBACK - Fixed dependencies
   const stableToast = useCallback((toastData: any) => {
@@ -1468,6 +1484,34 @@ export default function MapView() {
     });
   };
 
+  // Save map position when leaving the page
+  useEffect(() => {
+    const saveMapState = () => {
+      if (mapMethods?.getMapState) {
+        const mapState = mapMethods.getMapState();
+        sessionStorage.setItem('mapViewState', JSON.stringify(mapState));
+        console.log('💾 Saving map position:', mapState);
+      }
+    };
+
+    // Save on page unload
+    window.addEventListener('beforeunload', saveMapState);
+    
+    // Save on visibility change (tab switch)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        saveMapState();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      saveMapState(); // Save when component unmounts
+      window.removeEventListener('beforeunload', saveMapState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [mapMethods]);
+
   return (
     <>
       <div className="flex flex-col lg:flex-row h-full">
@@ -1530,18 +1574,21 @@ export default function MapView() {
           </div>
 
           <OpenLayersMap
-            features={features}
-            teams={fieldUsers}
+            center={initialMapState?.center || [67.0011, 24.8607]}
+            zoom={initialMapState?.zoom || 13}
+            features={filteredFeatures}
+            teams={teams}
             boundaries={boundaries}
             tasks={tasks}
-            allTeams={teams}
-            shapefiles={allShapefiles}
+            allTeams={allTeams}
+            shapefiles={localShapefiles}
             activeFilters={activeFilters}
             onFeatureClick={handleFeatureClick}
             onBoundaryClick={handleBoundaryClick}
             onTeamClick={handleTeamClick}
             onShapefileClick={handleShapefileClick}
             onMapClick={handleMapClick}
+            onMapDoubleClick={handleMapDoubleClick}
             onPolygonCreated={handlePolygonCreated}
             onLineCreated={handleLineCreated}
             selectionMode={selectionMode}
@@ -1550,8 +1597,10 @@ export default function MapView() {
             lineDrawingMode={lineDrawingMode}
             linePoints={linePoints}
             clearDrawnPolygon={clearPolygon}
-            className="w-full h-full"
-            onMapReady={setMapMethods}
+            onMapReady={(methods) => {
+              console.log('📍 Map is ready with methods:', methods);
+              setMapMethods(methods);
+            }}
           />
           
           {/* Mobile Drawing Button - Bottom Center */}
