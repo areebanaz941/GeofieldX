@@ -640,12 +640,12 @@ export class MongoStorage implements IStorage {
 
   async getShapefilesByTeam(teamId: string): Promise<IShapefile[]> {
     try {
+      // Return both visible and hidden shapefiles for manager toggling; map filters by isVisible client-side
       return await Shapefile.find({
         $or: [
           { assignedTo: new Types.ObjectId(teamId) },
           { teamId: new Types.ObjectId(teamId) }
-        ],
-        isVisible: true
+        ]
       })
         .populate('uploadedBy', 'name username')
         .populate('assignedTo', 'name')
@@ -659,9 +659,9 @@ export class MongoStorage implements IStorage {
 
   async getShapefilesByUser(userId: string): Promise<IShapefile[]> {
     try {
+      // Include hidden shapefiles so user can toggle visibility in manager
       return await Shapefile.find({
-        uploadedBy: new Types.ObjectId(userId),
-        isVisible: true
+        uploadedBy: new Types.ObjectId(userId)
       })
         .populate('uploadedBy', 'name username')
         .populate('assignedTo', 'name')

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getAllTeams, assignBoundaryToTeam } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import type { IBoundary } from "@shared/schema";
 
 interface BoundaryAssignmentModalProps {
@@ -78,6 +79,18 @@ export default function BoundaryAssignmentModal({
       boundaryId: boundary._id.toString(),
       teamId: teamId,
     });
+  };
+
+  const handleUnassign = async () => {
+    if (!boundary) return;
+    try {
+      await apiRequest('DELETE', `/api/boundaries/${boundary._id.toString()}/assign`);
+      toast({ title: 'Area Unassigned', description: 'Area assignment has been cleared.' });
+      queryClient.invalidateQueries({ queryKey: ["/api/boundaries"] });
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({ title: 'Unassign Failed', description: error.message || 'Failed to unassign area.', variant: 'destructive' });
+    }
   };
 
   if (!boundary) return null;
@@ -171,7 +184,15 @@ export default function BoundaryAssignmentModal({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="flex justify-between space-x-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={handleUnassign}
+              disabled={assignMutation.isPending}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Unassign
+            </Button>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}

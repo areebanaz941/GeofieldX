@@ -678,25 +678,46 @@ const OpenLayersMap = ({
     });
 
     // Create map
+    const persistedCenter = (() => {
+      try {
+        const raw = localStorage.getItem('map_center');
+        if (!raw) return center;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length === 2) return parsed as [number, number];
+      } catch {}
+      return center;
+    })();
+    const persistedZoom = (() => {
+      try {
+        const raw = localStorage.getItem('map_zoom');
+        if (!raw) return zoom;
+        const z = Number(raw);
+        return Number.isFinite(z) ? z : zoom;
+      } catch {}
+      return zoom;
+    })();
+
     const map = new Map({
       target: mapContainerRef.current,
       layers: [
         new TileLayer({
           source: new OSM()
         }),
-        // Order layers from bottom to top (first added = bottom)
-        shapefilesLayerRef.current,    // Bottom layer - shapefiles
-        boundariesLayerRef.current,     // Above shapefiles
-        featuresLayerRef.current,       // Above boundaries
-        tasksLayerRef.current,          // Above features
-        teamsLayerRef.current,          // Above tasks
+
+        // Ensure shapefiles are ALWAYS below features and boundaries
+        shapefilesLayerRef.current,
+        boundariesLayerRef.current,
+        featuresLayerRef.current,
+        teamsLayerRef.current,
+        tasksLayerRef.current,
+
         selectedLocationLayerRef.current,
         accuracyLayerRef.current,       // Accuracy circle
         locationLayerRef.current        // User location marker on top
       ],
       view: new View({
-        center: fromLonLat(center),
-        zoom: zoom
+        center: fromLonLat(persistedCenter),
+        zoom: persistedZoom
       })
     });
 
@@ -850,6 +871,14 @@ const OpenLayersMap = ({
       if (tasksLayerRef.current) {
         tasksLayerRef.current.changed();
       }
+    });
+
+    // Persist view on moveend
+    map.on('moveend', () => {
+      const v = map.getView();
+      const c = toLonLat(v.getCenter()!);
+      localStorage.setItem('map_center', JSON.stringify([c[0], c[1]]));
+      localStorage.setItem('map_zoom', String(v.getZoom() ?? 13));
     });
 
     // Add event listener for zoom-to-location functionality
@@ -1650,7 +1679,13 @@ const OpenLayersMap = ({
     if (!pointSelectionMode && !lineDrawingMode && !selectionMode && !drawingMode) {
       selectInteractionRef.current = new Select({
         condition: click,
-        layers: [featuresLayerRef.current, teamsLayerRef.current, boundariesLayerRef.current, tasksLayerRef.current, shapefilesLayerRef.current].filter((layer): layer is VectorLayer<any> => layer !== null)
+        // Prefer selecting non-shapefile layers first to avoid blockage
+        layers: [
+          featuresLayerRef.current,
+          boundariesLayerRef.current,
+          teamsLayerRef.current,
+          tasksLayerRef.current
+        ].filter((layer): layer is VectorLayer<any> => layer !== null)
       });
 
       selectInteractionRef.current.on('select', (event) => {
