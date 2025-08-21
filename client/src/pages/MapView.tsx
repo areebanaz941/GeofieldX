@@ -1470,9 +1470,9 @@ export default function MapView() {
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row h-full">
+      <div className="flex flex-col lg:flex-row h-full min-h-[calc(100vh-3.5rem)]">
         {/* Map Container */}
-        <div className="relative flex-1 z-0 h-[60vh] lg:h-full">
+        <div className="relative flex-1 z-0 h-full">
           {/* Mobile Controls Bar - Top */}
           <div className="absolute top-2 left-2 right-2 z-[1000] lg:hidden flex flex-wrap gap-2 justify-between">
             {/* Left side controls */}
