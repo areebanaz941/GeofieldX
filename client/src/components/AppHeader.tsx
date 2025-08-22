@@ -29,19 +29,6 @@ export default function AppHeader() {
   };
 
   const toggleSidebar = () => {
-    // Prefer new sidebar system if present
-    const sidebarWrapper = document.querySelector('[data-sidebar="sidebar"]') as HTMLElement | null;
-    if (sidebarWrapper) {
-      // Toggle using data-state on parent wrapper if available
-      const provider = sidebarWrapper.closest('.group/sidebar-wrapper') as HTMLElement | null;
-      if (provider) {
-        const isCollapsed = provider.getAttribute('data-collapsible') === 'icon';
-        provider.setAttribute('data-collapsible', isCollapsed ? 'offcanvas' : 'icon');
-        return;
-      }
-    }
-
-    // Fallback to legacy side-nav id
     const sidebar = document.getElementById("side-nav");
     if (sidebar) {
       // Toggle the sidebar visibility
