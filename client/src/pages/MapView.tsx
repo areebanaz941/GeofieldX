@@ -558,7 +558,7 @@ export default function MapView() {
       processingRef.current = true;
       
       try {
-        const visibleSavedShapefiles = savedShapefiles.filter((shapefile: any) => shapefile.isVisible);
+        const visibleSavedShapefiles = savedShapefiles.filter((shapefile: any) => shapefile.isVisible !== false);
         
         // Process saved shapefiles asynchronously - KEEP ALL ORIGINAL LOGIC
         const processedSavedShapefiles = await Promise.all(

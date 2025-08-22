@@ -36,6 +36,7 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [selectedShapefile, setSelectedShapefile] = useState<any>(null);
+  const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
 
   // Fetch saved shapefiles
   const { data: shapefiles = [], isLoading, error } = useQuery({
@@ -68,6 +69,7 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
     mutationFn: ({ id, isVisible }: { id: string; isVisible: boolean }) =>
       updateShapefileVisibility(id, isVisible),
     onMutate: async ({ id, isVisible }) => {
+      setPendingToggleId(id);
       await queryClient.cancelQueries({ queryKey: ['/api/shapefiles'] });
       const previous = queryClient.getQueryData<any[]>(['/api/shapefiles']);
 
@@ -84,16 +86,22 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
       return { previous } as { previous?: any[] };
     },
     onError: (error: any, _vars, context) => {
+      setPendingToggleId(null);
       if (context?.previous) {
         queryClient.setQueryData(['/api/shapefiles'], context.previous);
       }
+      const rawMessage = (error && error.message) ? String(error.message) : '';
+      const description = rawMessage.includes('502')
+        ? 'Server returned 502 (Bad Gateway). Visibility change was not saved. Please try again.'
+        : (rawMessage || 'Failed to update shapefile visibility');
       toast({
-        title: "Error",
-        description: error.message || "Failed to update shapefile visibility",
-        variant: "destructive",
+        title: 'Error',
+        description,
+        variant: 'destructive',
       });
     },
     onSuccess: (updatedShapefile) => {
+      setPendingToggleId(null);
       // Ensure cache has server truth
       queryClient.setQueryData(['/api/shapefiles'], (oldData: any) => {
         if (Array.isArray(oldData)) {
@@ -101,15 +109,14 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
         }
         return oldData;
       });
-      if (onShapefileToggle) {
-        onShapefileToggle(updatedShapefile, updatedShapefile.isVisible);
-      }
+      // Avoid double-calling onShapefileToggle here; onMutate already notified
       toast({
-        title: "Success",
+        title: 'Success',
         description: `Shapefile ${updatedShapefile.isVisible ? 'shown' : 'hidden'} on map`,
       });
     },
     onSettled: () => {
+      setPendingToggleId(null);
       queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
     },
   });
@@ -274,7 +281,7 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
                         variant="outline"
                         size="sm"
                         onClick={() => handleToggleVisibility(shapefile)}
-                        disabled={toggleVisibilityMutation.isPending}
+                        disabled={pendingToggleId === shapefile._id}
                       >
                         {shapefile.isVisible ? (
                           <EyeOff className="w-4 h-4" />
