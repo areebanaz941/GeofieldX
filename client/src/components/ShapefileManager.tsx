@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -153,6 +154,7 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
               </Badge>
             )}
           </DialogTitle>
+          <DialogDescription>Browse, preview, and manage saved shapefiles.</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">

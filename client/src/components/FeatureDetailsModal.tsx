@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -109,9 +109,11 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
       <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+
             <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
             {feature?.name || `${feature?.feaType} #${feature?.feaNo}`}
           </DialogTitle>
+          <DialogDescription>View details, images, and teams for the selected feature.</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-3 sm:space-y-4">

@@ -122,6 +122,7 @@ export default function CreateTaskModal({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Create Inspection Task</DialogTitle>
+          <DialogDescription>Provide task details and assign it as needed.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

@@ -57,6 +57,7 @@ export default function AdvancedSearchModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Advanced Search</DialogTitle>
+          <DialogDescription>Filter and search features by multiple criteria.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
