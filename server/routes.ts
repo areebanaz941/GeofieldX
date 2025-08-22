@@ -897,28 +897,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can see all features - ensure this always returns all data
         features = await storage.getAllFeatures();
       } else {
-        // Field users can only see features within their assigned boundaries
+        // Field users should see items they created, items assigned to their team,
+        // and items that fall within boundaries assigned to their team
         if (user.teamId) {
-          // Get assigned boundaries for the team
+          const allFeatures = await storage.getAllFeatures();
           const allBoundaries = await storage.getAllBoundaries();
-          const teamBoundaries = allBoundaries.filter(
-            boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
-          );
-          
-          // If team has assigned boundaries, show features created by the team
-          if (teamBoundaries.length > 0) {
-            const allFeatures = await storage.getAllFeatures();
-            // Show features created by the team (based on teamId)
-            features = allFeatures.filter(feature => {
-              return feature.teamId?.toString() === user.teamId?.toString();
-            });
-          } else {
-            // Even without boundaries, show features created by the team
-            const allFeatures = await storage.getAllFeatures();
-            features = allFeatures.filter(feature => {
-              return feature.teamId?.toString() === user.teamId?.toString();
-            });
-          }
+          const teamIdStr = user.teamId?.toString();
+          const teamBoundaryIds = allBoundaries
+            .filter(b => b.assignedTo?.toString() === teamIdStr)
+            .map(b => b._id.toString());
+
+          features = allFeatures.filter(feature => {
+            const featureTeamId = feature.teamId?.toString?.();
+            const assignedTo = (feature as any).assignedTo?.toString?.();
+            const boundaryId = feature.boundaryId?.toString?.();
+            return (
+              featureTeamId === teamIdStr ||
+              assignedTo === teamIdStr ||
+              (boundaryId && teamBoundaryIds.includes(boundaryId))
+            );
+          });
         } else {
           features = [];
         }
@@ -1278,6 +1276,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
         );
       }
+      
+      // Optionally enrich with assigned team object when available
+      try {
+        const teams = await storage.getAllTeams();
+        boundaries = boundaries.map((b: any) => {
+          if (b.assignedTo) {
+            const team = teams.find(t => t._id.toString() === b.assignedTo.toString());
+            if (team) {
+              return { ...b, assignedTo: { _id: team._id, name: team.name, status: team.status } };
+            }
+          }
+          return b;
+        });
+      } catch {}
       
       res.json(boundaries);
     } catch (error) {
