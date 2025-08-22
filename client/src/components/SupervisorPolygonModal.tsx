@@ -125,6 +125,7 @@ export default function SupervisorPolygonModal({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create Boundary</DialogTitle>
+          <DialogDescription>Draw a polygon to define a new boundary area.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

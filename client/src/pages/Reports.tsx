@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ChartContainer, BarChart, LineChart, PieChart } from "@/components/ui/chart";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { getAllTasks, getAllFeatures, getFieldUsers } from "@/lib/api";
@@ -471,6 +471,7 @@ export default function Reports() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Review Submission</DialogTitle>
+              <DialogDescription>Review and take action on the selected submission.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {selectedSubmission && (

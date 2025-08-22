@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
@@ -301,6 +301,7 @@ export default function Submissions() {
                             <DialogContent className="max-w-md">
                               <DialogHeader>
                                 <DialogTitle>Submit Task: {task.title}</DialogTitle>
+                                <DialogDescription>Upload files and optionally add notes for this submission.</DialogDescription>
                               </DialogHeader>
                               <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>

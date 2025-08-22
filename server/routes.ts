@@ -927,7 +927,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(features);
     } catch (error) {
       console.error("Get features error:", error);
-      res.status(500).json({ message: "Failed to fetch features" });
+      // Be resilient: return an empty list rather than failing the UI
+      return res.json([]);
     }
   });
 

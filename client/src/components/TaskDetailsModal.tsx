@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -271,6 +272,7 @@ export default function TaskDetailsModal({
             <StatusBadge status={task.status} />
             <DialogTitle className="ml-2">{task.title}</DialogTitle>
           </div>
+          <DialogDescription>View task details, status, and recent updates.</DialogDescription>
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto py-4">
