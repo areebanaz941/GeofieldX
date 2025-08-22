@@ -1475,13 +1475,14 @@ const OpenLayersMap = ({
     // Processing shapefiles for display
 
     // Get current zoom level for geometry simplification only
-    const currentZoom = mapRef.current?.getView().getZoom() || 13;
-    
-    let totalFeaturesProcessed = 0;
+    const zoomLevel = mapRef.current?.getView().getZoom?.() ?? 13;
+
     let totalFeaturesAdded = 0;
 
     // Process each shapefile
-    shapefiles.forEach(shapefile => {
+    shapefiles
+      .filter((s: any) => s == null || s.isVisible !== false)
+      .forEach(shapefile => {
       try {
         if (!shapefile.features) {
           console.warn(`Shapefile "${shapefile.name}" has no features`);
@@ -1494,95 +1495,60 @@ const OpenLayersMap = ({
           : shapefile.features;
 
         // Determine if it's a FeatureCollection or array of features
-        if (geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)) {
-          const totalFeatures = geojson.features.length;
-          totalFeaturesProcessed += totalFeatures;
-          
-          // SHOW ALL FEATURES - No limiting
+        if (geojson && geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)) {
+          // Optionally simplify at low zooms
           const featuresToProcess = geojson.features;
-          
-          // Create an enhanced version with metadata
-          const enhancedGeoJSON = {
-            type: 'FeatureCollection',
-            features: featuresToProcess.map((feature: any) => ({
-              ...feature,
-              properties: {
-                ...(feature.properties || {}),
-                shapefileId: shapefile._id,
-                shapefileName: shapefile.name
-              }
-            }))
-          };
-          
-          // Parse GeoJSON into OpenLayers features with light geometry simplification for performance
           try {
-            const olFeatures = new GeoJSON().readFeatures(enhancedGeoJSON, {
-              featureProjection: 'EPSG:3857' // Web Mercator
+            const olFeatures = new GeoJSON().readFeatures({
+              type: 'FeatureCollection',
+              features: featuresToProcess.map((feature: any) => ({
+                ...feature,
+                properties: {
+                  ...(feature.properties || {}),
+                  shapefileId: shapefile._id,
+                  shapefileName: shapefile.name
+                }
+              }))
+            }, {
+              featureProjection: 'EPSG:3857'
             });
-            
-            // Light geometry simplification based on zoom level for better performance
+
             olFeatures.forEach((feature, index) => {
-              const geometry = feature.getGeometry();
-              if (geometry && (geometry.getType() === 'Polygon' || geometry.getType() === 'LineString' || geometry.getType() === 'MultiPolygon')) {
-                // Light simplification - only at very low zoom levels
-                const tolerance = currentZoom < 8 ? 50 : 
-                                currentZoom < 10 ? 25 : 
-                                currentZoom < 12 ? 10 : 5; // Minimal simplification
-                geometry.simplify(tolerance);
-              }
-              
               feature.set('shapefileData', {
                 ...featuresToProcess[index],
                 parentShapefile: shapefile
               });
             });
-            
-            // Add ALL features to source
+
             source.addFeatures(olFeatures);
             totalFeaturesAdded += olFeatures.length;
           } catch (error) {
             console.error(`❌ Error parsing GeoJSON for "${shapefile.name}":`, error);
           }
         } else if (Array.isArray(geojson)) {
-          // Handle array of features - SHOW ALL
-          const totalFeatures = geojson.length;
-          totalFeaturesProcessed += totalFeatures;
-          const featuresToProcess = geojson; // Show all features
-          
-          // Convert to GeoJSON FeatureCollection format
-          const featureCollection = {
-            type: 'FeatureCollection',
-            features: featuresToProcess.map((feature: any) => {
-              if (!feature.properties) feature.properties = {};
-              feature.properties.shapefileId = shapefile._id;
-              feature.properties.shapefileName = shapefile.name;
-              return feature;
-            })
-          };
-          
-          // Parse as GeoJSON with light simplification
+          const featuresToProcess = geojson;
           try {
+            const featureCollection = {
+              type: 'FeatureCollection',
+              features: featuresToProcess.map((feature: any) => {
+                if (!feature.properties) feature.properties = {};
+                feature.properties.shapefileId = shapefile._id;
+                feature.properties.shapefileName = shapefile.name;
+                return feature;
+              })
+            };
+
             const olFeatures = new GeoJSON().readFeatures(featureCollection, {
               featureProjection: 'EPSG:3857'
             });
-            
-            // Light geometry simplification
+
             olFeatures.forEach((feature, index) => {
-              const geometry = feature.getGeometry();
-              if (geometry && (geometry.getType() === 'Polygon' || geometry.getType() === 'LineString' || geometry.getType() === 'MultiPolygon')) {
-                const tolerance = currentZoom < 8 ? 50 : 
-                                currentZoom < 10 ? 25 : 
-                                currentZoom < 12 ? 10 : 5;
-                geometry.simplify(tolerance);
-              }
-              
               feature.set('shapefileData', {
                 ...featuresToProcess[index],
                 parentShapefile: shapefile
               });
             });
-            
-            // Add ALL features to source
+
             source.addFeatures(olFeatures);
             totalFeaturesAdded += olFeatures.length;
           } catch (error) {

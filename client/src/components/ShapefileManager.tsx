@@ -67,8 +67,40 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
   const toggleVisibilityMutation = useMutation({
     mutationFn: ({ id, isVisible }: { id: string; isVisible: boolean }) =>
       updateShapefileVisibility(id, isVisible),
+    onMutate: async ({ id, isVisible }) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/shapefiles'] });
+      const previous = queryClient.getQueryData<any[]>(['/api/shapefiles']);
+
+      if (previous && Array.isArray(previous)) {
+        // Optimistically reflect visibility change in cache for immediate UI/map update
+        const updated = previous.map((s) => s._id === id ? { ...s, isVisible } : s);
+        queryClient.setQueryData(['/api/shapefiles'], updated);
+        const updatedItem = updated.find((s) => s._id === id);
+        if (onShapefileToggle && updatedItem) {
+          onShapefileToggle(updatedItem, isVisible);
+        }
+      }
+
+      return { previous } as { previous?: any[] };
+    },
+    onError: (error: any, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['/api/shapefiles'], context.previous);
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update shapefile visibility",
+        variant: "destructive",
+      });
+    },
     onSuccess: (updatedShapefile) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
+      // Ensure cache has server truth
+      queryClient.setQueryData(['/api/shapefiles'], (oldData: any) => {
+        if (Array.isArray(oldData)) {
+          return oldData.map((s) => s._id === updatedShapefile._id ? updatedShapefile : s);
+        }
+        return oldData;
+      });
       if (onShapefileToggle) {
         onShapefileToggle(updatedShapefile, updatedShapefile.isVisible);
       }
@@ -77,12 +109,8 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
         description: `Shapefile ${updatedShapefile.isVisible ? 'shown' : 'hidden'} on map`,
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update shapefile visibility",
-        variant: "destructive",
-      });
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shapefiles'] });
     },
   });
 
