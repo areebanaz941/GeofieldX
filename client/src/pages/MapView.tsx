@@ -565,7 +565,17 @@ export default function MapView() {
           visibleSavedShapefiles.map(processSavedShapefileWithShpJS)
         );
         
-        const combined = [...localShapefiles, ...processedSavedShapefiles];
+        // Deduplicate by _id (prefer saved entries) and ensure toggling hides any local duplicate
+        const savedIds = new Set(
+          (savedShapefiles as any[]).map((s) => (s?._id ?? (s as any)?.id ?? '').toString())
+        );
+        const filteredLocal = localShapefiles.filter((local: any) => {
+          const localId = (local?._id ?? local?.id ?? '').toString();
+          // Exclude local if there is any saved entry with the same id
+          return localId.length === 0 || !savedIds.has(localId);
+        });
+        
+        const combined = [...filteredLocal, ...processedSavedShapefiles];
         setAllShapefiles(combined);
       } catch (error) {
         console.error('Error processing shapefiles:', error);
