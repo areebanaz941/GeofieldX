@@ -1428,6 +1428,11 @@ export default function MapView() {
   // Handle shapefile visibility toggle from manager
   const handleShapefileToggle = (shapefile: any, isVisible: boolean) => {
     console.log(`👁️ Shapefile visibility toggled: ${shapefile.name} - ${isVisible ? 'visible' : 'hidden'}`);
+    // Optimistically update savedShapefiles in cache so effects pick up immediately
+    queryClient.setQueryData(['/api/shapefiles'], (old: any) => {
+      if (!Array.isArray(old)) return old;
+      return old.map((s) => s._id === shapefile._id ? { ...s, isVisible } : s);
+    });
     // The effect above will automatically update allShapefiles when savedShapefiles changes
     queryClient.invalidateQueries({ queryKey: ["/api/shapefiles"] });
   };
