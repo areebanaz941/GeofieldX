@@ -363,6 +363,17 @@ export default function MapView() {
     queryFn: getAllShapefiles,
   });
 
+  // Memoized signature that changes when any shapefile's visibility changes
+  const savedShapefilesVisibilityKey = useMemo(() => {
+    try {
+      return (savedShapefiles as any[])
+        .map((s) => `${s._id}:${s.isVisible ? 1 : 0}`)
+        .join("|");
+    } catch {
+      return String(savedShapefiles.length);
+    }
+  }, [savedShapefiles]);
+
   // Function to load shp.js library (same as in ShapefileUpload)
   const loadShpJS = async (): Promise<any> => {
     return new Promise((resolve, reject) => {
@@ -570,7 +581,7 @@ export default function MapView() {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [localShapefiles.length, savedShapefiles.length]); // Only depend on lengths, not full arrays
+  }, [localShapefiles.length, savedShapefilesVisibilityKey]); // React when any file's visibility changes
 
   // ✅ FIXED: Clear cache only when shapefiles actually change - PREVENT INFINITE LOOPS
   const prevShapefileIds = useRef<string>('');
