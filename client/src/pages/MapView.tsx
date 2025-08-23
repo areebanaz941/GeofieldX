@@ -27,7 +27,7 @@ import { EditFeatureModal } from "@/components/EditFeatureModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation, createParcel, getAllShapefiles } from "@/lib/api";
+import { getAllFeatures, getAllTasks, getFieldUsers, getAllBoundaries, updateUserLocation, createParcel, getAllShapefiles, getAllTeams } from "@/lib/api";
 import { IFeature, ITask, IUser, IBoundary } from "../../../shared/schema";
 
 // GeoJSON related interfaces
@@ -1494,6 +1494,27 @@ export default function MapView() {
     });
   };
 
+  // NEW: Boundary editing state
+  const [editingBoundaryId, setEditingBoundaryId] = useState<string | null>(null);
+  const [pendingBoundaryCoords, setPendingBoundaryCoords] = useState<number[][][] | null>(null);
+
+  // NEW: Save edited boundary geometry
+  const handleSaveEditedBoundary = async () => {
+    if (!editingBoundaryId || !pendingBoundaryCoords) return;
+    try {
+      const { updateBoundary } = await import('@/lib/api');
+      await updateBoundary(editingBoundaryId, {
+        geometry: { type: 'Polygon', coordinates: pendingBoundaryCoords }
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/boundaries"] });
+      setEditingBoundaryId(null);
+      setPendingBoundaryCoords(null);
+      memoizedToast({ title: 'Boundary updated', description: 'Geometry saved successfully' });
+    } catch (e: any) {
+      memoizedToast({ title: 'Update failed', description: e.message || 'Could not update boundary', variant: 'destructive' });
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col lg:flex-row h-full">
@@ -1578,6 +1599,9 @@ export default function MapView() {
             clearDrawnPolygon={clearPolygon}
             className="w-full h-full"
             onMapReady={setMapMethods}
+            // NEW: Boundary editing props
+            editingBoundaryId={editingBoundaryId || undefined}
+            onBoundaryGeometryEdited={(id, coords) => setPendingBoundaryCoords(coords)}
           />
           
           {/* Mobile Drawing Button - Bottom Center */}
@@ -1647,6 +1671,25 @@ export default function MapView() {
                   }
                 </p>
               </div>
+            </div>
+          )}
+          
+          {/* NEW: Boundary editing controls for supervisors */}
+          {user?.role === 'Supervisor' && editingBoundaryId && (
+            <div className="absolute bottom-24 left-4 z-[1000] flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => { setEditingBoundaryId(null); setPendingBoundaryCoords(null); }}
+              >
+                Cancel Edit
+              </Button>
+              <Button
+                onClick={handleSaveEditedBoundary}
+                disabled={!pendingBoundaryCoords}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Save Boundary
+              </Button>
             </div>
           )}
           
@@ -1876,6 +1919,27 @@ export default function MapView() {
         }}
         feature={featureToEdit}
       />
+
+      {/* NEW: Quick actions below boundary modal trigger for supervisors */}
+      {user?.role === 'Supervisor' && selectedBoundary && (
+        <div className="fixed bottom-4 right-4 z-[1100] flex gap-2">
+          {editingBoundaryId !== selectedBoundary._id.toString() ? (
+            <Button
+              onClick={() => setEditingBoundaryId(selectedBoundary._id.toString())}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Edit Boundary Geometry
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => { setEditingBoundaryId(null); setPendingBoundaryCoords(null); }}
+            >
+              Stop Editing
+            </Button>
+          )}
+        </div>
+      )}
     </>
   );
 }

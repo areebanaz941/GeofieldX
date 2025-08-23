@@ -338,6 +338,11 @@ export async function deleteBoundary(boundaryId: string) {
   return await res.json();
 }
 
+export async function updateBoundary(boundaryId: string, data: any) {
+  const res = await apiRequest('PATCH', `/api/boundaries/${boundaryId}`, data);
+  return await res.json();
+}
+
 export async function updateBoundaryStatus(boundaryId: number, status: string) {
   const res = await apiRequest('PUT', `/api/boundaries/${boundaryId}/status`, { status });
   return await res.json();

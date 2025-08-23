@@ -14,6 +14,7 @@ import { click } from 'ol/events/condition';
 import GeoJSON from 'ol/format/GeoJSON';
 import Geolocation from 'ol/Geolocation';
 import Control from 'ol/control/Control'; // Import Control class
+import Collection from 'ol/Collection';
 import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
 import { getFeatureIcon } from '../components/FeatureIcons';
 import { getStatusColor } from '../components/FeatureIcon';
@@ -384,6 +385,9 @@ interface MapProps {
     zoomToFeature: (featureId: string) => boolean;
     zoomToBoundary: (boundaryId: string) => boolean;
   }) => void;
+  // NEW: Boundary editing props
+  editingBoundaryId?: string;
+  onBoundaryGeometryEdited?: (boundaryId: string, coordinates: number[][][]) => void;
 }
 
 const OpenLayersMap = ({
@@ -411,7 +415,9 @@ const OpenLayersMap = ({
   linePoints = [],
   className = 'h-full w-full',
   clearDrawnPolygon = false,
-  onMapReady
+  onMapReady,
+  editingBoundaryId,
+  onBoundaryGeometryEdited
 }: MapProps) => {
   const mapRef = useRef<Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -425,6 +431,7 @@ const OpenLayersMap = ({
   const drawInteractionRef = useRef<Draw | null>(null);
   const drawLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectInteractionRef = useRef<Select | null>(null);
+  const modifyInteractionRef = useRef<Modify | null>(null);
 
   // OpenLayers Geolocation references
   const geolocationRef = useRef<Geolocation | null>(null);
@@ -1432,6 +1439,50 @@ const OpenLayersMap = ({
       }
     });
   }, [boundaries, allTeams]);
+
+  // NEW: Enable modify interaction for boundary editing
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+
+    // Remove existing modify interaction
+    if (modifyInteractionRef.current) {
+      map.removeInteraction(modifyInteractionRef.current);
+      modifyInteractionRef.current = null;
+    }
+
+    if (!editingBoundaryId || !boundariesLayerRef.current) return;
+
+    const source = boundariesLayerRef.current.getSource();
+    if (!source) return;
+
+    // Find the feature corresponding to the boundary ID
+    const target = source.getFeatures().find(f => {
+      const boundaryData = f.get('boundaryData');
+      return boundaryData && boundaryData._id && boundaryData._id.toString() === editingBoundaryId;
+    });
+
+    if (!target) return;
+
+    const features = new Collection<Feature>([target]);
+    const modify = new Modify({ features });
+
+    modify.on('modifyend', () => {
+      try {
+        const geom = target.getGeometry() as Polygon;
+        const coord3857 = geom.getCoordinates();
+        const lonLat = coord3857.map(ring => ring.map(coord => toLonLat(coord)));
+        if (onBoundaryGeometryEdited) {
+          onBoundaryGeometryEdited(editingBoundaryId, lonLat as unknown as number[][][]);
+        }
+      } catch (e) {
+        console.error('Error extracting modified boundary geometry:', e);
+      }
+    });
+
+    map.addInteraction(modify);
+    modifyInteractionRef.current = modify;
+  }, [editingBoundaryId]);
 
   // Update tasks on the map
   useEffect(() => {
