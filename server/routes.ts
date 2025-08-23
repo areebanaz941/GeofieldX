@@ -2098,6 +2098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put(
     "/api/shapefiles/:id/visibility",
     isAuthenticated,
+    validateObjectId('id'),
     async (req: Request, res: Response) => {
       try {
         const shapefileId = req.params.id;
@@ -2109,9 +2110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const updatedShapefile = await storage.updateShapefileVisibility(shapefileId, isVisible);
         res.json(updatedShapefile);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Update shapefile visibility error:", error);
-        res.status(500).json({ message: "Failed to update shapefile visibility" });
+        const message = (error && error.message) ? String(error.message) : 'Failed to update shapefile visibility';
+        // If storage threw a network/upstream-like error, signal as 502; otherwise 500
+        const isUpstream = /ECONNREFUSED|ECONNRESET|ETIMEDOUT|upstream|gateway|network/i.test(message);
+        res.status(isUpstream ? 502 : 500).json({ message: 'Failed to update shapefile visibility' });
       }
     },
   );
