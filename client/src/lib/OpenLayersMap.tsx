@@ -455,6 +455,8 @@ const OpenLayersMap = ({
     // Create vector layers
     featuresLayerRef.current = new VectorLayer({
       source: featuresSource,
+      declutter: true,
+      updateWhileInteracting: true,
       style: (feature, resolution) => {
         const featureData = feature.get('featureData');
         const featureType = featureData?.feaType || 'Tower';
@@ -570,8 +572,8 @@ const OpenLayersMap = ({
           });
         }
       },
-      // Ensure features render above shapefiles
-      zIndex: 500
+      // Ensure features render above shapefiles and boundaries for click priority
+      zIndex: 600
     });
 
     teamsLayerRef.current = new VectorLayer({
@@ -601,6 +603,8 @@ const OpenLayersMap = ({
 
     boundariesLayerRef.current = new VectorLayer({
       source: boundariesSource,
+      declutter: true,
+      updateWhileInteracting: true,
       style: (feature) => {
         const featureType = feature.get('type');
         
@@ -633,8 +637,8 @@ const OpenLayersMap = ({
           })
         });
       },
-      // Ensure boundaries render above shapefiles and features if needed
-      zIndex: 550
+      // Render boundaries below point features to avoid blocking clicks
+      zIndex: 400
     });
 
     tasksLayerRef.current = new VectorLayer({
@@ -755,7 +759,7 @@ const OpenLayersMap = ({
             });
         }
       },
-      // Always keep shapefiles beneath features and boundaries
+      // Always keep shapefiles beneath everything else
       zIndex: 100
     });
 
@@ -831,10 +835,11 @@ const OpenLayersMap = ({
         new TileLayer({
           source: new OSM()
         }),
-        // Ensure shapefiles are ALWAYS below features and boundaries
+        // Ensure shapefiles are ALWAYS below other feature layers
         shapefilesLayerRef.current,
-        boundariesLayerRef.current,
+        // Keep boundaries below clickable point features to avoid blocking selection
         featuresLayerRef.current,
+        boundariesLayerRef.current,
         teamsLayerRef.current,
         tasksLayerRef.current,
         selectedLocationLayerRef.current,
@@ -1759,12 +1764,13 @@ const OpenLayersMap = ({
     if (!pointSelectionMode && !lineDrawingMode && !selectionMode && !drawingMode) {
       selectInteractionRef.current = new Select({
         condition: click,
-        // Prefer selecting non-shapefile layers first to avoid blockage
+        hitTolerance: 6,
+        // Only allow selecting non-shapefile layers to ensure point features are clickable
         layers: [
           featuresLayerRef.current,
-          boundariesLayerRef.current,
           teamsLayerRef.current,
-          tasksLayerRef.current
+          tasksLayerRef.current,
+          boundariesLayerRef.current
         ].filter((layer): layer is VectorLayer<any> => layer !== null)
       });
 
