@@ -704,6 +704,28 @@ export class FileStorage implements IStorage {
     return result;
   }
 
+  // NEW: Update boundary details/geometry
+  async updateBoundary(id: string, boundaryUpdate: Partial<InsertBoundary>): Promise<IBoundary> {
+    if (!isValidObjectId(id)) throw new Error("Invalid boundary ID");
+
+    const existing = this.boundaries.get(id);
+    if (!existing) {
+      throw new Error(`Boundary with id ${id} not found`);
+    }
+
+    // Apply updates safely
+    if (typeof boundaryUpdate.name === 'string') existing.name = boundaryUpdate.name;
+    if (typeof boundaryUpdate.description === 'string') existing.description = boundaryUpdate.description;
+    if (typeof boundaryUpdate.status === 'string') existing.status = boundaryUpdate.status as any;
+    if (boundaryUpdate.assignedTo) existing.assignedTo = boundaryUpdate.assignedTo as any;
+    if (boundaryUpdate.geometry) existing.geometry = boundaryUpdate.geometry as any;
+    existing.updatedAt = new Date();
+
+    this.boundaries.set(id, existing);
+    this.saveBoundaries();
+    return existing;
+  }
+
   // Task updates operations
   async createTaskUpdate(insertUpdate: InsertTaskUpdate): Promise<ITaskUpdate> {
     if (

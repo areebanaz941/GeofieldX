@@ -51,6 +51,7 @@ export interface IStorage {
   assignBoundary(id: string, userId: string): Promise<IBoundary>;
   getAllBoundaries(): Promise<IBoundary[]>;
   deleteBoundary(id: string): Promise<boolean>;
+  updateBoundary(id: string, boundary: Partial<InsertBoundary>): Promise<IBoundary>;
   
   // Task update operations
   createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate>;
@@ -284,6 +285,11 @@ export class MemStorage implements IStorage {
   }
 
   async deleteShapefile(id: string): Promise<boolean> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  // NEW: Stub for updateBoundary
+  async updateBoundary(id: string, boundary: Partial<InsertBoundary>): Promise<IBoundary> {
     throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 }

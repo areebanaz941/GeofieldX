@@ -1286,6 +1286,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NEW: Get single boundary by ID
+  app.get(
+    "/api/boundaries/:id",
+    isAuthenticated,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const boundaryId = req.params.id;
+        const boundary = await storage.getBoundary(boundaryId);
+        if (!boundary) {
+          return res.status(404).json({ message: "Boundary not found" });
+        }
+        res.json(boundary);
+      } catch (error) {
+        console.error("Get boundary error:", error);
+        res.status(500).json({ message: "Failed to fetch boundary" });
+      }
+    },
+  );
+
+  // NEW: Update boundary (name, description, status, geometry, assignedTo)
+  app.patch(
+    "/api/boundaries/:id",
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const boundaryId = req.params.id;
+        const updates = req.body;
+        // Disallow updating _id and timestamps directly
+        delete updates._id;
+        delete updates.createdAt;
+        delete updates.updatedAt;
+
+        // If geometry is present as string, attempt to parse
+        if (typeof updates.geometry === 'string') {
+          try {
+            updates.geometry = JSON.parse(updates.geometry);
+          } catch {}
+        }
+
+        const updated = await storage.updateBoundary(boundaryId, updates);
+        res.json(updated);
+      } catch (error) {
+        console.error("Update boundary error:", error);
+        res.status(500).json({ message: "Failed to update boundary" });
+      }
+    },
+  );
+
   app.put(
     "/api/boundaries/:id/status",
     isSupervisor,

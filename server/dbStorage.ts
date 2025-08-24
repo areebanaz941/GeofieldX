@@ -372,6 +372,25 @@ export class MongoStorage implements IStorage {
     return !!result;
   }
 
+  // NEW: Update boundary details/geometry
+  async updateBoundary(id: string, boundaryUpdate: Partial<InsertBoundary>): Promise<IBoundary> {
+    if (!isValidObjectId(id)) throw new Error("Invalid boundary ID");
+
+    const update: any = { updatedAt: new Date() };
+    if (typeof boundaryUpdate.name === 'string') update.name = boundaryUpdate.name;
+    if (typeof boundaryUpdate.description === 'string') update.description = boundaryUpdate.description;
+    if (typeof boundaryUpdate.status === 'string') update.status = boundaryUpdate.status as any;
+    if (boundaryUpdate.assignedTo) update.assignedTo = toObjectId(boundaryUpdate.assignedTo);
+    if (boundaryUpdate.geometry) update.geometry = boundaryUpdate.geometry as any;
+
+    const boundary = await Boundary.findByIdAndUpdate(id, update, { new: true })
+      .populate("assignedTo")
+      .exec();
+
+    if (!boundary) throw new Error("Boundary not found");
+    return boundary;
+  }
+
   // Task updates operations
   async createTaskUpdate(updateData: InsertTaskUpdate): Promise<ITaskUpdate> {
     if (
