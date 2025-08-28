@@ -19,6 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<IUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const userRef = useRef<IUser | null>(null);
+  const PERSISTED_USER_KEY = 'auth_user';
 
   useEffect(() => {
     // Check if user is already logged in
@@ -33,10 +34,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('[Auth] User authenticated successfully:', userData.username, 'Role:', userData.role);
           setUser(userData);
           userRef.current = userData;
+          try {
+            localStorage.setItem(PERSISTED_USER_KEY, JSON.stringify(userData));
+          } catch (e) {
+            console.warn('[Auth] Failed to persist user:', e);
+          }
         } else {
           console.warn('[Auth] getCurrentUser returned invalid data:', userData);
           setUser(null);
           userRef.current = null;
+          try { localStorage.removeItem(PERSISTED_USER_KEY); } catch {}
         }
       } catch (error: any) {
         // Check if this might be extension interference
@@ -44,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn('[Auth] Authentication failed - user not logged in');
           setUser(null);
           userRef.current = null;
+          try { localStorage.removeItem(PERSISTED_USER_KEY); } catch {}
         } else if (error?.stack?.includes('knowee-ai') || error?.stack?.includes('extension://')) {
           console.warn('[Extension] Auth check may have been interfered with by extension:', error);
           // Don't clear user for extension interference - keep existing state
@@ -58,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.warn('[Auth] Clearing user state due to unknown error');
             setUser(null);
             userRef.current = null;
+            try { localStorage.removeItem(PERSISTED_USER_KEY); } catch {}
           }
         }
       } finally {
@@ -66,6 +75,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Initial auth check
+    // Hydrate from persisted user immediately to avoid redirect flicker
+    try {
+      const persisted = localStorage.getItem(PERSISTED_USER_KEY);
+      if (persisted) {
+        const parsed = JSON.parse(persisted) as IUser;
+        if (parsed && typeof parsed === 'object') {
+          setUser(parsed);
+          userRef.current = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('[Auth] Failed to read persisted user:', e);
+    }
     checkAuth();
     
     // Set up periodic auth validation (every 5 minutes)
@@ -101,6 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(userData);
       userRef.current = userData;
+      try {
+        localStorage.setItem(PERSISTED_USER_KEY, JSON.stringify(userData));
+      } catch (e) {
+        console.warn('[Auth] Failed to persist user on login:', e);
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -115,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiLogout();
       setUser(null);
       userRef.current = null;
+      try { localStorage.removeItem(PERSISTED_USER_KEY); } catch {}
     } catch (error) {
       console.error('Logout error:', error);
       toast({

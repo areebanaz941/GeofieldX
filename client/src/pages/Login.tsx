@@ -31,7 +31,19 @@ export default function Login() {
   // Using useEffect hook to handle navigation after render
   useEffect(() => {
     if (user) {
-      setLocation("/");
+      // If user is already logged in and reached login, send to dashboard
+      // Respect any redirect param in URL if present
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect');
+        if (redirect) {
+          setLocation(redirect);
+        } else {
+          setLocation("/");
+        }
+      } catch {
+        setLocation("/");
+      }
     }
   }, [user, setLocation]);
   
@@ -52,7 +64,17 @@ export default function Login() {
         description: "You have successfully logged in",
         variant: "default",
       });
-      setLocation("/");
+      // Restore intended route after login, then clear the stored value
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const redirectParam = params.get('redirect');
+        const stored = sessionStorage.getItem('post_login_redirect');
+        const dest = redirectParam || stored || "/";
+        setLocation(dest);
+        sessionStorage.removeItem('post_login_redirect');
+      } catch {
+        setLocation("/");
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -77,7 +99,16 @@ export default function Login() {
         description: `Logged in as ${userType} user`,
         variant: "default",
       });
-      setLocation("/dashboard");
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const redirectParam = params.get('redirect');
+        const stored = sessionStorage.getItem('post_login_redirect');
+        const dest = redirectParam || stored || "/dashboard";
+        setLocation(dest);
+        sessionStorage.removeItem('post_login_redirect');
+      } catch {
+        setLocation("/dashboard");
+      }
     } catch (error) {
       toast({
         title: "Error",

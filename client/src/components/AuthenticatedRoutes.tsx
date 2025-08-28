@@ -14,7 +14,14 @@ export function AuthenticatedRoutes({ children }: { children: React.ReactNode })
     // Only redirect to login if we're not loading AND there's no user
     if (!isLoading && !user) {
       console.log('[AuthenticatedRoutes] No user after loading complete, redirecting to login');
-      setLocation("/login");
+      try {
+        const currentPath = window.location.pathname + window.location.search + window.location.hash;
+        // Persist desired redirect so login page can restore it
+        sessionStorage.setItem('post_login_redirect', currentPath);
+        setLocation(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      } catch {
+        setLocation("/login");
+      }
     }
   }, [user, isLoading, setLocation]);
 
