@@ -30,11 +30,23 @@ const getStatusColor = (status: FeatureStatus | string): string => {
 
 // SVG icon components
 const TowerIcon = ({ color, size }: { color: string; size: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
-    <path d="M7 2L12 7L17 2V4L12 9L7 4V2Z"/>
-    <path d="M6 10H18V12H16V20H8V12H6V10Z"/>
-    <path d="M10 14H14V16H10V14Z"/>
-    <path d="M11 18H13V19H11V18Z"/>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 10 10"
+    stroke={color}
+    fill="none"
+    strokeWidth={1}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <line x1="5" y1="0.5" x2="5" y2="1" />
+    <path d="M3 9 L5 1 L7 9" />
+    <line x1="3" y1="9" x2="7" y2="9" />
+    <line x1="3.5" y1="7" x2="6.5" y2="7" />
+    <line x1="4" y1="5" x2="6" y2="5" />
+    <line x1="4.5" y1="3" x2="5.5" y2="3" />
   </svg>
 );
 
@@ -109,11 +121,13 @@ export const createSVGDataURI = (type: FeatureType, status: FeatureStatus, size:
   
   switch (type) {
     case 'Tower':
-      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg">
-        <path d="M7 2L12 7L17 2V4L12 9L7 4V2Z"/>
-        <path d="M6 10H18V12H16V20H8V12H6V10Z"/>
-        <path d="M10 14H14V16H10V14Z"/>
-        <path d="M11 18H13V19H11V18Z"/>
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 10 10" stroke="${color}" fill="none" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <line x1="5" y1="0.5" x2="5" y2="1" />
+        <path d="M3 9 L5 1 L7 9" />
+        <line x1="3" y1="9" x2="7" y2="9" />
+        <line x1="3.5" y1="7" x2="6.5" y2="7" />
+        <line x1="4" y1="5" x2="6" y2="5" />
+        <line x1="4.5" y1="3" x2="5.5" y2="3" />
       </svg>`;
       break;
     case 'Manhole':

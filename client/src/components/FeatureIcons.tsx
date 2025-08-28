@@ -25,20 +25,22 @@ export const TowerIcon: React.FC<FeatureIconProps> = ({ status, size = 24 }) => 
   const color = getStatusColor(status);
   
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 2L8 6V10L10 12V22H14V12L16 10V6L12 2Z"
-        fill={color}
-        stroke={color}
-        strokeWidth="1"
-      />
-      <circle cx="12" cy="4" r="1" fill={color} />
-      <path
-        d="M6 18H18M8 20H16"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 10 10"
+      stroke={color}
+      fill="none"
+      strokeWidth={1}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="5" y1="0.5" x2="5" y2="1" />
+      <path d="M3 9 L5 1 L7 9" />
+      <line x1="3" y1="9" x2="7" y2="9" />
+      <line x1="3.5" y1="7" x2="6.5" y2="7" />
+      <line x1="4" y1="5" x2="6" y2="5" />
+      <line x1="4.5" y1="3" x2="5.5" y2="3" />
     </svg>
   );
 };
