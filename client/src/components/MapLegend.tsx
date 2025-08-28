@@ -26,11 +26,10 @@ const MapLegend: React.FC = () => {
         
       case 'Manhole':
         return (
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" fill="none" stroke={color} strokeWidth="2"/>
-            <circle cx="12" cy="12" r="6" fill="none" stroke={color} strokeWidth="1"/>
-            <rect x="10" y="10" width="4" height="4" fill={color}/>
-            <path d="M12 2V6M12 18V22M22 12H18M6 12H2" stroke={color} strokeWidth="1"/>
+          <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="96" height="96" stroke="#FF0000" fill="none" strokeWidth="4" strokeLinecap="square" />
+            <line x1="2" y1="2" x2="98" y2="98" stroke="#FF0000" strokeWidth="4" strokeLinecap="square" />
+            <line x1="98" y1="2" x2="2" y2="98" stroke="#FF0000" strokeWidth="4" strokeLinecap="square" />
           </svg>
         );
         

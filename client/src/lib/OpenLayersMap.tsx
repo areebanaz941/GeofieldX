@@ -23,7 +23,6 @@ import 'ol/ol.css';
 
 // Import custom icons (keeping as fallback)
 import towerIcon from '@assets/tower-removebg-preview_1750282584510.png';
-import manholeIcon from '@assets/manhole-removebg-preview_1750282584509.png';
 import fibercableIcon from '@assets/fibercable-removebg-preview_1750282584507.png';
 import parcelIcon from '@assets/land-removebg-preview_1750282584509.png';
 
@@ -320,11 +319,10 @@ const createSVGIcon = (featureType: string, status: string, size: number = 24): 
       </svg>`;
       break;
     case 'Manhole':
-      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" fill="none" stroke="${color}" stroke-width="2"/>
-        <circle cx="12" cy="12" r="6" fill="none" stroke="${color}" stroke-width="1"/>
-        <rect x="10" y="10" width="4" height="4" fill="${color}"/>
-        <path d="M12 2V6M12 18V22M22 12H18M6 12H2" stroke="${color}" stroke-width="1"/>
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#FF0000" stroke-width="4" stroke-linecap="square">
+        <rect x="2" y="2" width="96" height="96" fill="none" />
+        <line x1="2" y1="2" x2="98" y2="98" />
+        <line x1="98" y1="2" x2="2" y2="98" />
       </svg>`;
       break;
     case 'FiberCable':

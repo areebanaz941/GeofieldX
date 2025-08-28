@@ -47,37 +47,10 @@ export const ManholeIcon: React.FC<FeatureIconProps> = ({ status, size = 24 }) =
   const color = getStatusColor(status);
   
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle
-        cx="12"
-        cy="12"
-        r="8"
-        fill={color}
-        stroke={color}
-        strokeWidth="2"
-      />
-      <circle
-        cx="12"
-        cy="12"
-        r="6"
-        fill="none"
-        stroke="white"
-        strokeWidth="1"
-      />
-      <circle
-        cx="12"
-        cy="12"
-        r="3"
-        fill="none"
-        stroke="white"
-        strokeWidth="1"
-      />
-      <path
-        d="M8 8L16 16M16 8L8 16"
-        stroke="white"
-        strokeWidth="1"
-        strokeLinecap="round"
-      />
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      <rect x="2" y="2" width="96" height="96" stroke="#FF0000" fill="none" strokeWidth="4" strokeLinecap="square" />
+      <line x1="2" y1="2" x2="98" y2="98" stroke="#FF0000" strokeWidth="4" strokeLinecap="square" />
+      <line x1="98" y1="2" x2="2" y2="98" stroke="#FF0000" strokeWidth="4" strokeLinecap="square" />
     </svg>
   );
 };
