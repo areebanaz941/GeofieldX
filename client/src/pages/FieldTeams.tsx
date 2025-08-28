@@ -8,7 +8,8 @@ import {
   getTeamMembers, 
   createTeam, 
   updateTeamStatus, 
-  assignUserToTeam 
+  assignUserToTeam,
+  deleteTeam
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,9 +41,10 @@ interface TeamCardProps {
   fieldUsers: any[];
   tasks: any[];
   handleTeamStatusChange: (teamId: string, status: string) => void;
+  onDelete?: (teamId: string) => void;
 }
 
-function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange }: TeamCardProps) {
+function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange, onDelete }: TeamCardProps) {
   // Find members of this team using MongoDB IDs
   const teamMembers = fieldUsers.filter(user => user.teamId === team._id);
   
@@ -172,6 +174,15 @@ function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange }: TeamCardP
             Deactivate
           </Button>
         )}
+        {onDelete && (
+          <Button 
+            size="sm"
+            variant="destructive"
+            onClick={() => onDelete(team._id)}
+          >
+            Delete
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
@@ -188,6 +199,24 @@ export default function FieldTeams() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // Mutation for deleting a team
+  const deleteTeamMutation = useMutation({
+    mutationFn: (teamId: string) => deleteTeam(teamId),
+    onSuccess: () => {
+      toast({ title: "Team deleted", description: "The team was removed successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete team", description: "An error occurred while deleting the team", variant: "destructive" });
+    }
+  });
+
+  const handleDeleteTeam = (teamId: string) => {
+    const confirmed = window.confirm("Are you sure you want to delete this team? This will unassign members and related items.");
+    if (!confirmed) return;
+    deleteTeamMutation.mutate(teamId);
+  };
+
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("");
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
@@ -437,7 +466,8 @@ export default function FieldTeams() {
                     team={team} 
                     fieldUsers={fieldUsers} 
                     tasks={tasks || []}
-                    handleTeamStatusChange={handleTeamStatusChange} 
+                    handleTeamStatusChange={handleTeamStatusChange}
+                    onDelete={user?.role === "Supervisor" ? handleDeleteTeam : undefined}
                   />
                 ))
             ) : (

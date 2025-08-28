@@ -144,6 +144,46 @@ export class MongoStorage implements IStorage {
     }
   }
 
+  async deleteTeam(id: string): Promise<boolean> {
+    try {
+      const team = await Team.findById(id);
+      if (!team) return false;
+
+      // Unassign users from this team
+      await User.updateMany({ teamId: team._id }, { $unset: { teamId: "" } });
+
+      // Remove team references from features and shapefiles/boundaries
+      await Feature.updateMany(
+        { $or: [{ teamId: team._id }, { assignedTo: team._id }] },
+        { $unset: { teamId: "", assignedTo: "" } }
+      );
+
+      await Boundary.updateMany(
+        { assignedTo: team._id },
+        { $unset: { assignedTo: "" } }
+      );
+
+      await Task.updateMany(
+        { assignedTo: team._id },
+        { $unset: { assignedTo: "" } }
+      );
+
+      // Optionally handle shapefiles if they reference teamId
+      if (typeof (Shapefile as any) !== 'undefined') {
+        await (Shapefile as any).updateMany(
+          { $or: [{ teamId: team._id }, { assignedTo: team._id }] },
+          { $unset: { teamId: "", assignedTo: "" } }
+        );
+      }
+
+      const result = await Team.findByIdAndDelete(id);
+      return result !== null;
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      throw error;
+    }
+  }
+
   async getAllTeams(): Promise<ITeam[]> {
     try {
       return await Team.find();

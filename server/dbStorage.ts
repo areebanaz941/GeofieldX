@@ -537,6 +537,32 @@ export class MongoStorage implements IStorage {
     return user;
   }
 
+  async deleteTeam(id: string): Promise<boolean> {
+    if (!isValidObjectId(id)) return false;
+
+    // Unassign users
+    await User.updateMany({ teamId: toObjectId(id) }, { $unset: { teamId: "" } }).exec();
+
+    // Remove team references across collections
+    await Feature.updateMany(
+      { $or: [{ teamId: toObjectId(id) }, { assignedTo: toObjectId(id) }] },
+      { $unset: { teamId: "", assignedTo: "" } }
+    ).exec();
+
+    await Boundary.updateMany(
+      { assignedTo: toObjectId(id) },
+      { $unset: { assignedTo: "" } }
+    ).exec();
+
+    await Task.updateMany(
+      { assignedTo: toObjectId(id) },
+      { $unset: { assignedTo: "" } }
+    ).exec();
+
+    const result = await Team.findByIdAndDelete(id).exec();
+    return result !== null;
+  }
+
   // Additional utility methods for MongoDB-specific operations
 
   // Geospatial queries

@@ -419,6 +419,43 @@ export class FileStorage implements IStorage {
     return user;
   }
 
+  async deleteTeam(id: string): Promise<boolean> {
+    if (!isValidObjectId(id)) return false;
+
+    const team = this.teams.get(id);
+    if (!team) return false;
+
+    // Unassign users from this team
+    for (const user of this.users.values()) {
+      if (user.teamId?.toString() === id) {
+        user.teamId = undefined;
+        user.updatedAt = new Date();
+      }
+    }
+    this.saveUsers();
+
+    // Remove team assignment from features and boundaries
+    for (const feature of this.features.values()) {
+      if (feature.teamId?.toString() === id || feature.assignedTo?.toString() === id) {
+        feature.teamId = undefined as any;
+        feature.assignedTo = undefined as any;
+      }
+    }
+    this.saveFeatures();
+
+    for (const boundary of this.boundaries.values()) {
+      if (boundary.assignedTo?.toString() === id) {
+        boundary.assignedTo = undefined as any;
+      }
+    }
+    this.saveBoundaries();
+
+    // Finally remove the team
+    const deleted = this.teams.delete(id);
+    this.saveTeams();
+    return deleted;
+  }
+
   // Task operations
   async createTask(insertTask: InsertTask): Promise<ITask> {
     const id = this.generateObjectId();

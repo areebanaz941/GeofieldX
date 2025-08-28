@@ -19,6 +19,7 @@ export interface IStorage {
   getTeam(id: string): Promise<ITeam | undefined>;
   getTeamByName(name: string): Promise<ITeam | undefined>;
   updateTeamStatus(id: string, status: string, approvedBy?: string): Promise<ITeam>;
+  deleteTeam(id: string): Promise<boolean>;
   getAllTeams(): Promise<ITeam[]>;
   getUsersByTeam(teamId: string): Promise<IUser[]>;
   assignUserToTeam(userId: string, teamId: string): Promise<IUser>;
@@ -133,6 +134,10 @@ export class MemStorage implements IStorage {
   }
 
   async assignUserToTeam(userId: string, teamId: string): Promise<IUser> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async deleteTeam(id: string): Promise<boolean> {
     throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
