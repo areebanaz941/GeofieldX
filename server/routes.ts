@@ -1505,6 +1505,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Delete team (supervisor only)
+  app.delete(
+    "/api/teams/:id",
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const teamId = req.params.id;
+        const team = await storage.getTeam(teamId);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
+
+        const deleted = await storage.deleteTeam(teamId);
+        if (!deleted) {
+          return res.status(500).json({ message: "Failed to delete team" });
+        }
+
+        res.json({ message: "Team deleted successfully" });
+      } catch (error) {
+        console.error("Delete team error:", error);
+        res.status(500).json({ message: "Failed to delete team" });
+      }
+    },
+  );
+
   app.get(
     "/api/teams/:id/users",
     isAuthenticated,

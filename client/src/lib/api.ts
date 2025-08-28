@@ -379,6 +379,11 @@ export async function getTeamMembers(teamId: number) {
   return await res.json();
 }
 
+export async function deleteTeam(teamId: string) {
+  const res = await apiRequest('DELETE', `/api/teams/${teamId}`);
+  return await res.json();
+}
+
 export async function assignUserToTeam(userId: number, teamId: number) {
   const res = await apiRequest('POST', `/api/users/${userId}/assign-team`, { teamId });
   return await res.json();
