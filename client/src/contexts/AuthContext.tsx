@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useRef } from "react";
 import { getCurrentUser, login as apiLogin, logout as apiLogout, register as apiRegister } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { IUser, InsertUser } from "@shared/schema";
@@ -18,6 +18,7 @@ export { AuthContext };
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<IUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userRef = useRef<IUser | null>(null);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -31,15 +32,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userData && typeof userData === 'object') {
           console.log('[Auth] User authenticated successfully:', userData.username, 'Role:', userData.role);
           setUser(userData);
+          userRef.current = userData;
         } else {
           console.warn('[Auth] getCurrentUser returned invalid data:', userData);
           setUser(null);
+          userRef.current = null;
         }
       } catch (error: any) {
         // Check if this might be extension interference
         if (error?.message?.includes('401') || error?.message?.includes('Not authenticated')) {
           console.warn('[Auth] Authentication failed - user not logged in');
           setUser(null);
+          userRef.current = null;
         } else if (error?.stack?.includes('knowee-ai') || error?.stack?.includes('extension://')) {
           console.warn('[Extension] Auth check may have been interfered with by extension:', error);
           // Don't clear user for extension interference - keep existing state
@@ -53,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Only clear user for actual authentication failures
             console.warn('[Auth] Clearing user state due to unknown error');
             setUser(null);
+            userRef.current = null;
           }
         }
       } finally {
@@ -60,12 +65,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Initial auth check
     checkAuth();
     
     // Set up periodic auth validation (every 5 minutes)
     const authValidationInterval = setInterval(() => {
-      if (user) {
-        console.log('[Auth] Periodic validation check for user:', user.username);
+      // Use ref instead of state to avoid dependency issues
+      if (userRef.current) {
+        console.log('[Auth] Periodic validation check for user:', userRef.current.username);
         checkAuth();
       }
     }, 5 * 60 * 1000); // 5 minutes
@@ -73,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       clearInterval(authValidationInterval);
     };
-  }, [user]);
+  }, []); // FIXED: Empty dependency array - only run once on mount
 
   const login = async (username: string, password: string) => {
     try {
@@ -93,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setUser(userData);
+      userRef.current = userData;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -106,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       await apiLogout();
       setUser(null);
+      userRef.current = null;
     } catch (error) {
       console.error('Logout error:', error);
       toast({
