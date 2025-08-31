@@ -9,6 +9,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { getFeature, deleteFeature } from "@/lib/api";
 
 interface FeatureDetailsModalProps {
   open: boolean;
@@ -36,24 +37,15 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
   const { data: freshFeature } = useQuery<IFeature>({
     queryKey: ['/api/features', feature?._id],
     queryFn: async () => {
-      const response = await fetch(`/api/features/${feature?._id}`);
-      if (!response.ok) throw new Error('Failed to fetch feature details');
-      return response.json();
+      if (!feature?._id) throw new Error('Missing feature id');
+      return await getFeature(feature._id.toString());
     },
     enabled: !!feature?._id && open,
   });
 
   // Delete feature mutation
   const deleteFeatureMutation = useMutation({
-    mutationFn: async (featureId: string) => {
-      const response = await fetch(`/api/features/${featureId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete feature');
-      }
-      return response.json();
-    },
+    mutationFn: async (featureId: string) => deleteFeature(featureId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/features'] });
       toast({
@@ -220,128 +212,36 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                   Team Assignment
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {isAssigned && assignedTeam ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Assigned to:</span>
-                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">
-                        {assignedTeam.name}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Team Status:</span>
-                      <Badge variant={assignedTeam.status === 'Approved' ? 'default' : 'outline'}>
-                        {assignedTeam.status}
-                      </Badge>
-                    </div>
-                    {assignedTeam.description && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Description:</span>
-                        <span className="text-sm font-medium">{assignedTeam.description}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-3">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
-                      Unassigned
-                    </Badge>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      This parcel area is not assigned to any team yet.
-                    </p>
+              <CardContent className="space-y-2">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Assigned To:</span>
+                  <Badge variant={isAssigned ? 'default' : 'outline'} className="w-fit">
+                    {isAssigned ? `Team #${feature?.assignedTo}` : 'Unassigned'}
+                  </Badge>
+                </div>
+                {creatorTeam && (
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                    <span className="text-xs sm:text-sm text-muted-foreground">Created by Team:</span>
+                    <Badge variant="outline" className="w-fit">{creatorTeam?.name || creatorTeam?._id}</Badge>
                   </div>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Additional Details */}
-          <Card>
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                Additional Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {feature?.specificType && (
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Specific Type:</span>
-                                      <span className="text-xs sm:text-sm font-medium">{feature?.specificType}</span>
-                </div>
-              )}
-              <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                <span className="text-xs sm:text-sm text-muted-foreground">Maintenance:</span>
-                <Badge variant="outline" className="w-fit">{feature?.maintenance}</Badge>
-              </div>
-              {feature?.createdAt && (
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Created:</span>
-                  <span className="text-xs sm:text-sm">
-                    {new Date(feature?.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <Separator />
 
-          {/* Creator Team Information */}
-          {displayFeature.teamId && (
-            <Card>
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                  Creator Team
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-2">
-                  {creatorTeam ? (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs sm:text-sm">
-                      {creatorTeam.name}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs sm:text-sm">
-                      Loading team...
-                    </Badge>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Created by this team
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-
-        </div>
-        
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 pt-4">
-          <div className="flex gap-2 justify-end w-full">
-            {onEdit && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEdit}
-                className="flex items-center gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Edit Feature
-              </Button>
-            )}
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDelete}
-              disabled={isDeleting || deleteFeatureMutation.isPending}
-              className="flex items-center gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              {isDeleting || deleteFeatureMutation.isPending ? "Deleting..." : "Delete Feature"}
+          <div className="flex items-center justify-between">
+            <Button variant="outline" onClick={handleEdit}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting || deleteFeatureMutation.isPending}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {isDeleting || deleteFeatureMutation.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
