@@ -325,7 +325,8 @@ export default function MapView() {
   // Handle map navigation errors - KEEP ALL FUNCTIONALITY
   useEffect(() => {
     const handleNavigationError = (event: CustomEvent) => {
-      const { type, id, error } = event.detail;
+      const detail: any = (event as any)?.detail || {};
+      const { type, id, error } = detail;
       stableToast({
         title: "Navigation Failed",
         description: `Unable to navigate to ${type}: ${error}`,
@@ -691,33 +692,29 @@ export default function MapView() {
   // Location event listeners for built-in control (simplified) - KEEP ALL FUNCTIONALITY
   useEffect(() => {
     const handleLocationSuccess = (event: any) => {
-      // Safe destructuring with validation
-      if (!event || !event.detail || typeof event.detail !== 'object') {
+      const detail = event?.detail || {};
+      if (typeof detail !== 'object') {
         console.warn('Invalid locationSuccess event:', event);
         return;
       }
-      
-      const { message, latitude, longitude } = event.detail || {};
-      
+      const { message, latitude, longitude } = detail;
       if (message && latitude !== undefined && longitude !== undefined) {
         stableToast({
           title: "Location Found! 🎯",
           description: `${message} (${latitude}, ${longitude})`,
         });
       } else {
-        console.warn('Incomplete location data:', event.detail);
+        console.warn('Incomplete location data:', detail);
       }
     };
 
     const handleLocationError = (event: any) => {
-      // Safe destructuring with validation
-      if (!event || !event.detail || typeof event.detail !== 'object') {
+      const detail = event?.detail || {};
+      if (typeof detail !== 'object') {
         console.warn('Invalid locationError event:', event);
         return;
       }
-      
-      const { message } = event.detail || {};
-      
+      const { message } = detail;
       if (message) {
         stableToast({
           title: "Location Error ❌",
@@ -1477,12 +1474,14 @@ export default function MapView() {
     
     // Store the drawn polygon for feature creation
     setDrawnPolygon({ coordinates: polygonData.coordinates });
-    setDrawingMode(false);
+    // Defer disabling drawing to ensure map interaction cleanup completes
+    setTimeout(() => setDrawingMode(false), 0);
     
     // Check if it's a boundary feature for supervisors
     if (selectedFeatureType === "Boundary" && user?.role === "Supervisor") {
       // Supervisor creating boundary - use supervisor modal with simplified form
-      setSupervisorPolygonModalOpen(true);
+      // Ensure modal opens after state updates have flushed to avoid first-attempt race
+      setTimeout(() => setSupervisorPolygonModalOpen(true), 0);
     } else {
       // Regular polygon feature creation (for other polygon features or all users)
       setCreateFeatureModalOpen(true);

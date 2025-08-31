@@ -1009,8 +1009,9 @@ const OpenLayersMap = ({
 
     // Add event listener for zoom-to-location functionality
     const handleZoomToLocation = (event: any) => {
-      console.log('🎯 Map received zoom event:', event.detail);
-      const { lat, lng, zoom, extent, padding } = event.detail;
+      const detail = event?.detail || {};
+      console.log('🎯 Map received zoom event:', detail);
+      const { lat, lng, zoom, extent, padding } = detail;
       
       if (!mapRef.current) {
         console.error('❌ Map reference not available');
