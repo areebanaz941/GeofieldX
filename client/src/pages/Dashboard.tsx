@@ -178,7 +178,8 @@ export default function Dashboard() {
   // Listen for dashboard tab change events from sidebar
   useEffect(() => {
     const handleTabChangeEvent = (event: CustomEvent) => {
-      const { tab } = event.detail;
+      const detail: any = (event as any)?.detail || {};
+      const { tab } = detail;
       if (tab && ['overview', 'features', 'teams', 'boundaries'].includes(tab)) {
         setActiveTab(tab);
       }

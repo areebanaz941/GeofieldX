@@ -130,13 +130,15 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                       // Handle different path formats - ensure proper URL construction
                       let imageUrl = imagePath;
                       if (typeof imagePath === 'string') {
-                        if (!imagePath.startsWith('http') && !imagePath.startsWith('/uploads/')) {
-                          // Remove leading slash if present and prepend /uploads/
-                          const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-                          imageUrl = `/uploads/${cleanPath}`;
+                        if (imagePath.startsWith('http')) {
+                          imageUrl = imagePath;
+                        } else if (imagePath.startsWith('/uploads/')) {
+                          imageUrl = imagePath;
                         } else if (imagePath.startsWith('uploads/')) {
-                          // Add leading slash if missing
                           imageUrl = `/${imagePath}`;
+                        } else {
+                          const cleanPath = imagePath.replace(/^\/+/, '');
+                          imageUrl = `/uploads/${cleanPath}`;
                         }
                       }
                       

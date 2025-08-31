@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -84,8 +85,11 @@ export default function SupervisorPolygonModal({
         description: "Boundary has been successfully created and assigned.",
       });
       form.reset();
-      setDrawingMode(false);
-      onClose();
+      // Defer UI state updates to next tick to avoid race conditions
+      setTimeout(() => {
+        setDrawingMode(false);
+        onClose();
+      }, 0);
     },
     onError: (error: any) => {
       toast({
@@ -97,7 +101,7 @@ export default function SupervisorPolygonModal({
   });
 
   const onSubmit = (values: SupervisorPolygonFormValues) => {
-    if (!drawnPolygon) {
+    if (!drawnPolygon || !Array.isArray(drawnPolygon.coordinates) || drawnPolygon.coordinates.length === 0) {
       toast({
         title: "Error",
         description: "Please draw a polygon on the map first",
