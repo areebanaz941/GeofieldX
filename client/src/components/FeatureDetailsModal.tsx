@@ -86,12 +86,14 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
     }
   };
 
-  // Debug logging for images
-  console.log('Feature data in popup:', displayFeature);
-  console.log('Feature images:', displayFeature.images);
-  console.log('Images length:', displayFeature.images?.length);
-  console.log('Feature teamId:', displayFeature.teamId);
-  console.log('Creator team data:', creatorTeam);
+  // Debug logging for images (dev only)
+  if (import.meta.env.DEV) {
+    console.log('Feature data in popup:', displayFeature);
+    console.log('Feature images:', displayFeature.images);
+    console.log('Images length:', displayFeature.images?.length);
+    console.log('Feature teamId:', displayFeature.teamId);
+    console.log('Creator team data:', creatorTeam);
+  }
 
   const isParcel = feature?.feaType === 'Parcel';
   const isAssigned = !!feature?.assignedTo;
@@ -124,8 +126,8 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 sm:max-h-60 overflow-y-auto">
                     {displayFeature.images.map((imagePath, index) => {
-                      // Debug each image path
-                      console.log(`Image ${index + 1}:`, imagePath);
+                      // Debug each image path (dev only)
+                      if (import.meta.env.DEV) console.log(`Image ${index + 1}:`, imagePath);
                       
                       // Handle different path formats - ensure proper URL construction
                       let imageUrl = imagePath;
@@ -142,7 +144,7 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                         }
                       }
                       
-                      console.log(`Final image URL ${index + 1}:`, imageUrl);
+                      if (import.meta.env.DEV) console.log(`Final image URL ${index + 1}:`, imageUrl);
                       
                       // Build an absolute URL for retry if needed
                       const buildAbsolute = (relative: string) => {
@@ -161,19 +163,22 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                             src={imageUrl}
                             alt={`${displayFeature.name} - Image ${index + 1}`}
                             className="w-full h-20 sm:h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => {
-                              window.open(imageUrl, '_blank');
+                            onClick={(e) => {
+                              const imgEl = e.target as HTMLImageElement;
+                              window.open(imgEl.src, '_blank');
                             }}
                             onError={(e) => {
-                              console.error(`Failed to load image ${index + 1}:`, imageUrl);
-                              console.error('Original path:', imagePath);
-                              console.error('Constructed URL:', imageUrl);
+                              if (import.meta.env.DEV) {
+                                console.error(`Failed to load image ${index + 1}:`, imageUrl);
+                                console.error('Original path:', imagePath);
+                                console.error('Constructed URL:', imageUrl);
+                              }
                               const img = e.target as HTMLImageElement;
                               // One-time retry with absolute URL if we haven't tried yet
                               const tried = img.getAttribute('data-retried');
                               if (!tried) {
                                 const absolute = buildAbsolute(typeof imageUrl === 'string' ? imageUrl : String(imageUrl));
-                                console.warn(`Retrying image ${index + 1} with absolute URL:`, absolute);
+                                if (import.meta.env.DEV) console.warn(`Retrying image ${index + 1} with absolute URL:`, absolute);
                                 img.setAttribute('data-retried', '1');
                                 img.src = absolute;
                                 return;
@@ -182,8 +187,11 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                               img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA5QzEwLjMgOSA5IDEwLjMgOSAxMkM5IDEzLjcgMTAuMyAxNSAxMiAxNUMxMy43IDE1IDE1IDEzLjcgMTUgMTJDMTUgMTAuMyAxMy43IDkgMTIgOVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTEyIDdDMTQuMiA3IDE2IDguOCAxNiAxMUMxNiAxMy4yIDE0LjIgMTUgMTIgMTVDOS44IDE1IDggMTMuMiA4IDExQzggOC44IDkuOCA3IDEyIDdaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4K';
                               img.alt = 'Image failed to load';
                             }}
-                            onLoad={() => {
-                              console.log(`Successfully loaded image ${index + 1}:`, imageUrl);
+                            onLoad={(e) => {
+                              if (import.meta.env.DEV) {
+                                const imgEl = e.target as HTMLImageElement;
+                                console.log(`Successfully loaded image ${index + 1}:`, imgEl.src);
+                              }
                             }}
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">

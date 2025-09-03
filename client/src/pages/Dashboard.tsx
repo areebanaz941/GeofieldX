@@ -251,11 +251,13 @@ export default function Dashboard() {
     parcels: (features as any[]).filter((feature: any) => feature.feaType === 'Parcel').length
   };
 
-  // Debug logging for towers issue
-  console.log('Dashboard - Features data:', features);
-  console.log('Dashboard - Total features:', (features as any[]).length);
-  console.log('Dashboard - Tower features:', featureStats.towers);
-  console.log('Dashboard - Current user:', user);
+  // Debug logging for towers issue (dev only)
+  if (import.meta.env.DEV) {
+    console.log('Dashboard - Features data:', features);
+    console.log('Dashboard - Total features:', (features as any[]).length);
+    console.log('Dashboard - Tower features:', featureStats.towers);
+    console.log('Dashboard - Current user:', user);
+  }
 
   // Loading state for field users only
   if (!user) {
