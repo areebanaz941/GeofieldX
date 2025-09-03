@@ -116,11 +116,20 @@ export default function TaskList() {
     return matchesSearch;
   });
 
-  // Get assignee name for each task
+  // Get assignee display for each task (resolves team or user)
   const getAssigneeName = (assigneeId?: string) => {
     if (!assigneeId) return 'Unassigned';
+    // First, check if the ID matches a team (tasks can be assigned to teams)
+    const team = (teams as ITeam[]).find((team: ITeam) => team._id && team._id.toString() === assigneeId);
+    if (team) {
+      return `Team: ${team.name}`;
+    }
+    // Otherwise, try to resolve as a field user
     const assignee = fieldUsers.find((user: any) => user._id && user._id.toString() === assigneeId);
-    return assignee ? assignee.name : 'Unknown User';
+    if (assignee) {
+      return `User: ${assignee.name || assignee.username}`;
+    }
+    return 'Unknown Assignment';
   };
 
   // Get team name for boundaries
