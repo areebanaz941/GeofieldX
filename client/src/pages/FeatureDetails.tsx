@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FeatureDetailsModal } from "@/components/FeatureDetailsModal";
+import { EditFeatureModal } from "@/components/EditFeatureModal";
 import { getFeature } from "@/lib/api";
 import type { IFeature } from "@shared/schema";
 
@@ -12,6 +13,7 @@ export default function FeatureDetails() {
   const [, setLocation] = useLocation();
   const featureId = useMemo(() => params?.featureId as string | undefined, [params]);
   const [isModalOpen, setIsModalOpen] = useState(true);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const { data: feature, isLoading, isError } = useQuery<IFeature>({
     queryKey: ["/api/features", featureId],
@@ -87,6 +89,19 @@ export default function FeatureDetails() {
       <FeatureDetailsModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        feature={feature}
+        onEdit={() => {
+          setIsModalOpen(false);
+          setIsEditOpen(true);
+        }}
+      />
+      <EditFeatureModal
+        open={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          // After editing, return to the details modal for consistency
+          setIsModalOpen(true);
+        }}
         feature={feature}
       />
     </div>
