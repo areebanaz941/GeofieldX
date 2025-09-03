@@ -385,18 +385,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/current-user", isAuthenticated, (req, res) => {
-    const user = { ...(req.user as any) };
-    delete user.password; // Don't send password to client
-    
-    // Ensure critical fields are present
-    if (!user.role) {
-      console.error('❌ User role missing in current-user response:', user);
-      return res.status(500).json({ message: "User data incomplete - missing role" });
+  app.get("/api/current-user", isAuthenticated, async (req, res) => {
+    try {
+      const rawUser = (req.user as any);
+      let user: any = rawUser && typeof rawUser.toObject === 'function' ? rawUser.toObject() : { ...rawUser };
+
+      if (user) {
+        delete user.password; // Don't send password to client
+      }
+
+      // If role is missing, attempt a safe refetch from storage and normalize
+      if (!user?.role) {
+        try {
+          const refetched = await storage.getUser(
+            rawUser?._id?.toString?.() || rawUser?._id || (rawUser?.id?.toString?.() ?? rawUser?.id)
+          );
+          if (refetched) {
+            user = typeof (refetched as any).toObject === 'function'
+              ? (refetched as any).toObject()
+              : { ...(refetched as any) };
+            delete user.password;
+          }
+        } catch (e) {
+          console.warn('⚠️ Failed to refetch user during current-user handling:', e);
+        }
+      }
+
+      // If we still don't have a role, treat as unauthenticated to avoid noisy 500s
+      if (!user?.role) {
+        console.warn('⚠️ User role missing after normalization; responding with 401. User:', {
+          _id: user?._id,
+          username: user?.username,
+        });
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      console.log(`✅ Current user response: ${user.username} (role: ${user.role})`);
+      return res.json(user);
+    } catch (error) {
+      console.error('❌ Error generating current-user response:', error);
+      return res.status(500).json({ message: "Failed to get current user" });
     }
-    
-    console.log(`✅ Current user response: ${user.username} (role: ${user.role})`);
-    res.json(user);
   });
 
   // User routes

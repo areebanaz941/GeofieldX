@@ -144,6 +144,17 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                       
                       console.log(`Final image URL ${index + 1}:`, imageUrl);
                       
+                      // Build an absolute URL for retry if needed
+                      const buildAbsolute = (relative: string) => {
+                        try {
+                          const origin = window.location.origin;
+                          if (relative.startsWith('http')) return relative;
+                          return `${origin}${relative.startsWith('/') ? relative : '/' + relative}`;
+                        } catch {
+                          return relative;
+                        }
+                      };
+
                       return (
                         <div key={index} className="relative group">
                           <img
@@ -157,8 +168,17 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                               console.error(`Failed to load image ${index + 1}:`, imageUrl);
                               console.error('Original path:', imagePath);
                               console.error('Constructed URL:', imageUrl);
-                              // Show a placeholder instead of hiding
                               const img = e.target as HTMLImageElement;
+                              // One-time retry with absolute URL if we haven't tried yet
+                              const tried = img.getAttribute('data-retried');
+                              if (!tried) {
+                                const absolute = buildAbsolute(typeof imageUrl === 'string' ? imageUrl : String(imageUrl));
+                                console.warn(`Retrying image ${index + 1} with absolute URL:`, absolute);
+                                img.setAttribute('data-retried', '1');
+                                img.src = absolute;
+                                return;
+                              }
+                              // Fallback placeholder
                               img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA5QzEwLjMgOSA5IDEwLjMgOSAxMkM5IDEzLjcgMTAuMyAxNSAxMiAxNUMxMy43IDE1IDE1IDEzLjcgMTUgMTJDMTUgMTAuMyAxMy43IDkgMTIgOVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTEyIDdDMTQuMiA3IDE2IDguOCAxNiAxMUMxNiAxMy4yIDE0LjIgMTUgMTIgMTVDOS44IDE1IDggMTMuMiA4IDExQzggOC44IDkuOCA3IDEyIDdaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4K';
                               img.alt = 'Image failed to load';
                             }}
