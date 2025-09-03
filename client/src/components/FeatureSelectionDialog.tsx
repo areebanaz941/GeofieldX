@@ -111,8 +111,12 @@ const FeatureSelectionDialog = ({
       description: instructions[feature.drawingType],
     });
 
-    onFeatureSelect(feature.id, feature.drawingType);
+    // Close the dialog first so its overlay doesn't swallow the first map click
     onOpenChange(false);
+    // Defer enabling drawing until after the dialog unmounts
+    setTimeout(() => {
+      onFeatureSelect(feature.id, feature.drawingType);
+    }, 0);
   };
 
   return (
