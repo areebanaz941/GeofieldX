@@ -6,7 +6,7 @@
     <title>GeoFieldX - Field Operations Management</title>
     <meta name="description" content="GeoFieldX is a streamlined workflow system for field operations management, enabling supervisors to track team locations, assign tasks, and monitor completion." />
     <!-- Content Security Policy to help protect against malicious script injection -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' ws: wss: https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://replit.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://replit.com; script-src-elem 'self' blob: https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://replit.com; worker-src 'self' blob:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; object-src 'none';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' ws: wss: https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://replit.com; script-src 'self' 'unsafe-eval' blob: https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://replit.com; script-src-elem 'self' blob: https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://replit.com; worker-src 'self' blob:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; object-src 'none';" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha384-o/2yZuJZWGJ4s/adjxVW71R+EO/LyCwdQfP5UWSgX/w87iiTXuvDZaejd3TsN7mf" crossorigin="anonymous" />
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shpjs/3.6.3/shp.min.js"></script>
@@ -14,148 +14,8 @@
   <body>
     <div id="root"></div>
     
-    <!-- Enhanced defensive script to handle browser extension interference -->
-    <script>
-      // Global error handler for unhandled promise rejections
-      window.addEventListener('unhandledrejection', function(event) {
-        if (event.reason && event.reason.message && event.reason.message.includes('Cannot destructure property')) {
-          console.warn('[Extension Interference] Destructuring error caught:', event.reason.message);
-          // Prevent the error from propagating
-          event.preventDefault();
-        }
-      });
-      
-      // Global error handler for JavaScript errors
-      window.addEventListener('error', function(event) {
-        if (event.message && event.message.includes('Cannot destructure property')) {
-          console.warn('[Extension Interference] JavaScript error caught:', event.message);
-          // Prevent the error from propagating
-          event.preventDefault();
-        }
-      });
-      
-      // Specific protection against knowee-ai extension
-      (function() {
-        // Monitor for knowee-ai extension injection
-        const observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            mutation.addedNodes.forEach(function(node) {
-              try {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                  const element = node;
-                  // Check for knowee-ai specific elements
-                  const classNameStr = element.className?.toString() || '';
-                  const elementId = element.id || '';
-                  
-                  if (element.tagName === 'SCRIPT' || 
-                      classNameStr.includes('knowee') ||
-                      elementId.includes('knowee') ||
-                      element.getAttribute?.('data-extension') === 'knowee-ai') {
-                    console.warn('[Extension] knowee-ai script injection detected:', element);
-                    // Isolate the extension script
-                    try {
-                      element.style.isolation = 'isolate';
-                      element.setAttribute('data-isolated', 'true');
-                    } catch (e) {
-                      console.warn('[Extension] Could not isolate knowee-ai element:', e);
-                    }
-                  }
-                }
-              } catch (error) {
-                console.warn('[Extension] Error processing DOM mutation:', error);
-              }
-            });
-          });
-        });
-        
-        // Start observing
-        observer.observe(document.documentElement, {
-          childList: true,
-          subtree: true
-        });
-        
-        // Store original methods before extension can override them
-        window.__originalFetch = window.fetch;
-        window.__originalXMLHttpRequest = window.XMLHttpRequest;
-      })();
-      
-      // Defensive wrapper for console methods to prevent extension interference
-      (function() {
-        const originalConsole = { ...console };
-        
-        // Override console methods to add context
-        ['log', 'warn', 'error', 'info'].forEach(method => {
-          console[method] = function(...args) {
-            try {
-              // Check if this is likely from an extension
-              const stack = new Error().stack;
-              if (stack && (stack.includes('extension://') || 
-                          stack.includes('chrome-extension://') ||
-                          stack.includes('knowee-ai'))) {
-                // Prefix extension logs and reduce noise
-                if (!args[0]?.includes?.('FloatTool') && 
-                    !args[0]?.includes?.('选区为空') &&
-                    !args[0]?.includes?.('messageSubscribe')) {
-                  originalConsole[method]('[Extension]', ...args);
-                }
-              } else {
-                originalConsole[method](...args);
-              }
-            } catch (e) {
-              // Fallback to original console if there's any issue
-              originalConsole[method](...args);
-            }
-          };
-        });
-      })();
-      
-      // Enhanced protection for critical global functions
-      (function() {
-        const protectedGlobals = ['fetch', 'XMLHttpRequest', 'Promise', 'addEventListener', 'removeEventListener'];
-        
-        protectedGlobals.forEach(globalName => {
-          const original = window[globalName];
-          if (original) {
-            // Store backup
-            window[`__original${globalName}`] = original;
-            
-            // Create protected wrapper
-            try {
-              Object.defineProperty(window, globalName, {
-                value: original,
-                writable: false,
-                configurable: false
-              });
-            } catch (e) {
-              console.warn(`[Extension] Could not protect global: ${globalName}`, e);
-            }
-          }
-        });
-      })();
-      
-      // Prevent extension from interfering with DOM ready state
-      (function() {
-        let isAppReady = false;
-        const originalReady = document.readyState;
-        
-        // Mark app as ready after a short delay
-        setTimeout(() => {
-          isAppReady = true;
-        }, 100);
-        
-        // Override document.readyState getter if needed
-        try {
-          Object.defineProperty(document, 'readyState', {
-            get: function() {
-              return isAppReady ? 'complete' : originalReady;
-            },
-            configurable: false
-          });
-        } catch (e) {
-          // Silently fail if we can't override readyState
-        }
-      })();
-    </script>
+    <!-- Defensive script moved to module to satisfy CSP (no inline JS) -->
+    <script type="module" src="/src/extensionGuard.ts"></script>
     
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
