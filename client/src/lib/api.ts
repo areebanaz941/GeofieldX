@@ -76,6 +76,11 @@ export async function getCurrentUser() {
     
     return userData;
   } catch (error) {
+    // Gracefully handle unauthenticated state without noisy stack traces
+    if (error instanceof Error && (error.message.includes('401') || error.message.includes('Not authenticated'))) {
+      console.warn('[Auth] getCurrentUser returned 401 - user not logged in');
+      return null;
+    }
     console.error('getCurrentUser API error:', error);
     throw error;
   }
