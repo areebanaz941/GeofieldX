@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +29,7 @@ const formSchema = z.object({
   maintenanceDate: z.string().optional(),
   assignedTo: z.string().optional(),
   remarks: z.string().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 type LineFeatureFormValues = z.infer<typeof formSchema>;
@@ -68,6 +70,7 @@ export default function LineFeatureModal({
       maintenanceDate: "",
       assignedTo: "",
       remarks: "",
+      images: [],
     },
   });
 
@@ -132,6 +135,7 @@ export default function LineFeatureModal({
         type: "LineString" as const,
         coordinates: multiplePoints.map(point => [point.lng, point.lat]),
       },
+      ...(values.images && values.images.length > 0 && { images: values.images }),
     };
 
     createFeatureMutation.mutate(submitData);
@@ -271,6 +275,54 @@ export default function LineFeatureModal({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Feature Images (Optional) */}
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Feature Images (Optional)</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      maxFiles={10}
+                      maxFileSize={10}
+                      onFilesChange={async (files) => {
+                        if (!files) return;
+                        try {
+                          const formData = new FormData();
+                          files.forEach(file => formData.append('images', file));
+
+                          const authToken = localStorage.getItem('auth_token');
+                          const headers: HeadersInit = {};
+                          if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+                          const response = await fetch('/api/features/upload-images', {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'include',
+                            headers,
+                          });
+
+                          if (!response.ok) {
+                            console.error('Failed to upload images:', response.status);
+                            return;
+                          }
+                          const result = await response.json();
+                          const uploadedPaths: string[] = result.imagePaths || [];
+                          const current = Array.isArray(field.value) ? field.value : [];
+                          field.onChange([...current, ...uploadedPaths]);
+                        } catch (error) {
+                          console.error('Error uploading images:', error);
+                        }
+                      }}
+                      disabled={createFeatureMutation.isPending}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
