@@ -23,6 +23,7 @@ export interface IStorage {
   getAllTeams(): Promise<ITeam[]>;
   getUsersByTeam(teamId: string): Promise<IUser[]>;
   assignUserToTeam(userId: string, teamId: string): Promise<IUser>;
+  unassignUserFromTeam(userId: string): Promise<IUser>;
   
   // Task operations
   createTask(taskData: InsertTask): Promise<ITask>;
@@ -134,6 +135,10 @@ export class MemStorage implements IStorage {
   }
 
   async assignUserToTeam(userId: string, teamId: string): Promise<IUser> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async unassignUserFromTeam(userId: string): Promise<IUser> {
     throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 

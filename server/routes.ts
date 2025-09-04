@@ -1668,6 +1668,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  app.post(
+    "/api/users/:id/unassign-team",
+    isSupervisor,
+    validateObjectId("id"),
+    async (req, res) => {
+      try {
+        const userId = req.params.id;
+        const updatedUser = await storage.unassignUserFromTeam(userId);
+        const { password, ...userResponse } = updatedUser as any;
+        res.json(userResponse);
+      } catch (error) {
+        console.error("Unassign user from team error:", error);
+        res.status(500).json({ message: "Failed to unassign user from team" });
+      }
+    },
+  );
+
   // Task routes
   app.post("/api/tasks", isAuthenticated, async (req, res) => {
     try {

@@ -223,6 +223,22 @@ export class MongoStorage implements IStorage {
     }
   }
 
+  async unassignUserFromTeam(userId: string): Promise<IUser> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+
+      user.teamId = undefined as any;
+      await user.save();
+      return user;
+    } catch (error) {
+      console.error("Error unassigning user from team:", error);
+      throw error;
+    }
+  }
+
   // Task operations
   async createTask(taskData: InsertTask): Promise<ITask> {
     try {
