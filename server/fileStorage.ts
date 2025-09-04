@@ -596,6 +596,11 @@ export class FileStorage implements IStorage {
       maintenanceDate: insertFeature.maintenanceDate,
       geometry: insertFeature.geometry,
       remarks: insertFeature.remarks,
+      // Persist team assignment and images if provided
+      teamId: insertFeature.teamId ? (insertFeature.teamId as any) : undefined,
+      assignedTo: insertFeature.assignedTo ? (insertFeature.assignedTo as any) : undefined,
+      color: insertFeature.color,
+      images: Array.isArray(insertFeature.images) ? insertFeature.images : [],
       createdBy: insertFeature.createdBy
         ? (insertFeature.createdBy as any)
         : undefined,
