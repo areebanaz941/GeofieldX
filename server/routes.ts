@@ -469,8 +469,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const fieldUsers = await storage.getAllFieldUsers();
       // Remove passwords from response
-      const usersResponse = fieldUsers.map((user) => {
-        const { password, ...userWithoutPassword } = user;
+      const usersResponse = fieldUsers.map((user: any) => {
+        const plainUser = typeof user?.toObject === "function" ? user.toObject() : user;
+        const { password, ...userWithoutPassword } = plainUser;
         return userWithoutPassword;
       });
       res.json(usersResponse);
@@ -492,16 +493,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, we'll fetch by trying common supervisor usernames or IDs
       try {
         const supervisor = await storage.getUserByUsername("supervisor");
-        if (supervisor && !allUsers.find(u => u._id.toString() === supervisor._id.toString())) {
-          allUsers.push(supervisor);
+        if (supervisor && !allUsers.find(u => (u as any)._id.toString() === supervisor._id.toString())) {
+          allUsers.push(supervisor as any);
         }
       } catch (e) {
         // Supervisor might not exist or have different username
       }
       
       // Remove passwords from response
-      const usersResponse = allUsers.map((user) => {
-        const { password, ...userWithoutPassword } = user;
+      const usersResponse = allUsers.map((user: any) => {
+        const plainUser = typeof user?.toObject === "function" ? user.toObject() : user;
+        const { password, ...userWithoutPassword } = plainUser;
         return userWithoutPassword;
       });
       res.json(usersResponse);
@@ -1657,8 +1659,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid team ID format" });
         }
 
-        const updatedUser = await storage.assignUserToTeam(userId, teamId);
-        const { password, ...userResponse } = updatedUser;
+        const updatedUser: any = await storage.assignUserToTeam(userId, teamId);
+        const plainUser = typeof updatedUser?.toObject === "function" ? updatedUser.toObject() : updatedUser;
+        const { password, ...userResponse } = plainUser;
 
         res.json(userResponse);
       } catch (error) {
@@ -1675,8 +1678,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const userId = req.params.id;
-        const updatedUser = await storage.unassignUserFromTeam(userId);
-        const { password, ...userResponse } = updatedUser as any;
+        const updatedUser: any = await storage.unassignUserFromTeam(userId);
+        const plainUser = typeof updatedUser?.toObject === "function" ? updatedUser.toObject() : updatedUser;
+        const { password, ...userResponse } = plainUser;
         res.json(userResponse);
       } catch (error) {
         console.error("Unassign user from team error:", error);
