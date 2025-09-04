@@ -9,6 +9,7 @@ import {
   createTeam, 
   updateTeamStatus, 
   assignUserToTeam,
+  unassignUserFromTeam,
   deleteTeam
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
@@ -42,9 +43,10 @@ interface TeamCardProps {
   tasks: any[];
   handleTeamStatusChange: (teamId: string, status: string) => void;
   onDelete?: (teamId: string) => void;
+  onManageMembers?: (team: any) => void;
 }
 
-function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange, onDelete }: TeamCardProps) {
+function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange, onDelete, onManageMembers }: TeamCardProps) {
   // Find members of this team using MongoDB IDs
   const teamMembers = fieldUsers.filter(user => user.teamId === team._id);
   
@@ -134,6 +136,15 @@ function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange, onDelete }:
         )}
       </CardContent>
       <CardFooter className="bg-gray-50 flex justify-end gap-2 pt-2">
+        {onManageMembers && (
+          <Button 
+            size="sm"
+            variant="default"
+            onClick={() => onManageMembers(team)}
+          >
+            Manage Members
+          </Button>
+        )}
         {team.status === "Pending" && (
           <>
             <Button 
@@ -148,7 +159,7 @@ function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange, onDelete }:
               size="sm" 
               variant="outline" 
               className="border-green-500 text-green-500 hover:bg-green-50"
-              onClick={() => handleTeamStatusChange(team.id, "Approved")}
+              onClick={() => handleTeamStatusChange(team._id, "Approved")}
             >
               Approve
             </Button>
@@ -221,6 +232,8 @@ export default function FieldTeams() {
   const [cityFilter, setCityFilter] = useState("");
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<ITeam | null>(null);
+  const [manageMembersOpen, setManageMembersOpen] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
   
   // Create a form for team creation
   const form = useForm<z.infer<typeof teamFormSchema>>({
@@ -292,6 +305,50 @@ export default function FieldTeams() {
       });
     }
   });
+
+  // Mutation for assigning user to team
+  const assignUserToTeamMutation = useMutation({
+    mutationFn: ({ userId, teamId }: { userId: string, teamId: string }) => 
+      assignUserToTeam(userId, teamId),
+    onSuccess: () => {
+      toast({
+        title: "Member added",
+        description: "The user has been added to the team",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/field"] });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to add member",
+        description: "An error occurred while adding the user to the team",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Mutation for unassigning user from team
+  const unassignUserFromTeamMutation = useMutation({
+    mutationFn: (userId: string) => unassignUserFromTeam(userId),
+    onSuccess: () => {
+      toast({
+        title: "Member removed",
+        description: "The user has been removed from the team",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/field"] });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to remove member",
+        description: "An error occurred while removing the user from the team",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleManageMembers = (team: ITeam) => {
+    setSelectedTeam(team);
+    setManageMembersOpen(true);
+  };
   
   // Get unique cities from teams
   const uniqueCities = Array.from(new Set(teams.map((team: any) => team.city).filter(Boolean))) as string[];
@@ -468,6 +525,7 @@ export default function FieldTeams() {
                     tasks={tasks || []}
                     handleTeamStatusChange={handleTeamStatusChange}
                     onDelete={user?.role === "Supervisor" ? handleDeleteTeam : undefined}
+                    onManageMembers={isSupervisor ? handleManageMembers : undefined}
                   />
                 ))
             ) : (
@@ -493,6 +551,99 @@ export default function FieldTeams() {
               </div>
             )}
           </div>
+
+          {/* Manage Members Dialog */}
+          <Dialog open={manageMembersOpen} onOpenChange={setManageMembersOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Manage Members{selectedTeam ? `: ${selectedTeam.name}` : ""}</DialogTitle>
+                <DialogDescription>
+                  Add or remove field users for this team.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Current Members */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Current Members</h4>
+                  <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                    {fieldUsers.filter((u: any) => selectedTeam && u.teamId === (selectedTeam as any)._id).length === 0 && (
+                      <div className="text-sm text-gray-500">No members yet</div>
+                    )}
+                    {fieldUsers
+                      .filter((u: any) => selectedTeam && u.teamId === (selectedTeam as any)._id)
+                      .map((member: any) => (
+                        <div key={member._id} className="flex items-center justify-between gap-3 border rounded-md p-2">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6 bg-primary-100 text-primary-600">
+                              <AvatarFallback className="text-xs">{getInitials(member.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span className="text-sm">{member.name || member.username}</span>
+                              <span className="text-xs text-gray-500">{member.username}</span>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="border-red-500 text-red-600 hover:bg-red-50"
+                            onClick={() => unassignUserFromTeamMutation.mutate(member._id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Add Members */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Add Members</h4>
+                  <Input 
+                    placeholder="Search users..." 
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    className="mb-2"
+                  />
+                  <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                    {fieldUsers
+                      .filter((u: any) => selectedTeam && u.teamId !== (selectedTeam as any)._id)
+                      .filter((u: any) => {
+                        if (!memberSearch) return true;
+                        const q = memberSearch.toLowerCase();
+                        return (
+                          (u.name || "").toLowerCase().includes(q) ||
+                          (u.username || "").toLowerCase().includes(q)
+                        );
+                      })
+                      .map((u: any) => (
+                        <div key={u._id} className="flex items-center justify-between gap-3 border rounded-md p-2">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6 bg-primary-100 text-primary-600">
+                              <AvatarFallback className="text-xs">{getInitials(u.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span className="text-sm">{u.name || u.username}</span>
+                              <span className="text-xs text-gray-500">{u.username}{u.teamId ? " • assigned" : ""}</span>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm"
+                            onClick={() => selectedTeam && assignUserToTeamMutation.mutate({ userId: u._id, teamId: (selectedTeam as any)._id })}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setManageMembersOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

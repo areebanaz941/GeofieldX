@@ -537,6 +537,21 @@ export class MongoStorage implements IStorage {
     return user;
   }
 
+  async unassignUserFromTeam(userId: string): Promise<IUser> {
+    if (!isValidObjectId(userId)) {
+      throw new Error("Invalid user ID");
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $unset: { teamId: "" } },
+      { new: true }
+    ).exec();
+
+    if (!user) throw new Error("User not found");
+    return user as any;
+  }
+
   async deleteTeam(id: string): Promise<boolean> {
     if (!isValidObjectId(id)) return false;
 
