@@ -157,10 +157,12 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                         }
                       };
 
+                      const absoluteUrl = typeof imageUrl === 'string' ? buildAbsolute(imageUrl) : String(imageUrl);
+
                       return (
                         <div key={index} className="relative group">
                           <img
-                            src={imageUrl}
+                            src={absoluteUrl}
                             alt={`${displayFeature.name} - Image ${index + 1}`}
                             className="w-full h-20 sm:h-24 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
                             onClick={(e) => {
@@ -169,9 +171,9 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                             }}
                             onError={(e) => {
                               if (import.meta.env.DEV) {
-                                console.error(`Failed to load image ${index + 1}:`, imageUrl);
+                                console.error(`Failed to load image ${index + 1}:`, absoluteUrl);
                                 console.error('Original path:', imagePath);
-                                console.error('Constructed URL:', imageUrl);
+                                console.error('Constructed URL:', absoluteUrl);
                               }
                               const img = e.target as HTMLImageElement;
                               // One-time retry with absolute URL if we haven't tried yet

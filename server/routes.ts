@@ -134,6 +134,15 @@ const featureImageUpload = multer({
   },
 });
 
+  // Conditionally apply multer only for multipart requests to preserve JSON bodies
+  const maybeFeatureUpload = (req: Request, res: Response, next: any) => {
+    const contentType = req.headers["content-type"] || "";
+    if (typeof contentType === "string" && contentType.includes("multipart/form-data")) {
+      return upload.array('images', 10)(req as any, res as any, next);
+    }
+    return next();
+  };
+
 // Configure multer for shapefile uploads
 const uploadImages = multer({
   storage: storage_multer,
@@ -776,7 +785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Feature routes
-  app.post("/api/features", isAuthenticated, upload.array('images', 10), async (req, res) => {
+  app.post("/api/features", isAuthenticated, maybeFeatureUpload, async (req, res) => {
     try {
       const user = req.user as any;
       
@@ -1199,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update feature
-  app.patch("/api/features/:id", isAuthenticated, validateObjectId("id"), upload.array('images', 10), async (req, res) => {
+  app.patch("/api/features/:id", isAuthenticated, validateObjectId("id"), maybeFeatureUpload, async (req, res) => {
     try {
       const featureId = req.params.id;
       const user = req.user as any;

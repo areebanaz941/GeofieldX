@@ -435,6 +435,12 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
                                 url = `/${url}`;
                               }
                             }
+                            try {
+                              const origin = window.location.origin;
+                              if (!url.startsWith('http')) {
+                                url = `${origin}${url.startsWith('/') ? url : '/' + url}`;
+                              }
+                            } catch {}
                             return (
                               <img key={idx} src={url} alt={`image-${idx}`} className="w-full h-20 object-cover rounded border" />
                             );
