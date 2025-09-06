@@ -11,6 +11,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { uploadBufferToGridFS, openGridFSDownloadStream, getGridFSFileInfo } from "./gridfs";
 import {
   insertUserSchema,
   insertTaskSchema,
@@ -88,6 +89,9 @@ const storage_multer = multer.diskStorage({
   },
 });
 
+// Memory storage for images that will be stored in MongoDB GridFS
+const memoryStorage = multer.memoryStorage();
+
 const upload = multer({
   storage: storage_multer,
   limits: {
@@ -154,6 +158,38 @@ const uploadImages = multer({
     } else {
       cb(new Error("Only shapefile formats are allowed (ZIP, SHP, SHX, DBF, PRJ, CPG)"));
     }
+  },
+});
+
+// Memory-based uploaders for GridFS-backed image uploads
+const memoryImageUpload = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per image
+    files: 10,
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|bmp/;
+    const allowedMimes = /image\/(jpeg|jpg|png|gif|webp|bmp)/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimetype = allowedMimes.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed (JPEG, PNG, GIF, WebP, BMP)"));
+    }
+  },
+});
+
+const memorySingleImageUpload = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = /image\/(jpeg|jpg|png|gif|webp|bmp)/;
+    if (allowedMimes.test(file.mimetype)) return cb(null, true);
+    cb(new Error("Only image files are allowed"));
   },
 });
 
@@ -319,20 +355,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Image upload endpoints
-  // Image upload endpoint for feature creation (single)
-  app.post("/api/upload/image", upload.single('image'), async (req: any, res: Response) => {
+  // Image upload endpoint for feature creation (single) -> store in GridFS
+  app.post("/api/upload/image", memorySingleImageUpload.single('image'), async (req: any, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
       }
 
-      console.log("📸 Image uploaded successfully:", req.file.filename);
+      const id = await uploadBufferToGridFS(req.file.buffer, req.file.originalname, req.file.mimetype);
+      const url = `/api/images/${id}`;
+      console.log("📸 Image stored in GridFS:", id, req.file.originalname);
       
       res.json({
         message: "Image uploaded successfully",
-        filename: req.file.filename,
+        id,
+        url,
         originalName: req.file.originalname,
-        size: req.file.size
+        size: req.file.size,
+        contentType: req.file.mimetype,
       });
     } catch (error) {
       console.error("Image upload error:", error);
@@ -341,16 +381,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Multiple images upload endpoint for feature creation
-  app.post("/api/features/upload-images", isAuthenticated, featureImageUpload.array('images', 10), async (req: any, res: Response) => {
+  app.post("/api/features/upload-images", isAuthenticated, memoryImageUpload.array('images', 10), async (req: any, res: Response) => {
     try {
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
         return res.status(400).json({ message: "No image files provided" });
       }
-      
+
       const uploadedFiles = req.files as Express.Multer.File[];
-      const imagePaths = uploadedFiles.map(file => `/uploads/${file.filename}`);
+      const imagePaths: string[] = [];
+      for (const file of uploadedFiles) {
+        const id = await uploadBufferToGridFS(file.buffer, file.originalname, file.mimetype);
+        imagePaths.push(`/api/images/${id}`);
+      }
       
-      console.log("📸 Multiple images uploaded successfully:", imagePaths);
+      console.log("📸 Multiple images stored in GridFS:", imagePaths);
       
       res.json({
         message: "Images uploaded successfully",
@@ -728,7 +772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/tasks/:id/evidence",
     isAuthenticated,
     validateObjectId("id"),
-    upload.single("image"),
+    memorySingleImageUpload.single("image"),
     async (req, res) => {
       try {
         const taskId = req.params.id;
@@ -738,7 +782,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Image file is required" });
         }
 
-        const imageUrl = `/uploads/${req.file.filename}`;
+        const id = await uploadBufferToGridFS(req.file.buffer, req.file.originalname, req.file.mimetype);
+        const imageUrl = `/api/images/${id}`;
 
         const evidenceData = insertTaskEvidenceSchema.parse({
           taskId,
@@ -776,7 +821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Feature routes
-  app.post("/api/features", isAuthenticated, upload.array('images', 10), async (req, res) => {
+  app.post("/api/features", isAuthenticated, memoryImageUpload.array('images', 10), async (req, res) => {
     try {
       const user = req.user as any;
       
@@ -795,12 +840,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if images are being uploaded as files (FormData)
       if (req.files && Array.isArray(req.files)) {
         const uploadedFiles = req.files as Express.Multer.File[];
-        imagePaths = uploadedFiles.map(file => `/uploads/${file.filename}`);
-        console.log("📸 Processed image paths from files:", imagePaths);
+        const paths: string[] = [];
+        for (const file of uploadedFiles) {
+          const id = await uploadBufferToGridFS(file.buffer, file.originalname, file.mimetype);
+          paths.push(`/api/images/${id}`);
+        }
+        imagePaths = paths;
+        console.log("📸 Processed image paths from GridFS:", imagePaths);
       }
       // Check if images are already uploaded and passed as paths in the body
       else if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
-        imagePaths = req.body.images.filter((path: string) => path && path.startsWith('/uploads/'));
+        imagePaths = req.body.images.filter((p: string) => typeof p === 'string' && (p.startsWith('/api/images/') || p.startsWith('api/images/') || p.startsWith('/uploads/') || p.startsWith('uploads/')))
+          .map((p: string) => p.startsWith('api/images/') ? `/${p}` : (p.startsWith('uploads/') ? `/${p}` : p));
         console.log("📸 Using existing image paths from body:", imagePaths);
       }
       
@@ -1075,30 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // Feature image upload endpoint
-  app.post(
-    "/api/features/upload-images",
-    isAuthenticated,
-    featureImageUpload.array('images', 10),
-    async (req, res) => {
-      try {
-        if (!req.files || req.files.length === 0) {
-          return res.status(400).json({ message: "No images uploaded" });
-        }
-
-        const files = req.files as Express.Multer.File[];
-        const imagePaths = files.map(file => `/uploads/${file.filename}`);
-
-        res.json({ 
-          message: "Images uploaded successfully",
-          imagePaths: imagePaths 
-        });
-      } catch (error) {
-        console.error("Feature image upload error:", error);
-        res.status(500).json({ message: "Failed to upload images" });
-      }
-    }
-  );
+  // (Removed duplicate feature image upload endpoint that used local disk storage)
 
   // Feature status update
   app.patch(
@@ -1199,7 +1227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update feature
-  app.patch("/api/features/:id", isAuthenticated, validateObjectId("id"), upload.array('images', 10), async (req, res) => {
+  app.patch("/api/features/:id", isAuthenticated, validateObjectId("id"), memoryImageUpload.array('images', 10), async (req, res) => {
     try {
       const featureId = req.params.id;
       const user = req.user as any;
@@ -1242,12 +1270,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if images are being uploaded as files (FormData)
       if (req.files && Array.isArray(req.files)) {
         const uploadedFiles = req.files as Express.Multer.File[];
-        imagePaths = uploadedFiles.map(file => `/uploads/${file.filename}`);
-        console.log("📸 Processed image paths from files for update:", imagePaths);
+        const paths: string[] = [];
+        for (const file of uploadedFiles) {
+          const id = await uploadBufferToGridFS(file.buffer, file.originalname, file.mimetype);
+          paths.push(`/api/images/${id}`);
+        }
+        imagePaths = paths;
+        console.log("📸 Processed image paths from GridFS for update:", imagePaths);
       }
       // Check if images are already uploaded and passed as paths in the body
       else if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
-        imagePaths = req.body.images.filter((path: string) => path && path.startsWith('/uploads/'));
+        imagePaths = req.body.images.filter((p: string) => typeof p === 'string' && (p.startsWith('/api/images/') || p.startsWith('api/images/') || p.startsWith('/uploads/') || p.startsWith('uploads/')))
+          .map((p: string) => p.startsWith('api/images/') ? `/${p}` : (p.startsWith('uploads/') ? `/${p}` : p));
         console.log("📸 Using existing image paths from body for update:", imagePaths);
       }
       
@@ -2173,6 +2207,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // Image retrieval endpoint from GridFS
+  app.get("/api/images/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params as any;
+      if (!id || !isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid image id" });
+      }
+
+      const info = await getGridFSFileInfo(id);
+      if (!info) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+
+      const contentType = info.contentType || info.metadata?.contentType || "application/octet-stream";
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Length", String(info.length));
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.setHeader("Content-Disposition", `inline; filename="${info.filename || "image"}"`);
+
+      const stream = openGridFSDownloadStream(id);
+      stream.on("error", (err) => {
+        console.error("GridFS stream error:", err);
+        if (!res.headersSent) res.status(500).end();
+      });
+      stream.pipe(res);
+    } catch (error) {
+      console.error("Failed to retrieve image:", error);
+      res.status(500).json({ message: "Failed to retrieve image" });
+    }
+  });
 
   // Get all shapefiles (supervisors) or assigned shapefiles (field teams)
   app.get("/api/shapefiles", isAuthenticated, async (req: Request, res: Response) => {

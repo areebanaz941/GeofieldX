@@ -134,6 +134,10 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                       if (typeof imagePath === 'string') {
                         if (imagePath.startsWith('http')) {
                           imageUrl = imagePath;
+                        } else if (imagePath.startsWith('/api/images/')) {
+                          imageUrl = imagePath;
+                        } else if (imagePath.startsWith('api/images/')) {
+                          imageUrl = `/${imagePath}`;
                         } else if (imagePath.startsWith('/uploads/')) {
                           imageUrl = imagePath;
                         } else if (imagePath.startsWith('uploads/')) {
