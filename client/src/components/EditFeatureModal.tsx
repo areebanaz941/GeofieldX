@@ -428,11 +428,19 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
                           {feature!.images!.map((img, idx) => {
                             let url = img as string;
                             if (typeof url === 'string') {
-                              if (!url.startsWith('http') && !url.startsWith('/uploads/')) {
-                                const clean = url.startsWith('/') ? url.slice(1) : url;
-                                url = `/uploads/${clean}`;
+                              if (url.startsWith('http')) {
+                                // keep
+                              } else if (url.startsWith('/api/images/')) {
+                                // keep GridFS URL
+                              } else if (url.startsWith('api/images/')) {
+                                url = `/${url}`;
+                              } else if (url.startsWith('/uploads/')) {
+                                // keep legacy static path
                               } else if (url.startsWith('uploads/')) {
                                 url = `/${url}`;
+                              } else {
+                                const clean = url.startsWith('/') ? url.slice(1) : url;
+                                url = `/uploads/${clean}`;
                               }
                             }
                             return (
