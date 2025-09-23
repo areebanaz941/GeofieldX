@@ -1122,8 +1122,14 @@ const OpenLayersMap = ({
       drawInteractionRef.current = null;
     }
 
-    // Remove existing draw layer
-    if (drawLayerRef.current) {
+    // Remove existing draw layer ONLY when entering a new drawing mode.
+    // This preserves the last drawn geometry (e.g., polygon) until explicitly cleared via clearDrawnPolygon.
+    const willCreateNewDrawLayer =
+      (drawingMode && !!onPolygonCreated) ||
+      (pointSelectionMode && !!onMapClick) ||
+      (lineDrawingMode && !!onLineCreated);
+
+    if (willCreateNewDrawLayer && drawLayerRef.current) {
       mapRef.current.removeLayer(drawLayerRef.current);
       drawLayerRef.current = null;
     }
