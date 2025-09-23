@@ -1339,9 +1339,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Field users can only see boundaries assigned to their team
         const allBoundaries = await storage.getAllBoundaries();
-        boundaries = allBoundaries.filter(
-          boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
-        );
+        boundaries = allBoundaries.filter((boundary: any) => {
+          const assigned = boundary?.assignedTo;
+          if (!assigned || !user.teamId) return false;
+          // Handle both populated doc and raw ObjectId/string
+          const assignedId = typeof assigned === 'object' ? assigned._id?.toString?.() : assigned?.toString?.();
+          return assignedId === user.teamId.toString();
+        });
       }
       
       res.json(boundaries);
