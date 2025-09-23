@@ -1418,18 +1418,22 @@ const OpenLayersMap = ({
               type: 'boundary-label'
             });
             
-            // Find assigned team with robust ObjectId comparison
-            const assignedTeam = allTeams.find(team => {
-              if (!boundary.assignedTo || !team._id) return false;
-              
-              // Convert both IDs to strings for reliable comparison
-              const teamIdStr = String(team._id);
-              const assignedIdStr = String(boundary.assignedTo);
-              
-              return teamIdStr === assignedIdStr;
-            });
-            
-            const teamName = assignedTeam ? assignedTeam.name : "Unassigned";
+            // Determine team name handling both populated and raw ObjectId cases
+            let teamName = "Unassigned";
+            const assigned = (boundary as any).assignedTo;
+            if (assigned) {
+              // If populated document, prefer its name directly
+              if (typeof assigned === 'object') {
+                teamName = assigned.name || assigned.username || 'Unknown Team';
+              } else {
+                // Fallback: find in allTeams by matching IDs as strings
+                const assignedTeam = allTeams.find(team => {
+                  if (!team || !team._id) return false;
+                  return String(team._id) === String(assigned);
+                });
+                teamName = assignedTeam ? assignedTeam.name : 'Unknown Team';
+              }
+            }
             
             labelFeature.set('labelText', `${boundary.name}\nAssigned to: ${teamName}`);
             source.addFeature(labelFeature);
