@@ -1116,16 +1116,33 @@ const OpenLayersMap = ({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Remove existing draw interaction
+    const map = mapRef.current;
+
+    // Always stop any active draw interaction
     if (drawInteractionRef.current) {
-      mapRef.current.removeInteraction(drawInteractionRef.current);
+      map.removeInteraction(drawInteractionRef.current);
       drawInteractionRef.current = null;
     }
 
-    // Remove existing draw layer
-    if (drawLayerRef.current) {
-      mapRef.current.removeLayer(drawLayerRef.current);
-      drawLayerRef.current = null;
+    const anyModeActive = !!(drawingMode || pointSelectionMode || lineDrawingMode);
+
+    // Decide whether to remove the temporary draw layer
+    if (anyModeActive) {
+      // Starting or switching drawing modes — ensure a clean layer
+      if (drawLayerRef.current) {
+        map.removeLayer(drawLayerRef.current);
+        drawLayerRef.current = null;
+      }
+    } else {
+      // No drawing active — keep polygon preview until explicitly cleared,
+      // but remove temporary layers for point/line to avoid leftovers
+      if (drawLayerRef.current) {
+        const existingMode = drawLayerRef.current.get('mode');
+        if (existingMode !== 'polygon') {
+          map.removeLayer(drawLayerRef.current);
+          drawLayerRef.current = null;
+        }
+      }
     }
 
     // Handle polygon drawing
@@ -1143,8 +1160,10 @@ const OpenLayersMap = ({
           })
         })
       });
+      // Mark layer mode so we can decide persistence when modes change
+      drawLayer.set('mode', 'polygon');
 
-      mapRef.current.addLayer(drawLayer);
+      map.addLayer(drawLayer);
       drawLayerRef.current = drawLayer;
 
       drawInteractionRef.current = new Draw({
@@ -1169,14 +1188,14 @@ const OpenLayersMap = ({
           });
         }
 
-        // Remove the draw interaction to prevent further drawing
+        // Remove only the interaction; keep the layer visible until cleared
         if (drawInteractionRef.current) {
-          mapRef.current?.removeInteraction(drawInteractionRef.current);
+          map.removeInteraction(drawInteractionRef.current);
           drawInteractionRef.current = null;
         }
       });
 
-      mapRef.current.addInteraction(drawInteractionRef.current);
+      map.addInteraction(drawInteractionRef.current);
     }
 
     // Handle point selection mode
@@ -1192,8 +1211,9 @@ const OpenLayersMap = ({
           })
         })
       });
+      drawLayer.set('mode', 'point');
 
-      mapRef.current.addLayer(drawLayer);
+      map.addLayer(drawLayer);
       drawLayerRef.current = drawLayer;
 
       drawInteractionRef.current = new Draw({
@@ -1212,16 +1232,16 @@ const OpenLayersMap = ({
 
         // Remove the draw interaction after single point
         if (drawInteractionRef.current) {
-          mapRef.current?.removeInteraction(drawInteractionRef.current);
+          map.removeInteraction(drawInteractionRef.current);
           drawInteractionRef.current = null;
         }
       });
 
-      mapRef.current.addInteraction(drawInteractionRef.current);
+      map.addInteraction(drawInteractionRef.current);
     }
 
     // Handle line drawing mode
-    if (lineDrawingMode && !drawInteractionRef.current && mapRef.current) {
+    if (lineDrawingMode && !drawInteractionRef.current) {
       console.log('🔵 Activating line drawing mode');
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
@@ -1238,8 +1258,9 @@ const OpenLayersMap = ({
           })
         })
       });
+      drawLayer.set('mode', 'line');
 
-      mapRef.current.addLayer(drawLayer);
+      map.addLayer(drawLayer);
       drawLayerRef.current = drawLayer;
 
       drawInteractionRef.current = new Draw({
@@ -1284,12 +1305,12 @@ const OpenLayersMap = ({
 
         // Remove the draw interaction after line completion
         if (drawInteractionRef.current) {
-          mapRef.current?.removeInteraction(drawInteractionRef.current);
+          map.removeInteraction(drawInteractionRef.current);
           drawInteractionRef.current = null;
         }
       });
 
-      mapRef.current.addInteraction(drawInteractionRef.current);
+      map.addInteraction(drawInteractionRef.current);
     }
   }, [drawingMode, pointSelectionMode, lineDrawingMode, onPolygonCreated, onMapClick, onLineCreated]);
 
