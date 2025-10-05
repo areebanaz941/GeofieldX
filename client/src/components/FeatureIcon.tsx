@@ -51,10 +51,10 @@ const TowerIcon = ({ color, size }: { color: string; size: number }) => (
 );
 
 const ManholeIcon = ({ color, size }: { color: string; size: number }) => (
-  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="2" width="96" height="96" stroke="#FF0000" fill="none" strokeWidth="4" strokeLinecap="square"/>
-    <line x1="2" y1="2" x2="98" y2="98" stroke="#FF0000" strokeWidth="4" strokeLinecap="square"/>
-    <line x1="98" y1="2" x2="2" y2="98" stroke="#FF0000" strokeWidth="4" strokeLinecap="square"/>
+  <svg width={size} height={size} viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0.5" y="0.5" width="9" height="9" stroke={color} fill="none" strokeWidth={1} strokeLinecap="square"/>
+    <line x1="0.5" y1="0.5" x2="9.5" y2="9.5" stroke={color} strokeWidth={1} strokeLinecap="square"/>
+    <line x1="9.5" y1="0.5" x2="0.5" y2="9.5" stroke={color} strokeWidth={1} strokeLinecap="square"/>
   </svg>
 );
 
@@ -131,10 +131,10 @@ export const createSVGDataURI = (type: FeatureType, status: FeatureStatus, size:
       </svg>`;
       break;
     case 'Manhole':
-      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#FF0000" stroke-width="4" stroke-linecap="square">
-        <rect x="2" y="2" width="96" height="96" fill="none" />
-        <line x1="2" y1="2" x2="98" y2="98" />
-        <line x1="98" y1="2" x2="2" y2="98" />
+      svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="${color}" stroke-width="1" stroke-linecap="square">
+        <rect x="0.5" y="0.5" width="9" height="9" fill="none" />
+        <line x1="0.5" y1="0.5" x2="9.5" y2="9.5" />
+        <line x1="9.5" y1="0.5" x2="0.5" y2="9.5" />
       </svg>`;
       break;
     case 'FiberCable':
