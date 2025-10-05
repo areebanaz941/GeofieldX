@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
@@ -9,12 +10,13 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { getAllBoundaries, deleteBoundary } from '@/lib/api';
 import FeatureIcon, { FeatureType } from '@/components/FeatureIcon';
-import { Trash2, MapPin, Users, Calendar } from 'lucide-react';
+import { Trash2, MapPin, Users, Calendar, Search } from 'lucide-react';
 
 // Boundary Management Component
 function BoundaryManagement() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: boundaries = [], isLoading } = useQuery({
     queryKey: ['/api/boundaries'],
     queryFn: getAllBoundaries
@@ -44,6 +46,39 @@ function BoundaryManagement() {
     }
   };
 
+  // Derived, filtered and sorted boundaries (latest first)
+  const displayedBoundaries = (boundaries as any[])
+    .filter((b) => {
+      if (!searchQuery) return true;
+      const q = String(searchQuery).toLowerCase();
+      const name = String(b?.name ?? '').toLowerCase();
+      const desc = String(b?.description ?? '').toLowerCase();
+      const status = String(b?.status ?? '').toLowerCase();
+      const assignedName = typeof b?.assignedTo === 'object'
+        ? String(b?.assignedTo?.name || b?.assignedTo?.username || '').toLowerCase()
+        : String(b?.assignedTo ?? '').toLowerCase();
+      return (
+        name.includes(q) ||
+        desc.includes(q) ||
+        status.includes(q) ||
+        assignedName.includes(q)
+      );
+    })
+    .sort((a, b) => {
+      const getTime = (x: any) => {
+        const created = x?.createdAt ? new Date(x.createdAt).getTime() : NaN;
+        if (!Number.isNaN(created)) return created;
+        try {
+          const idStr = x?._id?.toString?.() ?? x?._id;
+          if (typeof idStr === 'string' && idStr.length >= 8) {
+            return parseInt(idStr.slice(0, 8), 16) * 1000; // Fallback from ObjectId
+          }
+        } catch {}
+        return 0;
+      };
+      return getTime(b) - getTime(a);
+    });
+
   if (isLoading) {
     return (
       <Card>
@@ -68,6 +103,21 @@ function BoundaryManagement() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Search */}
+        {boundaries.length > 0 && (
+          <div className="mb-4 max-w-sm">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search boundaries..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        )}
+
         {boundaries.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -76,7 +126,11 @@ function BoundaryManagement() {
           </div>
         ) : (
           <div className="space-y-4">
-            {boundaries.map((boundary: any) => (
+            {displayedBoundaries.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No boundaries match your search.</p>
+              </div>
+            ) : displayedBoundaries.map((boundary: any) => (
               <div key={boundary._id} className="border rounded-lg p-4 hover:bg-gray-50">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -95,7 +149,11 @@ function BoundaryManagement() {
                       {boundary.assignedTo && (
                         <div className="flex items-center gap-1">
                           <Users className="h-3 w-3" />
-                          <span>Assigned to: {boundary.assignedTo.name || boundary.assignedTo.username}</span>
+                          <span>
+                            Assigned to: {typeof boundary.assignedTo === 'object'
+                              ? (boundary.assignedTo.name || boundary.assignedTo.username)
+                              : boundary.assignedTo}
+                          </span>
                         </div>
                       )}
                       {boundary.createdAt && (
