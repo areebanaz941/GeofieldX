@@ -298,6 +298,30 @@ export async function deleteFeature(featureId: string) {
   return await res.json();
 }
 
+// Delete a single image attached to a feature
+export async function deleteFeatureImage(featureId: string, image: { imageId?: string; imagePath?: string }) {
+  // Use fetch to send a JSON body with DELETE (some servers require this)
+  const authToken = localStorage.getItem('auth_token');
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+  const res = await fetch(`/api/features/${featureId}/images`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers,
+    body: JSON.stringify(image)
+  });
+  if (!res.ok) {
+    throw new Error('Failed to delete feature image');
+  }
+  return await res.json();
+}
+
+// Delete a raw image by GridFS id and purge references
+export async function deleteImageById(imageId: string) {
+  const res = await apiRequest('DELETE', `/api/images/${imageId}`);
+  return await res.json();
+}
+
 export async function assignFeatureToTeam(featureId: string, teamId: string) {
   const res = await apiRequest('PUT', `/api/features/${featureId}/assign`, { teamId });
   return await res.json();
