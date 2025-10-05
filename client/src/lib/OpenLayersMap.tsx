@@ -433,6 +433,11 @@ const OpenLayersMap = ({
   const selectInteractionRef = useRef<Select | null>(null);
   const modifyInteractionRef = useRef<Modify | null>(null);
 
+  // Stable callback refs to prevent effect churn during drawing
+  const onPolygonCreatedRef = useRef<MapProps['onPolygonCreated'] | null>(null);
+  const onMapClickRef = useRef<MapProps['onMapClick'] | null>(null);
+  const onLineCreatedRef = useRef<MapProps['onLineCreated'] | null>(null);
+
   // OpenLayers Geolocation references
   const geolocationRef = useRef<Geolocation | null>(null);
   const locationLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
@@ -948,7 +953,7 @@ const OpenLayersMap = ({
     window.olMap = map;
 
     // Add click interaction for legacy selection mode only
-    if (onMapClick) {
+    if (onMapClickRef.current) {
       map.on('click', (event) => {
         // Only handle legacy selection mode, not the new drawing modes
         if (!drawingMode && !pointSelectionMode && !lineDrawingMode && selectionMode) {
@@ -968,7 +973,8 @@ const OpenLayersMap = ({
             selectedLocationSourceRef.current.addFeature(marker);
           }
           
-          onMapClick({ lat, lng });
+          const handler = onMapClickRef.current;
+          if (handler) handler({ lat, lng });
         }
       });
     }
@@ -1089,6 +1095,19 @@ const OpenLayersMap = ({
     };
   }, []);
 
+  // Keep callback refs updated without retriggering drawing effects
+  useEffect(() => {
+    onPolygonCreatedRef.current = onPolygonCreated || null;
+  }, [onPolygonCreated]);
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick || null;
+  }, [onMapClick]);
+
+  useEffect(() => {
+    onLineCreatedRef.current = onLineCreated || null;
+  }, [onLineCreated]);
+
   // Zoom change listener for shapefile optimization - DISABLED to prevent performance issues
   useEffect(() => {
     // DISABLED: This was causing excessive re-renders and hanging
@@ -1146,7 +1165,7 @@ const OpenLayersMap = ({
     }
 
     // Handle polygon drawing
-    if (drawingMode && onPolygonCreated) {
+    if (drawingMode && onPolygonCreatedRef.current) {
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
         source: source,
@@ -1180,9 +1199,10 @@ const OpenLayersMap = ({
           ring.map(coord => toLonLat(coord))
         );
 
-        if (onPolygonCreated) {
+        const handler = onPolygonCreatedRef.current;
+        if (handler) {
           console.log('Polygon created with coordinates:', lonLatCoordinates);
-          onPolygonCreated({
+          handler({
             name: '',
             coordinates: lonLatCoordinates
           });
@@ -1199,7 +1219,7 @@ const OpenLayersMap = ({
     }
 
     // Handle point selection mode
-    if (pointSelectionMode && onMapClick) {
+    if (pointSelectionMode && onMapClickRef.current) {
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
         source: source,
@@ -1226,9 +1246,8 @@ const OpenLayersMap = ({
         const coordinates = geometry.getCoordinates();
         const [lng, lat] = toLonLat(coordinates);
 
-        if (onMapClick) {
-          onMapClick({ lat, lng });
-        }
+        const handler = onMapClickRef.current;
+        if (handler) handler({ lat, lng });
 
         // Remove the draw interaction after single point
         if (drawInteractionRef.current) {
@@ -1296,9 +1315,10 @@ const OpenLayersMap = ({
         console.log('🔵 Converted coordinates:', lonLatCoordinates);
 
         // Pass the line coordinates to the completion handler
-        if (onLineCreated) {
+        const handler = onLineCreatedRef.current;
+        if (handler) {
           console.log('🔵 Calling onLineCreated handler');
-          onLineCreated({ coordinates: lonLatCoordinates });
+          handler({ coordinates: lonLatCoordinates });
         } else {
           console.warn('🔵 No onLineCreated handler available');
         }
@@ -1312,7 +1332,7 @@ const OpenLayersMap = ({
 
       map.addInteraction(drawInteractionRef.current);
     }
-  }, [drawingMode, pointSelectionMode, lineDrawingMode, onPolygonCreated, onMapClick, onLineCreated]);
+  }, [drawingMode, pointSelectionMode, lineDrawingMode]);
 
   // Handle clearing drawn polygon
   useEffect(() => {
