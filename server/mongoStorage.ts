@@ -1,4 +1,7 @@
 import { Types } from "mongoose";
+import path from "path";
+import fs from "fs";
+import { deleteGridFSFile } from "./gridfs";
 import { IStorage } from "./storage";
 import {
   User, Team, Task, Feature, Boundary, TaskUpdate, TaskEvidence, TaskSubmission, Shapefile,
@@ -412,8 +415,50 @@ export class MongoStorage implements IStorage {
 
   async deleteFeature(id: string): Promise<boolean> {
     try {
-      const result = await Feature.deleteOne({ _id: new Types.ObjectId(id) });
-      return result.deletedCount === 1;
+      // Load feature first to clean up associated images
+      const existing = await Feature.findById(id);
+      if (!existing) return false;
+
+      // Attempt to delete associated images (GridFS or local uploads)
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      const images: unknown = (existing as any).images;
+      if (Array.isArray(images)) {
+        for (const imagePath of images) {
+          if (typeof imagePath !== "string") continue;
+
+          // Handle GridFS-backed images: /api/images/<ObjectId>
+          const gridfsMatch = imagePath.replace(/^\/+/, "/").match(/^\/api\/images\/([a-fA-F0-9]{24})$/);
+          if (gridfsMatch) {
+            const imageId = gridfsMatch[1];
+            try {
+              await deleteGridFSFile(imageId);
+            } catch (e) {
+              // Ignore failures to keep deletion resilient
+              console.warn("Failed to delete GridFS image", imageId, e);
+            }
+            continue;
+          }
+
+          // Handle legacy local-uploaded images: /uploads/<filename>
+          const normalized = imagePath.replace(/^\/+/, "");
+          if (normalized.startsWith("uploads/")) {
+            const absolute = path.resolve(process.cwd(), normalized);
+            // Ensure we only delete within uploads directory
+            if (absolute.startsWith(uploadsDir)) {
+              try {
+                if (fs.existsSync(absolute)) {
+                  await fs.promises.unlink(absolute);
+                }
+              } catch (e) {
+                console.warn("Failed to delete local upload image", absolute, e);
+              }
+            }
+          }
+        }
+      }
+
+      const result = await Feature.findByIdAndDelete(id);
+      return result !== null;
     } catch (error) {
       console.error("Error deleting feature:", error);
       return false;

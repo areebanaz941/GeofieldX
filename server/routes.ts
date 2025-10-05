@@ -11,7 +11,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { uploadBufferToGridFS, openGridFSDownloadStream, getGridFSFileInfo } from "./gridfs";
+import { uploadBufferToGridFS, openGridFSDownloadStream, getGridFSFileInfo, deleteGridFSFile } from "./gridfs";
 import {
   insertUserSchema,
   insertTaskSchema,
@@ -1313,6 +1313,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Remove a specific image from a feature and delete the backing file
+  app.delete("/api/features/:id/images", isAuthenticated, validateObjectId("id"), async (req: Request, res: Response) => {
+    try {
+      const featureId = req.params.id;
+      const { imagePath, imageUrl, imageId } = (req.body || {}) as { imagePath?: string; imageUrl?: string; imageId?: string };
+      const targetPath = imagePath || imageUrl || (imageId ? `/api/images/${imageId}` : undefined);
+
+      if (!targetPath || typeof targetPath !== 'string') {
+        return res.status(400).json({ message: "imagePath or imageId is required" });
+      }
+
+      const feature = await storage.getFeature(featureId);
+      if (!feature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+
+      // Permission checks aligned with update rules
+      const user = req.user as any;
+      if (user.role === "Field") {
+        let canEdit = false;
+        if (feature.teamId?.toString() === user.teamId?.toString()) {
+          canEdit = true;
+        }
+        if (!canEdit && feature.boundaryId) {
+          const boundary = await storage.getBoundary(feature.boundaryId.toString());
+          if (boundary && boundary.assignedTo?.toString() === user.teamId?.toString()) {
+            canEdit = true;
+          }
+        }
+        if (!canEdit) {
+          return res.status(403).json({ message: "You can only update features created by your team or within your assigned boundaries" });
+        }
+      }
+
+      const currentImages = Array.isArray((feature as any).images) ? ([...(feature as any).images] as string[]) : [];
+      const normalizedTarget = targetPath.startsWith('/') ? targetPath : `/${targetPath}`;
+      const altVariant = normalizedTarget.startsWith('/api/images/') ? normalizedTarget.slice(1) : normalizedTarget.replace(/^\/+/, '');
+      const remaining = currentImages.filter((p) => p !== normalizedTarget && p !== altVariant);
+
+      if (remaining.length === currentImages.length) {
+        return res.status(404).json({ message: "Image not found on this feature" });
+      }
+
+      // Delete backing file if GridFS or legacy uploads
+      const gridfsMatch = normalizedTarget.match(/^\/api\/images\/([a-fA-F0-9]{24})$/);
+      if (gridfsMatch) {
+        const id = gridfsMatch[1];
+        try { await deleteGridFSFile(id); } catch (e) { console.warn("GridFS delete failed", id, e); }
+      } else if (normalizedTarget.startsWith('/uploads/')) {
+        try {
+          const p = await import('path');
+          const fs = await import('fs');
+          const absolute = p.resolve(process.cwd(), normalizedTarget.replace(/^\/+/, ''));
+          const uploadsDir = p.join(process.cwd(), 'uploads');
+          if (absolute.startsWith(uploadsDir) && fs.existsSync(absolute)) {
+            await fs.promises.unlink(absolute);
+          }
+        } catch (e) {
+          console.warn("Local upload delete failed", normalizedTarget, e);
+        }
+      }
+
+      const updated = await storage.updateFeature(featureId, { images: remaining });
+      return res.json(updated);
+    } catch (error) {
+      console.error("Delete feature image error:", error);
+      return res.status(500).json({ message: "Failed to delete feature image" });
+    }
+  });
+
   // Boundary routes
   app.post("/api/boundaries", isSupervisor, async (req, res) => {
     try {
@@ -2240,6 +2310,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to retrieve image:", error);
       res.status(500).json({ message: "Failed to retrieve image" });
+    }
+  });
+
+  // Delete a single image from GridFS and remove reference from any feature using it
+  app.delete("/api/images/:id", isAuthenticated, validateObjectId("id"), async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params as any;
+      await deleteGridFSFile(id);
+
+      const { Feature } = await import('@shared/schema');
+      const variants = [
+        `/api/images/${id}`,
+        `api/images/${id}`,
+      ];
+      await Feature.updateMany(
+        { images: { $in: variants } },
+        { $pull: { images: { $in: variants } } }
+      );
+
+      return res.json({ message: "Image deleted successfully" });
+    } catch (error) {
+      console.error("Failed to delete image:", error);
+      return res.status(500).json({ message: "Failed to delete image" });
     }
   });
 

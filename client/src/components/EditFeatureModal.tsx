@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/hooks/use-toast";
 import { featureStateEnum, featureStatusEnum, maintenanceEnum, IFeature } from "@shared/schema";
+import { deleteFeatureImage } from "@/lib/api";
 
 // Define form schema with dynamic specific type options
 const formSchema = z.object({
@@ -444,7 +445,32 @@ export function EditFeatureModal({ open, onClose, feature }: EditFeatureModalPro
                               }
                             }
                             return (
-                              <img key={idx} src={url} alt={`image-${idx}`} className="w-full h-20 object-cover rounded border" />
+                              <div key={idx} className="relative group">
+                                <img src={url} alt={`image-${idx}`} className="w-full h-20 object-cover rounded border" />
+                                <button
+                                  type="button"
+                                  className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      const match = String(img).replace(/^\/+/, '/').match(/^\/api\/images\/([a-fA-F0-9]{24})$/);
+                                      if (match && feature?._id) {
+                                        await deleteFeatureImage(feature._id.toString(), { imageId: match[1] });
+                                      } else if (feature?._id) {
+                                        await deleteFeatureImage(feature._id.toString(), { imagePath: String(img) });
+                                      }
+                                      // Update form and local state optimistically
+                                      const remaining = (feature?.images || []).filter(p => p !== img);
+                                      form.setValue('images', remaining);
+                                      toast({ title: 'Image removed', description: 'The image has been deleted.' });
+                                    } catch (err) {
+                                      toast({ title: 'Failed to delete image', description: 'Please try again.', variant: 'destructive' });
+                                    }
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             );
                           })}
                         </div>

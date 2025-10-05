@@ -9,7 +9,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { getFeature, deleteFeature } from "@/lib/api";
+import { getFeature, deleteFeature, deleteFeatureImage } from "@/lib/api";
 
 interface FeatureDetailsModalProps {
   open: boolean;
@@ -76,6 +76,24 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
       await deleteFeatureMutation.mutateAsync(displayFeature._id.toString());
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteImage = async (imgPath: string) => {
+    if (!displayFeature?._id) return;
+    try {
+      // Try to extract GridFS id if applicable for cleaner deletion
+      const match = imgPath.replace(/^\/+/, '/').match(/^\/api\/images\/([a-fA-F0-9]{24})$/);
+      if (match) {
+        await deleteFeatureImage(displayFeature._id.toString(), { imageId: match[1] });
+      } else {
+        await deleteFeatureImage(displayFeature._id.toString(), { imagePath: imgPath });
+      }
+      await queryClient.invalidateQueries({ queryKey: ['/api/features'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/features', displayFeature._id] });
+      toast({ title: 'Image removed', description: 'The image has been deleted.' });
+    } catch (e) {
+      toast({ title: 'Failed to delete image', description: 'Please try again.', variant: 'destructive' });
     }
   };
 
@@ -198,6 +216,15 @@ export function FeatureDetailsModal({ open, onClose, feature, onEdit }: FeatureD
                               }
                             }}
                           />
+                          {/* Delete image button */}
+                          <button
+                            type="button"
+                            className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteImage(String(imagePath)); }}
+                            title="Delete image"
+                          >
+                            Delete
+                          </button>
                           <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity">
                             Click to enlarge
                           </div>
