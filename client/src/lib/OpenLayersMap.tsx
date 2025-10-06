@@ -28,16 +28,161 @@ import parcelIcon from '@assets/land-removebg-preview_1750282584509.png';
 
 // Map various status names to our standardized status types
 const mapToStandardStatus = (status: string): string => {
-  const normalizedStatus = status.toLowerCase();
-  if (normalizedStatus === 'complete' || normalizedStatus === 'completed' || normalizedStatus === 'review_accepted') {
+  if (!status) return 'unassigned';
+  // Normalize by removing spaces/underscores/hyphens and lowercasing
+  const normalized = status
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  // Completed states
+  if (
+    normalized === 'complete' ||
+    normalized === 'completed' ||
+    normalized === 'reviewaccepted' ||
+    normalized === 'review_accepted'
+  ) {
     return 'complete';
-  } else if (normalizedStatus === 'assigned' || normalizedStatus === 'in progress' || normalizedStatus === 'submit-review' || normalizedStatus === 'review_inprogress' || normalizedStatus === 'inprogress') {
+  }
+
+  // Assigned/active/in progress states
+  if (
+    normalized === 'assigned' ||
+    normalized === 'inprogress' ||
+    normalized === 'submitreview' ||
+    normalized === 'reviewinprogress' ||
+    normalized === 'active'
+  ) {
     return 'assigned';
-  } else if (normalizedStatus === 'in-complete' || normalizedStatus === 'review_reject' || normalizedStatus === 'delayed') {
+  }
+
+  // Delayed / incomplete states
+  if (
+    normalized === 'incomplete' || // generic
+    normalized === 'incompleted' || // alternative typo form
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'incompleted' ||
+    normalized === 'reviewreject' ||
+    normalized === 'delayed'
+  ) {
     return 'delayed';
-  } else {
+  }
+
+  // New/unassigned states map to unassigned
+  if (normalized === 'new' || normalized === 'unassigned') {
     return 'unassigned';
   }
+
+  return 'unassigned';
+};
+
+// Convert hex color (#RRGGBB) to rgba string with given alpha
+const hexToRgba = (hex: string, alpha: number): string => {
+  const cleaned = hex.replace('#', '');
+  const bigint = parseInt(cleaned.length === 3
+    ? cleaned.split('').map(c => c + c).join('')
+    : cleaned, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
 // Define status colors matching our SVG system (kept for backward compatibility)
@@ -492,14 +637,15 @@ const OpenLayersMap = ({
 
         const isHovered = !!feature.get('isHovered');
         const isSelected = !!feature.get('isSelected');
-        const hoverStrokeColor = isSelected ? '#2563eb' : '#f59e0b'; // blue when selected, amber on hover
-        const hoverFillColor = isSelected ? 'rgba(37,99,235,0.15)' : 'rgba(245,158,11,0.15)';
+        const standardStatus = mapToStandardStatus(featureStatus);
+        const statusColor = getStatusColor(standardStatus);
+        const hoverStrokeColor = isSelected ? statusColor : '#f59e0b'; // status color when selected, amber on hover
+        const hoverFillColor = isSelected ? hexToRgba(statusColor, 0.15) : 'rgba(245,158,11,0.15)';
         
         if (geometryType === 'LineString' || featureType === 'FiberCable') {
           // For line features (fiber cables), use stroke styling with status-based colors
           const lineWidth = Math.max(2, Math.min(6, zoom / 3));
-          const standardStatus = mapToStandardStatus(featureStatus);
-          const statusColor = getStatusColor(standardStatus);
+          // Use status-based color for base styling
           const baseStyle = new Style({
             stroke: new Stroke({
               color: statusColor,
@@ -649,6 +795,8 @@ const OpenLayersMap = ({
       updateWhileInteracting: true,
       style: (feature) => {
         const featureType = feature.get('type');
+        const boundaryData = feature.get('boundaryData');
+        const boundaryStatusColor = getStatusColor(mapToStandardStatus(boundaryData?.status || 'Unassigned'));
         
         if (featureType === 'boundary-label') {
           const labelText = feature.get('labelText');
@@ -676,7 +824,7 @@ const OpenLayersMap = ({
         });
         if (isHovered || isSelected) {
           const highlight = new Style({
-            stroke: new Stroke({ color: isSelected ? '#2563eb' : '#f59e0b', width: 5 })
+            stroke: new Stroke({ color: isSelected ? boundaryStatusColor : '#f59e0b', width: 5 })
           });
           return [highlight, base];
         }
@@ -1991,9 +2139,14 @@ const OpenLayersMap = ({
       });
 
       selectInteractionRef.current.on('select', (event) => {
+        // Reflect selection state on features so style function can render status-colored highlight
+        event.deselected?.forEach((f: any) => { f.set('isSelected', false); f.changed(); });
         const selected = event.selected;
         if (selected.length > 0) {
           const feature = selected[0];
+          feature.set('isSelected', true);
+          feature.changed();
+
           const featureData = feature.get('featureData');
           const teamData = feature.get('teamData');
           const boundaryData = feature.get('boundaryData');
