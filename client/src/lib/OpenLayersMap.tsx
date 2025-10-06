@@ -432,6 +432,8 @@ const OpenLayersMap = ({
   const drawLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const selectInteractionRef = useRef<Select | null>(null);
   const modifyInteractionRef = useRef<Modify | null>(null);
+  const hoveredFeatureRef = useRef<Feature | null>(null);
+  const selectedFeatureRef = useRef<Feature | null>(null);
 
   // Stable callback refs to prevent effect churn during drawing
   const onPolygonCreatedRef = useRef<MapProps['onPolygonCreated'] | null>(null);
@@ -487,14 +489,18 @@ const OpenLayersMap = ({
         // Handle different geometry types
         const geometry = feature.getGeometry();
         const geometryType = geometry?.getType();
+
+        const isHovered = !!feature.get('isHovered');
+        const isSelected = !!feature.get('isSelected');
+        const hoverStrokeColor = isSelected ? '#2563eb' : '#f59e0b'; // blue when selected, amber on hover
+        const hoverFillColor = isSelected ? 'rgba(37,99,235,0.15)' : 'rgba(245,158,11,0.15)';
         
         if (geometryType === 'LineString' || featureType === 'FiberCable') {
           // For line features (fiber cables), use stroke styling with status-based colors
           const lineWidth = Math.max(2, Math.min(6, zoom / 3));
           const standardStatus = mapToStandardStatus(featureStatus);
           const statusColor = getStatusColor(standardStatus);
-          
-          return new Style({
+          const baseStyle = new Style({
             stroke: new Stroke({
               color: statusColor,
               width: lineWidth
@@ -507,6 +513,13 @@ const OpenLayersMap = ({
               font: `${Math.max(10, Math.min(14, zoom))}px Arial`
             })
           });
+          if (isHovered || isSelected) {
+            const highlight = new Style({
+              stroke: new Stroke({ color: hoverStrokeColor, width: lineWidth + 2 })
+            });
+            return [highlight, baseStyle];
+          }
+          return baseStyle;
         } else if (geometryType === 'Polygon' || featureType === 'Parcel') {
           // For polygon features (parcels), use blue fill and stroke with team assignment
           const strokeWidth = Math.max(1, Math.min(3, zoom / 5));
@@ -545,14 +558,12 @@ const OpenLayersMap = ({
             labelText = `${labelText}\nAssigned to: ${teamName}`;
           }
           
-          return new Style({
-            fill: new Fill({
-              color: fillColor
-            }),
+          const baseStyle = new Style({
+            fill: new Fill({ color: fillColor }),
             stroke: new Stroke({
               color: strokeColor,
               width: strokeWidth,
-              lineDash: (isParcel && !featureData?.color) ? [8, 8] : undefined // Dashed only for boundaries without custom colors
+              lineDash: (isParcel && !featureData?.color) ? [8, 8] : undefined
             }),
             text: new Text({
               text: labelText,
@@ -563,12 +574,20 @@ const OpenLayersMap = ({
               textBaseline: 'middle'
             })
           });
+          if (isHovered || isSelected) {
+            const highlight = new Style({
+              stroke: new Stroke({ color: hoverStrokeColor, width: strokeWidth + 2 }),
+              fill: new Fill({ color: hoverFillColor })
+            });
+            return [highlight, baseStyle];
+          }
+          return baseStyle;
         } else {
           // For point features (towers, manholes), use SVG icons with status-based colors
-          return new Style({
+          const base = new Style({
             image: new Icon({
               src: svgIconSrc,
-              scale: 1,
+              scale: isHovered || isSelected ? 1.15 : 1,
               anchor: [0.5, 0.5],
               anchorXUnits: 'fraction',
               anchorYUnits: 'fraction'
@@ -582,6 +601,17 @@ const OpenLayersMap = ({
               textAlign: 'center'
             })
           });
+          if (isHovered || isSelected) {
+            const ring = new Style({
+              image: new Circle({
+                radius: Math.max(12, iconSize / 1.5),
+                fill: new Fill({ color: hoverFillColor }),
+                stroke: new Stroke({ color: hoverStrokeColor, width: 2 })
+              })
+            });
+            return [ring, base];
+          }
+          return base;
         }
       },
       // Ensure features render above shapefiles and boundaries for click priority
@@ -638,16 +668,19 @@ const OpenLayersMap = ({
           });
         }
         
-        return new Style({
-          fill: new Fill({
-            color: 'rgba(0, 0, 0, 0)' // Completely transparent fill (hollow)
-          }),
-          stroke: new Stroke({
-            color: '#009688',
-            width: 4,
-            lineDash: [8, 8] // More prominent dashed line for better visibility
-          })
+        const isHovered = !!feature.get('isHovered');
+        const isSelected = !!feature.get('isSelected');
+        const base = new Style({
+          fill: new Fill({ color: 'rgba(0, 0, 0, 0)' }),
+          stroke: new Stroke({ color: '#009688', width: 4, lineDash: [8, 8] })
         });
+        if (isHovered || isSelected) {
+          const highlight = new Style({
+            stroke: new Stroke({ color: isSelected ? '#2563eb' : '#f59e0b', width: 5 })
+          });
+          return [highlight, base];
+        }
+        return base;
       },
       // Render boundaries below point features to avoid blocking clicks
       zIndex: 400
@@ -979,6 +1012,85 @@ const OpenLayersMap = ({
       });
     }
 
+    // Hover highlight handler for all map features
+    const setHoveredFeature = (feature: Feature | null) => {
+      if (hoveredFeatureRef.current === feature) return;
+      // Clear previous
+      if (hoveredFeatureRef.current) {
+        hoveredFeatureRef.current.set('isHovered', false);
+        hoveredFeatureRef.current.changed();
+      }
+      hoveredFeatureRef.current = feature;
+      if (feature) {
+        feature.set('isHovered', true);
+        feature.changed();
+      }
+    };
+
+    const pickTopFeature = (pixel: number[]) => {
+      let best: { feature: Feature; layer: any; score: number } | null = null;
+      const preferPointScore = (geomType?: string) => geomType === 'Point' ? 3 : geomType === 'LineString' ? 2 : 1;
+      map.forEachFeatureAtPixel(pixel, (f: any, layer: any) => {
+        const geomType = f.getGeometry()?.getType();
+        let layerScore = 0;
+        if (layer === featuresLayerRef.current) layerScore = 100;
+        else if (layer === teamsLayerRef.current || layer === tasksLayerRef.current) layerScore = 90;
+        else if (layer === boundariesLayerRef.current) layerScore = 50;
+        else if (layer === shapefilesLayerRef.current) layerScore = 10;
+        const score = layerScore + preferPointScore(geomType);
+        if (!best || score > best.score) {
+          best = { feature: f, layer, score };
+        }
+        return false; // continue searching
+      }, { hitTolerance: 6 });
+      return best?.feature || null;
+    };
+
+    const handlePointerMove = (evt: any) => {
+      if (drawingMode || pointSelectionMode || lineDrawingMode) {
+        setHoveredFeature(null);
+        return;
+      }
+      const feature = pickTopFeature(evt.pixel);
+      setHoveredFeature(feature);
+      map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+    };
+
+    map.on('pointermove', handlePointerMove);
+
+    // Click selection with priority: prefer towers/points over boundaries
+    const setSelectedFeature = (feature: Feature | null) => {
+      if (selectedFeatureRef.current === feature) return;
+      if (selectedFeatureRef.current) {
+        selectedFeatureRef.current.set('isSelected', false);
+        selectedFeatureRef.current.changed();
+      }
+      selectedFeatureRef.current = feature;
+      if (feature) {
+        feature.set('isSelected', true);
+        feature.changed();
+      }
+    };
+
+    const handlePrimaryClick = (evt: any) => {
+      if (drawingMode || pointSelectionMode || lineDrawingMode || selectionMode) return; // handled elsewhere
+      const feature = pickTopFeature(evt.pixel);
+      setSelectedFeature(feature);
+      if (!feature) return;
+      const featureData = feature.get('featureData');
+      const teamData = feature.get('teamData');
+      const boundaryData = feature.get('boundaryData');
+      const taskData = feature.get('taskData');
+      const shapefileData = feature.get('shapefileData');
+      if (featureData && onFeatureClick) onFeatureClick(featureData);
+      else if (teamData && onTeamClick) onTeamClick(teamData);
+      else if (boundaryData && onBoundaryClick) onBoundaryClick(boundaryData);
+      else if (taskData && onShapefileClick) onShapefileClick?.(taskData);
+      else if (shapefileData && onShapefileClick) onShapefileClick(shapefileData);
+    };
+
+    map.on('singleclick', handlePrimaryClick);
+
     // Store map reference for later use
     mapRef.current = map;
 
@@ -1077,6 +1189,10 @@ const OpenLayersMap = ({
       if (locationControlRef.current && mapRef.current) {
         mapRef.current.removeControl(locationControlRef.current);
         locationControlRef.current = null;
+      }
+      if (mapRef.current) {
+        mapRef.current.un('pointermove', handlePointerMove);
+        mapRef.current.un('singleclick', handlePrimaryClick);
       }
       
       // Clean up zoom control styles
@@ -1511,7 +1627,10 @@ const OpenLayersMap = ({
     if (!target) return;
 
     const features = new Collection<Feature>([target]);
-    const modify = new Modify({ features });
+    const modify = new Modify({ 
+      features,
+      pixelTolerance: 5 // tighten so point clicks are less likely to grab vertices
+    });
 
     modify.on('modifyend', () => {
       try {
