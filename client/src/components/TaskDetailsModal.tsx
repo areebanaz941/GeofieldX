@@ -27,6 +27,7 @@ import {
   updateTaskStatus, 
   getTaskEvidence, 
   addTaskEvidence,
+  deleteTaskEvidence,
   getAllTeams,
   getFieldUsers,
   getAllBoundaries
@@ -49,7 +50,17 @@ export default function TaskDetailsModal({
 }: TaskDetailsModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [status, setStatus] = useState(task.status);
+  // Normalize any legacy labels to enum values for the control
+  const normalizeInitialStatus = (s: string) => {
+    const compact = s.replace(/\s+/g, '').replace(/[_-]+/g, '').toLowerCase();
+    switch (compact) {
+      case 'inprogress': return 'InProgress';
+      case 'incomplete':
+      case 'incompleted': return 'In-Completed';
+      default: return s;
+    }
+  };
+  const [status, setStatus] = useState(normalizeInitialStatus(task.status));
   const [comment, setComment] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -186,6 +197,18 @@ export default function TaskDetailsModal({
         description: "Failed to upload image",
         variant: "destructive",
       });
+    },
+  });
+
+  // Delete evidence mutation
+  const deleteEvidenceMutation = useMutation({
+    mutationFn: (evidenceId: string) => deleteTaskEvidence(task._id.toString(), evidenceId),
+    onSuccess: () => {
+      toast({ title: "Evidence deleted", description: "Image removed successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", task._id, "evidence"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete image", variant: "destructive" });
     },
   });
 
@@ -413,11 +436,12 @@ export default function TaskDetailsModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Ensure values match backend enums while labels are friendly */}
                     <SelectItem value="Unassigned">Unassigned</SelectItem>
                     <SelectItem value="Assigned">Assigned</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="InProgress">In Progress</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="In-Complete">Incomplete</SelectItem>
+                    <SelectItem value="In-Completed">Incomplete</SelectItem>
                     <SelectItem value="Submit-Review">Submit for Review</SelectItem>
                   </SelectContent>
                 </Select>
@@ -428,8 +452,8 @@ export default function TaskDetailsModal({
                 
                 {evidence.length > 0 && (
                   <div className="grid grid-cols-2 gap-2 mb-3">
-                    {evidence.map((item) => (
-                      <div key={item.id} className="relative group">
+                    {evidence.map((item: any) => (
+                      <div key={item._id || item.id} className="relative group">
                         <img
                           src={item.imageUrl}
                           alt="Evidence"
@@ -443,6 +467,16 @@ export default function TaskDetailsModal({
                             onClick={() => window.open(item.imageUrl, "_blank")}
                           >
                             <i className="ri-zoom-in-line"></i>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white h-8 w-8 ml-2"
+                            onClick={() => deleteEvidenceMutation.mutate(item._id || item.id)}
+                            disabled={deleteEvidenceMutation.isPending}
+                            title="Delete image"
+                          >
+                            <i className="ri-delete-bin-6-line"></i>
                           </Button>
                         </div>
                       </div>

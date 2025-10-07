@@ -193,6 +193,12 @@ export async function getTaskEvidence(taskId: string) {
   return await res.json();
 }
 
+// Delete a specific evidence item from a task
+export async function deleteTaskEvidence(taskId: string, evidenceId: string) {
+  const res = await apiRequest('DELETE', `/api/tasks/${taskId}/evidence/${evidenceId}`);
+  return await res.json();
+}
+
 // Feature API
 export async function createFeature(featureData: any) {
   // If there are image files, use FormData to upload them
