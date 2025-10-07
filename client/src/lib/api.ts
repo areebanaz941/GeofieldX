@@ -136,7 +136,9 @@ export async function getMyTasks() {
 }
 
 export async function updateTaskStatus(taskId: string, status: string) {
-  const res = await apiRequest('PUT', `/api/tasks/${taskId}/status`, { status });
+  // Normalize UI labels to backend enums
+  const canonical = normalizeTaskStatus(status);
+  const res = await apiRequest('PUT', `/api/tasks/${taskId}/status`, { status: canonical });
   return await res.json();
 }
 
@@ -191,6 +193,29 @@ export async function addTaskEvidence(taskId: string, formData: FormData) {
 export async function getTaskEvidence(taskId: string) {
   const res = await apiRequest('GET', `/api/tasks/${taskId}/evidence`);
   return await res.json();
+}
+
+// Delete Task Evidence
+export async function deleteTaskEvidence(taskId: string, evidenceId: string) {
+  const res = await apiRequest('DELETE', `/api/tasks/${taskId}/evidence/${evidenceId}`);
+  return await res.json();
+}
+
+// Helper: map UI labels to canonical enum values used by backend
+export function normalizeTaskStatus(status: string): string {
+  const map: Record<string, string> = {
+    'In Progress': 'InProgress',
+    'Incomplete': 'In-Completed',
+    'In-Complete': 'In-Completed',
+    'Submit for Review': 'Submit-Review',
+    'Submit-Review': 'Submit-Review',
+    'Unassigned': 'Unassigned',
+    'Assigned': 'Assigned',
+    'Completed': 'Completed',
+    'Active': 'Active',
+    'New': 'New',
+  };
+  return map[status] || status;
 }
 
 // Feature API

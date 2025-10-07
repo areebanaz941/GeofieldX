@@ -20,6 +20,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
           text: "text-blue-700",
         };
       case "In Progress":
+      case "InProgress":
         return {
           bg: "bg-purple-100",
           text: "text-purple-700",
@@ -30,6 +31,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
           text: "text-green-700",
         };
       case "In-Complete":
+      case "In-Completed":
       case "Incomplete":
         return {
           bg: "bg-yellow-100",

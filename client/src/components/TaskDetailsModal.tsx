@@ -27,6 +27,7 @@ import {
   updateTaskStatus, 
   getTaskEvidence, 
   addTaskEvidence,
+  deleteTaskEvidence,
   getAllTeams,
   getFieldUsers,
   getAllBoundaries
@@ -415,9 +416,9 @@ export default function TaskDetailsModal({
                   <SelectContent>
                     <SelectItem value="Unassigned">Unassigned</SelectItem>
                     <SelectItem value="Assigned">Assigned</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="InProgress">In Progress</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="In-Complete">Incomplete</SelectItem>
+                    <SelectItem value="In-Completed">Incomplete</SelectItem>
                     <SelectItem value="Submit-Review">Submit for Review</SelectItem>
                   </SelectContent>
                 </Select>
@@ -428,8 +429,8 @@ export default function TaskDetailsModal({
                 
                 {evidence.length > 0 && (
                   <div className="grid grid-cols-2 gap-2 mb-3">
-                    {evidence.map((item) => (
-                      <div key={item.id} className="relative group">
+                    {evidence.map((item: any) => (
+                      <div key={(item._id || item.id).toString()} className="relative group">
                         <img
                           src={item.imageUrl}
                           alt="Evidence"
@@ -443,6 +444,24 @@ export default function TaskDetailsModal({
                             onClick={() => window.open(item.imageUrl, "_blank")}
                           >
                             <i className="ri-zoom-in-line"></i>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white h-8 w-8"
+                            onClick={async () => {
+                              try {
+                                const evidenceId = (item._id || item.id).toString();
+                                await deleteTaskEvidence(task._id.toString(), evidenceId);
+                                toast({ title: "Evidence deleted" });
+                                queryClient.invalidateQueries({ queryKey: ["/api/tasks", task._id, "evidence"] });
+                              } catch (e) {
+                                toast({ title: "Failed to delete evidence", variant: "destructive" });
+                              }
+                            }}
+                            title="Delete"
+                          >
+                            <i className="ri-delete-bin-line"></i>
                           </Button>
                         </div>
                       </div>
