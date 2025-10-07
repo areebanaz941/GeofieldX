@@ -9,6 +9,12 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   // Define status colors and backgrounds
   const getStatusStyles = (status: string) => {
     switch (status) {
+      case "InProgress":
+      case "In Progress":
+        return {
+          bg: "bg-purple-100",
+          text: "text-purple-700",
+        };
       case "Unassigned":
         return {
           bg: "bg-neutral-100",
@@ -19,17 +25,13 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
           bg: "bg-blue-100",
           text: "text-blue-700",
         };
-      case "In Progress":
-        return {
-          bg: "bg-purple-100",
-          text: "text-purple-700",
-        };
       case "Completed":
         return {
           bg: "bg-green-100",
           text: "text-green-700",
         };
       case "In-Complete":
+      case "In-Completed":
       case "Incomplete":
         return {
           bg: "bg-yellow-100",

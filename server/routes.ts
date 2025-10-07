@@ -24,6 +24,8 @@ import {
   insertFeatureTemplateSchema,
   FeatureTemplate,
   isValidObjectId,
+  TASK_STATUSES,
+  TaskEvidence,
 } from "@shared/schema";
 import { z } from "zod";
 import createMemoryStore from "memorystore";
@@ -327,6 +329,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log(`❌ Authentication failed for ${req.path}: No valid session or JWT`);
     res.status(401).json({ message: "Not authenticated" });
+  };
+
+  // Helper to normalize task status strings coming from UI variations
+  const normalizeTaskStatus = (input: string): string => {
+    if (!input || typeof input !== 'string') return input;
+    const compact = input.replace(/\s+/g, '').replace(/[_-]+/g, '').toLowerCase();
+    switch (compact) {
+      case 'new':
+        return 'New';
+      case 'assigned':
+        return 'Assigned';
+      case 'inprogress':
+        return 'InProgress';
+      case 'completed':
+        return 'Completed';
+      case 'incomplete':
+      case 'incompleted':
+      case 'incompletee':
+        return 'In-Completed';
+      case 'submitreview':
+        return 'Submit-Review';
+      case 'reviewaccepted':
+        return 'Review_Accepted';
+      case 'reviewreject':
+      case 'reviewrejected':
+        return 'Review_Reject';
+      case 'reviewinprogress':
+        return 'Review_inprogress';
+      case 'active':
+        return 'Active';
+      case 'unassigned':
+      case 'unassign':
+        return 'Unassigned';
+      default:
+        return input;
+    }
   };
 
   // Middleware to check if user is supervisor (works with hybrid auth)
@@ -656,15 +694,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const taskId = req.params.id;
-        const { status } = req.body;
+        let { status } = req.body as any;
 
         if (!status) {
           return res.status(400).json({ message: "Status is required" });
         }
 
+        // Normalize and validate against allowed statuses
+        const normalized = normalizeTaskStatus(String(status));
+        if (!TASK_STATUSES.includes(normalized as any)) {
+          return res.status(400).json({ message: `Invalid status value: ${status}` });
+        }
+
         const updatedTask = await storage.updateTaskStatus(
           taskId,
-          status,
+          normalized,
           (req.user as any)._id.toString(),
         );
         res.json(updatedTask);
@@ -2178,9 +2222,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "Invalid task ID format", invalidIds });
       }
 
+      // Normalize and validate status
+      const normalized = normalizeTaskStatus(String(status));
+      if (!TASK_STATUSES.includes(normalized as any)) {
+        return res.status(400).json({ message: `Invalid status value: ${status}` });
+      }
+
       // Bulk update tasks manually
       const updatePromises = taskIds.map((taskId: string) => 
-        storage.updateTaskStatus(taskId, status, req.user.id)
+        storage.updateTaskStatus(taskId, normalized, (req.user as any)._id.toString())
       );
       const results = await Promise.all(updatePromises);
       const updatedCount = results.length;
@@ -2190,6 +2240,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to bulk update task status" });
     }
   });
+
+  // Delete task evidence (and attempt to delete backing image if GridFS)
+  app.delete(
+    "/api/tasks/:id/evidence/:evidenceId",
+    isAuthenticated,
+    validateObjectId("id"),
+    validateObjectId("evidenceId"),
+    async (req: Request, res: Response) => {
+      try {
+        const taskId = req.params.id;
+        const evidenceId = req.params.evidenceId;
+
+        const evidence = await TaskEvidence.findById(evidenceId);
+        if (!evidence) {
+          return res.status(404).json({ message: "Evidence not found" });
+        }
+
+        if (evidence.taskId?.toString() !== taskId) {
+          return res.status(400).json({ message: "Evidence does not belong to this task" });
+        }
+
+        const user = (req as any).user;
+        const isOwner = evidence.userId?.toString() === user._id?.toString();
+        const isSupervisorRole = user?.role === 'Supervisor';
+        if (!isOwner && !isSupervisorRole) {
+          return res.status(403).json({ message: "You don't have permission to delete this evidence" });
+        }
+
+        // Try to delete backing image if it is a GridFS URL
+        const normalizedUrl = String(evidence.imageUrl || '').replace(/^\/+/, '/');
+        const gridfsMatch = normalizedUrl.match(/^\/api\/images\/([a-fA-F0-9]{24})$/);
+        if (gridfsMatch) {
+          const fileId = gridfsMatch[1];
+          try { await deleteGridFSFile(fileId); } catch (e) { console.warn("GridFS delete failed", fileId, e); }
+        } else if (normalizedUrl.startsWith('/uploads/')) {
+          try {
+            const p = await import('path');
+            const fs = await import('fs');
+            const absolute = p.resolve(process.cwd(), normalizedUrl.replace(/^\/+/, ''));
+            const uploadsDir = p.join(process.cwd(), 'uploads');
+            if (absolute.startsWith(uploadsDir) && fs.existsSync(absolute)) {
+              await fs.promises.unlink(absolute);
+            }
+          } catch (e) {
+            console.warn("Local upload delete failed", normalizedUrl, e);
+          }
+        }
+
+        await TaskEvidence.findByIdAndDelete(evidenceId);
+        return res.json({ message: "Evidence deleted successfully" });
+      } catch (error) {
+        console.error("Delete task evidence error:", error);
+        return res.status(500).json({ message: "Failed to delete task evidence" });
+      }
+    }
+  );
 
   // Shapefile upload routes
   app.post(
