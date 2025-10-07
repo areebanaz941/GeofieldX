@@ -346,10 +346,8 @@ export default function Dashboard() {
     const teamTasks = (tasks as any[]).filter((task: any) => task.assignedTo?.toString() === user.teamId?.toString());
     const totalTeamTasks = teamTasks.length;
     
-    // Get boundaries assigned to this team (features with feaType === 'Parcel')
-    const assignedBoundaries = (features as any[]).filter((feature: any) => 
-      feature.feaType === 'Parcel' && feature.assignedTo?.toString() === user.teamId?.toString()
-    );
+    // Boundaries assigned to this team (provided by /api/boundaries for field users)
+    const assignedBoundaries = (boundaries as any[]);
     
     return (
       <div className="min-h-screen bg-gray-50">
@@ -538,13 +536,15 @@ export default function Dashboard() {
                           )}
                           <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                             <span className={`px-2 py-1 rounded-full ${
-                              boundary.feaStatus === 'Active' ? 'bg-green-100 text-green-800' :
-                              boundary.feaStatus === 'New' ? 'bg-blue-100 text-blue-800' :
+                              boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
+                              boundary.status === 'New' ? 'bg-blue-100 text-blue-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {boundary.feaStatus}
+                              {boundary.status}
                             </span>
-                            <span>Type: {boundary.feaType}</span>
+                            {boundary.geometry && (
+                              <span>Type: {boundary.geometry.type}</span>
+                            )}
                           </div>
                         </div>
                         <Button
