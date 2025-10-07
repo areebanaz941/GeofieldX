@@ -860,9 +860,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If supervisor is creating, skip boundary restriction
         // Get all boundaries assigned to the user's team
         const allBoundaries = await storage.getAllBoundaries();
-        const assignedBoundaries = allBoundaries.filter(boundary => 
-          boundary.assignedTo?.toString() === user.teamId?.toString()
-        );
+        // Handle both populated `assignedTo` objects and raw ObjectId/string values
+        const assignedBoundaries = allBoundaries.filter((boundary: any) => {
+          const assigned = boundary?.assignedTo;
+          if (!assigned || !user.teamId) return false;
+          const assignedId = typeof assigned === 'object' ? assigned._id?.toString?.() : assigned?.toString?.();
+          return assignedId === user.teamId.toString();
+        });
         
         if (assignedBoundaries.length === 0) {
           return res.status(403).json({ message: "No boundaries assigned to your team" });
