@@ -647,6 +647,30 @@ export class MongoStorage implements IStorage {
     }
   }
 
+  async deleteTaskEvidence(taskId: string, evidenceId: string): Promise<boolean> {
+    try {
+      const evidence = await TaskEvidence.findById(evidenceId);
+      if (!evidence) return false;
+      if (evidence.taskId.toString() !== taskId.toString()) return false;
+
+      // Attempt to delete backing image if stored in GridFS
+      const imageUrl = (evidence as any).imageUrl as string | undefined;
+      if (imageUrl && typeof imageUrl === 'string') {
+        const match = imageUrl.replace(/^\/+/, '/').match(/^\/api\/images\/([a-fA-F0-9]{24})$/);
+        if (match) {
+          const id = match[1];
+          try { await deleteGridFSFile(id); } catch (e) { console.warn('GridFS delete failed for evidence image', id, e); }
+        }
+      }
+
+      await TaskEvidence.findByIdAndDelete(evidenceId);
+      return true;
+    } catch (error) {
+      console.error('Error deleting task evidence:', error);
+      return false;
+    }
+  }
+
   // Task submission operations
   async createTaskSubmission(submissionData: InsertTaskSubmission): Promise<ITaskSubmission> {
     try {

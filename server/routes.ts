@@ -820,6 +820,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Delete task evidence (and backing GridFS image)
+  app.delete(
+    "/api/tasks/:taskId/evidence/:evidenceId",
+    isAuthenticated,
+    validateObjectId("taskId"),
+    validateObjectId("evidenceId"),
+    async (req, res) => {
+      try {
+        const { taskId, evidenceId } = req.params as any;
+        const success = await storage.deleteTaskEvidence(taskId, evidenceId);
+        if (!success) {
+          return res.status(404).json({ message: "Evidence not found" });
+        }
+        return res.json({ message: "Evidence deleted successfully" });
+      } catch (error) {
+        console.error("Delete task evidence error:", error);
+        return res.status(500).json({ message: "Failed to delete task evidence" });
+      }
+    }
+  );
+
   // Feature routes
   app.post("/api/features", isAuthenticated, memoryImageUpload.array('images', 10), async (req, res) => {
     try {

@@ -62,6 +62,7 @@ export interface IStorage {
   // Task evidence operations
   addTaskEvidence(evidenceData: InsertTaskEvidence): Promise<ITaskEvidence>;
   getTaskEvidence(taskId: string): Promise<ITaskEvidence[]>;
+  deleteTaskEvidence(taskId: string, evidenceId: string): Promise<boolean>;
   
   // Task submission operations
   createTaskSubmission(submissionData: InsertTaskSubmission): Promise<ITaskSubmission>;
@@ -251,6 +252,10 @@ export class MemStorage implements IStorage {
   }
 
   async getTaskEvidence(taskId: string): Promise<ITaskEvidence[]> {
+    throw new Error('MemStorage is a stub - use MongoStorage instead');
+  }
+
+  async deleteTaskEvidence(taskId: string, evidenceId: string): Promise<boolean> {
     throw new Error('MemStorage is a stub - use MongoStorage instead');
   }
 
