@@ -68,7 +68,14 @@ export default function Submissions() {
       // Fetch submissions for each task
       for (const task of tasks) {
         try {
-          const response = await fetch(`/api/tasks/${task._id}/submissions`);
+          // Ensure auth via JWT header + include credentials for session fallback
+          const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+          const headers: HeadersInit = {};
+          if (authToken) headers.Authorization = `Bearer ${authToken}`;
+          const response = await fetch(`/api/tasks/${task._id}/submissions`, {
+            credentials: 'include',
+            headers,
+          });
           if (response.ok) {
             const taskSubmissions = await response.json();
             allSubmissions.push(...taskSubmissions);
@@ -91,9 +98,16 @@ export default function Submissions() {
       });
       formData.append('description', description);
 
+      // Include JWT Authorization header and cookies for hybrid auth
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: HeadersInit = {};
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
       const response = await fetch(`/api/tasks/${taskId}/submissions`, {
         method: 'POST',
         body: formData,
+        credentials: 'include',
+        headers,
       });
 
       if (!response.ok) {
