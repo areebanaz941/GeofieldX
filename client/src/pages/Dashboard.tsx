@@ -266,26 +266,7 @@ export default function Dashboard() {
   const { data: features = [], refetch: refetchFeatures } = useQuery({ 
     queryKey: ['/api/features'],
     staleTime: 0,
-    refetchOnWindowFocus: true,
-    select: (serverFeatures: any[]) => {
-      // Ensure field users always see features they created OR assigned to their team OR within their assigned boundaries
-      if (!user || user.role === 'Supervisor') return serverFeatures;
-      try {
-        const teamId = user.teamId?.toString();
-        if (!teamId) return serverFeatures;
-        // Pre-calc boundary ids from parcels assigned to team (already present in list)
-        const teamParcels = serverFeatures.filter((f: any) => f.feaType === 'Parcel' && f.assignedTo?.toString() === teamId);
-        const teamBoundaryIds = new Set(teamParcels.map((p: any) => p._id?.toString()).filter(Boolean));
-        return serverFeatures.filter((f: any) => {
-          const createdByTeam = f.teamId?.toString() === teamId;
-          const assignedToTeam = f.assignedTo?.toString() === teamId;
-          const inTeamBoundary = f.boundaryId && teamBoundaryIds.has(f.boundaryId.toString());
-          return createdByTeam || assignedToTeam || inTeamBoundary;
-        });
-      } catch {
-        return serverFeatures;
-      }
-    }
+    refetchOnWindowFocus: true
   });
   const { data: teams = [] } = useQuery({ queryKey: ['/api/teams'] });
   const { data: fieldUsers = [] } = useQuery({ queryKey: ['/api/users/field'] });
@@ -348,6 +329,19 @@ export default function Dashboard() {
     
     // Boundaries assigned to this team (provided by /api/boundaries for field users)
     const assignedBoundaries = (boundaries as any[]);
+    const assignedBoundaryIds = new Set(
+      assignedBoundaries.map((b: any) => b?._id?.toString()).filter(Boolean)
+    );
+
+    const countInAssignedAreas = (type: 'Tower' | 'Manhole' | 'FiberCable') => {
+      return (features as any[]).filter((feature: any) => {
+        if (feature.feaType !== type) return false;
+        const bid = typeof feature.boundaryId === 'object'
+          ? feature.boundaryId?._id?.toString?.()
+          : feature.boundaryId?.toString?.();
+        return !!bid && assignedBoundaryIds.has(bid);
+      }).length;
+    };
     
     return (
       <div className="min-h-screen bg-gray-50">
@@ -437,12 +431,7 @@ export default function Dashboard() {
                     <div className="w-8 h-8 mx-auto mb-2">
                       <FeatureIcon type="Tower" status="unassigned" size={32} />
                     </div>
-                    <div className="text-xl font-bold text-gray-800">
-                      {(features as any[]).filter((feature: any) => 
-                        feature.feaType === 'Tower' && 
-                        feature.assignedTo?.toString() === user.teamId?.toString()
-                      ).length}
-                    </div>
+                    <div className="text-xl font-bold text-gray-800">{countInAssignedAreas('Tower')}</div>
                     <div className="text-xs text-gray-600">Towers</div>
                   </CardContent>
                 </Card>
@@ -455,12 +444,7 @@ export default function Dashboard() {
                     <div className="w-8 h-8 mx-auto mb-2">
                       <FeatureIcon type="Manhole" status="assigned" size={32} />
                     </div>
-                    <div className="text-xl font-bold text-gray-800">
-                      {(features as any[]).filter((feature: any) => 
-                        feature.feaType === 'Manhole' && 
-                        feature.assignedTo?.toString() === user.teamId?.toString()
-                      ).length}
-                    </div>
+                    <div className="text-xl font-bold text-gray-800">{countInAssignedAreas('Manhole')}</div>
                     <div className="text-xs text-gray-600">Manholes</div>
                   </CardContent>
                 </Card>
@@ -473,12 +457,7 @@ export default function Dashboard() {
                     <div className="w-8 h-8 mx-auto mb-2">
                       <FeatureIcon type="FiberCable" status="complete" size={32} />
                     </div>
-                    <div className="text-xl font-bold text-gray-800">
-                      {(features as any[]).filter((feature: any) => 
-                        feature.feaType === 'FiberCable' && 
-                        feature.assignedTo?.toString() === user.teamId?.toString()
-                      ).length}
-                    </div>
+                    <div className="text-xl font-bold text-gray-800">{countInAssignedAreas('FiberCable')}</div>
                     <div className="text-xs text-gray-600">Fiber Cables</div>
                   </CardContent>
                 </Card>

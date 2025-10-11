@@ -998,39 +998,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/features", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      let features;
-      
+      let features: any[] = [];
+
       if (user.role === "Supervisor") {
-        // Supervisors can see all features - ensure this always returns all data
+        // Supervisors can see all features
         features = await storage.getAllFeatures();
       } else {
-        // Field users can only see features within their assigned boundaries
+        // Field users: include any feature that is
+        // 1) created by their team, OR
+        // 2) assigned to their team, OR
+        // 3) located within a boundary assigned to their team
         if (user.teamId) {
-          // Get assigned boundaries for the team
-          const allBoundaries = await storage.getAllBoundaries();
-          const teamBoundaries = allBoundaries.filter(
-            boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
+          const teamIdStr = user.teamId.toString();
+
+          // Fetch everything once to filter in memory (backends normalize differently)
+          const [allFeatures, allBoundaries] = await Promise.all([
+            storage.getAllFeatures(),
+            storage.getAllBoundaries(),
+          ]);
+
+          // Collect boundary ids assigned to this team (support populated docs or raw ids)
+          const teamBoundaryIds = new Set(
+            allBoundaries
+              .filter((boundary: any) => {
+                const assigned = boundary?.assignedTo;
+                if (!assigned) return false;
+                const assignedId =
+                  typeof assigned === "object"
+                    ? assigned._id?.toString?.()
+                    : assigned?.toString?.();
+                return assignedId === teamIdStr;
+              })
+              .map((b: any) => b?._id?.toString?.())
+              .filter(Boolean)
           );
-          
-          // If team has assigned boundaries, show features created by the team
-          if (teamBoundaries.length > 0) {
-            const allFeatures = await storage.getAllFeatures();
-            // Show features created by the team (based on teamId)
-            features = allFeatures.filter(feature => {
-              return feature.teamId?.toString() === user.teamId?.toString();
-            });
-          } else {
-            // Even without boundaries, show features created by the team
-            const allFeatures = await storage.getAllFeatures();
-            features = allFeatures.filter(feature => {
-              return feature.teamId?.toString() === user.teamId?.toString();
-            });
-          }
-        } else {
-          features = [];
+
+          features = allFeatures.filter((feature: any) => {
+            const createdByTeam = feature?.teamId?.toString?.() === teamIdStr;
+            const assignedToTeam = feature?.assignedTo?.toString?.() === teamIdStr;
+            const boundaryIdStr =
+              typeof feature?.boundaryId === "object"
+                ? feature?.boundaryId?._id?.toString?.()
+                : feature?.boundaryId?.toString?.();
+            const inAssignedBoundary =
+              !!boundaryIdStr && teamBoundaryIds.has(boundaryIdStr);
+            return createdByTeam || assignedToTeam || inAssignedBoundary;
+          });
         }
       }
-      
+
       res.json(features);
     } catch (error) {
       console.error("Get features error:", error);
