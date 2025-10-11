@@ -80,6 +80,20 @@ export default function MapView() {
   const [editFeatureModalOpen, setEditFeatureModalOpen] = useState(false);
   const [featureToEdit, setFeatureToEdit] = useState<IFeature | null>(null);
   
+  // Dismissible boundary notice state (persisted)
+  const [showBoundaryNotice, setShowBoundaryNotice] = useState<boolean>(() => {
+    try {
+      if (typeof window === 'undefined') return true;
+      return localStorage.getItem('boundary_notice_dismissed') !== 'true';
+    } catch {
+      return true;
+    }
+  });
+  const dismissBoundaryNotice = () => {
+    try { localStorage.setItem('boundary_notice_dismissed', 'true'); } catch {}
+    setShowBoundaryNotice(false);
+  };
+  
   // Map methods for navigation
   const [mapMethods, setMapMethods] = useState<{
     panTo: (lat: number, lng: number, zoom?: number) => void;
@@ -1632,9 +1646,17 @@ export default function MapView() {
           </div>
 
           {/* Show boundary info for field users - Mobile */}
-          {user?.role === "Field" && (
+          {user?.role === "Field" && showBoundaryNotice && (
             <div className="absolute bottom-20 left-2 right-2 z-[1000] lg:hidden">
-              <div className="bg-white rounded-lg p-2 shadow-lg border border-orange-200">
+              <div className="relative bg-white rounded-lg p-2 shadow-lg border border-orange-200">
+                <button
+                  type="button"
+                  onClick={dismissBoundaryNotice}
+                  aria-label="Dismiss"
+                  className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 p-1"
+                >
+                  ×
+                </button>
                 <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
                 <p className="text-sm font-medium text-gray-800">
                   {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
@@ -1653,9 +1675,17 @@ export default function MapView() {
           )}
 
           {/* Desktop boundary info for field users */}
-          {user?.role === "Field" && (
+          {user?.role === "Field" && showBoundaryNotice && (
             <div className="absolute bottom-4 right-4 z-[1000] hidden lg:block">
-              <div className="bg-white rounded-lg p-3 shadow-lg border border-orange-200">
+              <div className="relative bg-white rounded-lg p-3 shadow-lg border border-orange-200">
+                <button
+                  type="button"
+                  onClick={dismissBoundaryNotice}
+                  aria-label="Dismiss"
+                  className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 p-1"
+                >
+                  ×
+                </button>
                 <p className="text-xs text-gray-600 mb-1">Assigned Boundary:</p>
                 <p className="text-sm font-medium text-gray-800">
                   {boundaries.length > 0 ? boundaries[0]?.name : 'No Assignment'}
