@@ -1,13 +1,38 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FEATURE_STATUSES } from '@shared/schema';
 
 const MapLegend: React.FC = () => {
-  const statusItems = [
-    { status: 'assigned', label: 'Assigned', color: '#3B82F6' },
-    { status: 'unassigned', label: 'Unassigned', color: '#000000' },
-    { status: 'complete', label: 'Complete', color: '#10B981' },
-    { status: 'delayed', label: 'Delayed', color: '#EF4444' }
-  ];
+  // Map all feature status options to legend items (no yellow hues)
+  const statusLabelMap: Record<string, string> = {
+    New: 'New',
+    InProgress: 'In Progress',
+    Completed: 'Completed',
+    'In-Completed': 'In-Completed',
+    'Submit-Review': 'Submit Review',
+    Review_Accepted: 'Review Accepted',
+    Review_Reject: 'Review Rejected',
+    Review_inprogress: 'Review In Progress',
+    Active: 'Active',
+  };
+
+  const statusColorMap: Record<string, string> = {
+    New: '#6B7280',               // Gray
+    InProgress: '#8B5CF6',        // Purple
+    Completed: '#10B981',         // Green
+    'In-Completed': '#F97316',    // Orange (avoid yellow)
+    'Submit-Review': '#3B82F6',   // Blue
+    Review_Accepted: '#14B8A6',   // Teal
+    Review_Reject: '#EF4444',     // Red
+    Review_inprogress: '#38BDF8', // Sky
+    Active: '#6366F1',            // Indigo
+  };
+
+  const statusItems = FEATURE_STATUSES.map((status) => ({
+    status,
+    label: statusLabelMap[status] ?? status,
+    color: statusColorMap[status] ?? '#6B7280',
+  }));
 
   // Create the exact same SVG icons used in the OpenLayersMap
   const createMapIcon = (featureType: string, size: number = 16): JSX.Element => {
@@ -113,9 +138,7 @@ const MapLegend: React.FC = () => {
 
         {/* Additional Info */}
         <div className="pt-2 border-t border-gray-200">
-          <p className="text-xs text-gray-500">
-            Feature colors change based on assignment and completion status
-          </p>
+          <p className="text-xs text-gray-500">Legend shows all feature statuses</p>
         </div>
       </CardContent>
     </Card>
