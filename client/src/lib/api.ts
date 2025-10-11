@@ -471,5 +471,6 @@ export async function deleteShapefile(id: string) {
 
 export async function updateShapefileVisibility(id: string, isVisible: boolean) {
   const res = await apiRequest('PUT', `/api/shapefiles/${id}/visibility`, { isVisible });
+  // The server may return a minimal payload; do not expect full features back
   return await res.json();
 }

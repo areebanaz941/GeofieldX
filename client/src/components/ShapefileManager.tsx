@@ -100,14 +100,22 @@ export function ShapefileManager({ onShapefileSelect, onShapefileToggle }: Shape
         variant: 'destructive',
       });
     },
-    onSuccess: (updatedShapefile) => {
+    onSuccess: (updatedShapefile: any) => {
       setPendingToggleId(null);
-      // Ensure cache has server truth
+      // Merge only fields we know about to support minimal server payloads
       queryClient.setQueryData(['/api/shapefiles'], (oldData: any) => {
-        if (Array.isArray(oldData)) {
-          return oldData.map((s) => s._id === updatedShapefile._id ? updatedShapefile : s);
-        }
-        return oldData;
+        if (!Array.isArray(oldData)) return oldData;
+        const targetId = updatedShapefile?._id || updatedShapefile?.id;
+        return oldData.map((s: any) =>
+          s._id === targetId
+            ? {
+                ...s,
+                isVisible: updatedShapefile.isVisible,
+                featuresCount:
+                  updatedShapefile.featuresCount ?? s.featuresCount,
+              }
+            : s,
+        );
       });
       // Avoid double-calling onShapefileToggle here; onMutate already notified
       toast({

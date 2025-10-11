@@ -822,14 +822,17 @@ export class MongoStorage implements IStorage {
 
   async updateShapefileVisibility(id: string, isVisible: boolean): Promise<IShapefile> {
     try {
-      const shapefile = await Shapefile.findById(id);
-      if (!shapefile) {
+      // Use atomic update to avoid revalidating/rewriting large feature arrays
+      // and to minimize DB roundtrips for this simple toggle
+      const updated = await Shapefile.findByIdAndUpdate(
+        id,
+        { $set: { isVisible } },
+        { new: true, runValidators: false }
+      );
+      if (!updated) {
         throw new Error(`Shapefile with ID ${id} not found`);
       }
-
-      shapefile.isVisible = isVisible;
-      await shapefile.save();
-      return shapefile;
+      return updated as IShapefile;
     } catch (error) {
       console.error("Error updating shapefile visibility:", error);
       throw error;
