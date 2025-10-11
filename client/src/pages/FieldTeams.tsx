@@ -175,7 +175,7 @@ function TeamCard({ team, fieldUsers, tasks, handleTeamStatusChange, onDelete, o
             Approve
           </Button>
         )}
-        {team.status === "Approved" && (
+        {onManageMembers && team.status === "Approved" && (
           <Button 
             size="sm" 
             variant="outline" 
