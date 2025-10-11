@@ -2421,14 +2421,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "isVisible must be a boolean" });
         }
 
-        const updatedShapefile = await storage.updateShapefileVisibility(shapefileId, isVisible);
-        res.json(updatedShapefile);
+        const updatedShapefile: any = await storage.updateShapefileVisibility(
+          shapefileId,
+          isVisible,
+        );
+
+        // Return a minimal payload to avoid transferring very large feature arrays
+        const features = updatedShapefile?.features;
+        const featuresCount = Array.isArray(features)
+          ? features.length
+          : (features && typeof features === 'object' && Array.isArray(features.features)
+              ? features.features.length
+              : undefined);
+
+        return res.json({
+          _id: updatedShapefile._id,
+          name: updatedShapefile.name,
+          originalFilename: updatedShapefile.originalFilename,
+          shapefileType: updatedShapefile.shapefileType,
+          isVisible: updatedShapefile.isVisible,
+          featuresCount,
+          updatedAt: updatedShapefile.updatedAt,
+          createdAt: updatedShapefile.createdAt,
+        });
       } catch (error: any) {
         console.error("Update shapefile visibility error:", error);
-        const message = (error && error.message) ? String(error.message) : 'Failed to update shapefile visibility';
-        // If storage threw a network/upstream-like error, signal as 502; otherwise 500
-        const isUpstream = /ECONNREFUSED|ECONNRESET|ETIMEDOUT|upstream|gateway|network/i.test(message);
-        res.status(isUpstream ? 502 : 500).json({ message: 'Failed to update shapefile visibility' });
+        // Always respond with 500 here; proxies translating payload issues as 502 is misleading
+        return res.status(500).json({ message: 'Failed to update shapefile visibility' });
       }
     },
   );
