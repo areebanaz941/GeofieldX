@@ -585,6 +585,9 @@ const OpenLayersMap = ({
   const onMapClickRef = useRef<MapProps['onMapClick'] | null>(null);
   const onLineCreatedRef = useRef<MapProps['onLineCreated'] | null>(null);
 
+  // Visibility thresholds to prevent flicker at low zooms
+  const LAYERS_VISIBILITY_ZOOM = 13; // Hide vector layers below this zoom
+
   // OpenLayers Geolocation references
   const geolocationRef = useRef<Geolocation | null>(null);
   const locationLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
@@ -615,21 +618,24 @@ const OpenLayersMap = ({
     featuresLayerRef.current = new VectorLayer({
       source: featuresSource,
       declutter: true,
-      updateWhileInteracting: true,
+      // Avoid re-rendering on each interaction frame to reduce flicker
+      updateWhileInteracting: false,
       style: (feature, resolution) => {
         const featureData = feature.get('featureData');
         const featureType = featureData?.feaType || 'Tower';
-        
-        // Calculate zoom-responsive scale (extremely small when zoomed out)
         const zoom = mapRef.current?.getView().getZoom() || 13;
-        const baseScale = Math.max(0.05, Math.min(0.4, (zoom - 8) / 20));
-        const iconSize = Math.max(16, Math.min(32, zoom * 2));
+        // Hide features entirely at low zooms
+        if (zoom < LAYERS_VISIBILITY_ZOOM) return undefined;
+        // Use a fixed icon source and scale by zoom to avoid image reload flicker
+        const baseIconSize = 24;
+        const sizeScale = Math.max(0.6, Math.min(1.6, (zoom - 10) / 6));
+        const effectiveIconSize = baseIconSize * sizeScale;
         
         // FIXED: Changed feaState to feaStatus for proper color determination
         const featureStatus = featureData?.feaStatus || featureData?.status || 'Unassigned';
         
         // Create SVG icon with status-based color using enhanced system
-        const svgIconSrc = createSVGIcon(featureType, featureStatus, iconSize);
+        const svgIconSrc = createSVGIcon(featureType, featureStatus, baseIconSize);
         
         // Handle different geometry types
         const geometry = feature.getGeometry();
@@ -733,14 +739,14 @@ const OpenLayersMap = ({
           const base = new Style({
             image: new Icon({
               src: svgIconSrc,
-              scale: isHovered || isSelected ? 1.15 : 1,
+              scale: (isHovered || isSelected ? 1.15 : 1) * sizeScale,
               anchor: [0.5, 0.5],
               anchorXUnits: 'fraction',
               anchorYUnits: 'fraction'
             }),
             text: new Text({
               text: featureData?.name || `${featureType} #${featureData?.feaNo}`,
-              offsetY: iconSize + 10,
+              offsetY: effectiveIconSize + 10,
               fill: new Fill({ color: '#000' }),
               stroke: new Stroke({ color: '#fff', width: 2 }),
               font: `${Math.max(10, Math.min(14, zoom))}px Arial`,
@@ -750,7 +756,7 @@ const OpenLayersMap = ({
           if (isHovered || isSelected) {
             const ring = new Style({
               image: new Circle({
-                radius: Math.max(12, iconSize / 1.5),
+                radius: Math.max(12, effectiveIconSize / 1.5),
                 fill: new Fill({ color: hoverFillColor }),
                 stroke: new Stroke({ color: hoverStrokeColor, width: 2 })
               })
@@ -767,6 +773,8 @@ const OpenLayersMap = ({
     teamsLayerRef.current = new VectorLayer({
       source: teamsSource,
       style: (feature) => {
+        const zoom = mapRef.current?.getView().getZoom() || 13;
+        if (zoom < LAYERS_VISIBILITY_ZOOM) return undefined;
         const teamData = feature.get('teamData');
         const isActive = teamData?.lastActive && 
           (new Date().getTime() - new Date(teamData.lastActive).getTime() < 15 * 60 * 1000);
@@ -792,13 +800,17 @@ const OpenLayersMap = ({
     boundariesLayerRef.current = new VectorLayer({
       source: boundariesSource,
       declutter: true,
-      updateWhileInteracting: true,
+      updateWhileInteracting: false,
       style: (feature) => {
+        const zoom = mapRef.current?.getView().getZoom() || 13;
+        if (zoom < LAYERS_VISIBILITY_ZOOM) return undefined;
         const featureType = feature.get('type');
         const boundaryData = feature.get('boundaryData');
         const boundaryStatusColor = getStatusColor(mapToStandardStatus(boundaryData?.status || 'Unassigned'));
         
         if (featureType === 'boundary-label') {
+          // Slightly stricter threshold for labels to avoid clutter flicker
+          if (zoom < LAYERS_VISIBILITY_ZOOM + 1) return undefined;
           const labelText = feature.get('labelText');
           return new Style({
             text: new Text({
@@ -837,6 +849,8 @@ const OpenLayersMap = ({
     tasksLayerRef.current = new VectorLayer({
       source: tasksSource,
       style: (feature) => {
+        const zoom = mapRef.current?.getView().getZoom() || 13;
+        if (zoom < LAYERS_VISIBILITY_ZOOM) return undefined;
         const taskData = feature.get('taskData');
         const status = taskData?.status || 'Unassigned';
         // ENHANCED: Use improved status mapping system
@@ -875,6 +889,8 @@ const OpenLayersMap = ({
     shapefilesLayerRef.current = new VectorLayer({
       source: shapefilesSource,
       style: function(feature) {
+        const zoom = mapRef.current?.getView().getZoom() || 13;
+        if (zoom < LAYERS_VISIBILITY_ZOOM) return undefined;
         const geometry = feature.getGeometry()?.getType();
         const properties = feature.getProperties();
         const shapefileData = properties.shapefileData || {};
@@ -1176,7 +1192,8 @@ const OpenLayersMap = ({
     };
 
     const pickTopFeature = (pixel: number[]) => {
-      let best: { feature: Feature; layer: any; score: number } | null = null;
+      let bestFeature: Feature | null = null;
+      let bestScore = -Infinity;
       const preferPointScore = (geomType?: string) => geomType === 'Point' ? 3 : geomType === 'LineString' ? 2 : 1;
       map.forEachFeatureAtPixel(pixel, (f: any, layer: any) => {
         const geomType = f.getGeometry()?.getType();
@@ -1186,12 +1203,13 @@ const OpenLayersMap = ({
         else if (layer === boundariesLayerRef.current) layerScore = 50;
         else if (layer === shapefilesLayerRef.current) layerScore = 10;
         const score = layerScore + preferPointScore(geomType);
-        if (!best || score > best.score) {
-          best = { feature: f, layer, score };
+        if (score > bestScore) {
+          bestScore = score;
+          bestFeature = f as Feature;
         }
         return false; // continue searching
       }, { hitTolerance: 6 });
-      return best?.feature || null;
+      return bestFeature;
     };
 
     const handlePointerMove = (evt: any) => {
@@ -1251,19 +1269,16 @@ const OpenLayersMap = ({
       });
     }
 
-    // Add zoom change listener to update icon sizes
-    map.getView().on('change:resolution', () => {
-      // Trigger layer re-render when zoom changes
-      if (featuresLayerRef.current) {
-        featuresLayerRef.current.changed();
-      }
-      if (teamsLayerRef.current) {
-        teamsLayerRef.current.changed();
-      }
-      if (tasksLayerRef.current) {
-        tasksLayerRef.current.changed();
-      }
-    });
+    // Initialize visibility based on starting zoom
+    const applyLayerVisibilityByZoom = (z: number) => {
+      const visible = z >= LAYERS_VISIBILITY_ZOOM;
+      featuresLayerRef.current?.setVisible(visible);
+      teamsLayerRef.current?.setVisible(visible);
+      tasksLayerRef.current?.setVisible(visible);
+      boundariesLayerRef.current?.setVisible(visible);
+      shapefilesLayerRef.current?.setVisible(visible);
+    };
+    applyLayerVisibilityByZoom(map.getView().getZoom() || persistedZoom);
 
     // Persist view on moveend
     map.on('moveend', () => {
@@ -1271,6 +1286,14 @@ const OpenLayersMap = ({
       const c = toLonLat(v.getCenter()!);
       localStorage.setItem('map_center', JSON.stringify([c[0], c[1]]));
       localStorage.setItem('map_zoom', String(v.getZoom() ?? 13));
+      // Update layer visibility and then request a redraw once when interaction ends
+      const z = v.getZoom() ?? 13;
+      applyLayerVisibilityByZoom(z);
+      featuresLayerRef.current?.changed();
+      teamsLayerRef.current?.changed();
+      tasksLayerRef.current?.changed();
+      boundariesLayerRef.current?.changed();
+      shapefilesLayerRef.current?.changed();
     });
 
     // Add event listener for zoom-to-location functionality
