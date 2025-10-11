@@ -42,7 +42,7 @@ const formSchema = z.object({
   feaType: z.enum(["Tower", "Manhole", "FiberCable", "Parcel"]),
   specificType: z.string().min(1, "Specific type is required"),
   feaState: z.enum(["Plan", "Under Construction", "As-Built", "Abandoned"]),
-  feaStatus: z.enum(["New", "InProgress", "Completed", "In-Completed", "Submit-Review", "Active"]),
+  feaStatus: featureStatusEnum,
   maintenance: z.enum(["Required", "None"]),
   maintenanceDate: z.string().optional(),
   remarks: z.string().optional(),
