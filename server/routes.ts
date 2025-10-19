@@ -73,6 +73,43 @@ function isPointInPolygon(point: [number, number], polygon: [number, number][]):
   return inside;
 }
 
+// Helper to determine if a feature geometry lies within a boundary polygon
+function doesGeometryIntersectBoundary(
+  geometry: any,
+  boundaryPolygon: [number, number][],
+): boolean {
+  if (!geometry || !geometry.type || !geometry.coordinates) return false;
+
+  try {
+    if (geometry.type === "Point") {
+      const [lng, lat] = geometry.coordinates as [number, number];
+      return isPointInPolygon([lng, lat], boundaryPolygon);
+    }
+
+    if (geometry.type === "LineString") {
+      const coords = geometry.coordinates as [number, number][];
+      for (const [lng, lat] of coords) {
+        if (isPointInPolygon([lng, lat], boundaryPolygon)) return true;
+      }
+      return false;
+    }
+
+    if (geometry.type === "Polygon") {
+      // Use vertex-based check (simple but effective for our use case)
+      const ring = geometry.coordinates?.[0] as [number, number][] | undefined;
+      if (!ring) return false;
+      for (const [lng, lat] of ring) {
+        if (isPointInPolygon([lng, lat], boundaryPolygon)) return true;
+      }
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -878,73 +915,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Field users can only create features within their assigned boundaries
       if (user.role === "Field") {
-        // If supervisor is creating, skip boundary restriction
         // Get all boundaries assigned to the user's team
         const allBoundaries = await storage.getAllBoundaries();
-        // Handle both populated `assignedTo` objects and raw ObjectId/string values
         const assignedBoundaries = allBoundaries.filter((boundary: any) => {
           const assigned = boundary?.assignedTo;
           if (!assigned || !user.teamId) return false;
           const assignedId = typeof assigned === 'object' ? assigned._id?.toString?.() : assigned?.toString?.();
           return assignedId === user.teamId.toString();
         });
-        
+
         if (assignedBoundaries.length === 0) {
           return res.status(403).json({ message: "No boundaries assigned to your team" });
         }
-        
-        // Check if the feature geometry is within any assigned boundary
+
+        // Check geometry against team's boundaries (supports Point, LineString, Polygon)
         let isWithinBoundary = false;
         const featureGeometry = req.body.geometry;
-        
         if (featureGeometry) {
           for (const boundary of assignedBoundaries) {
-            if (boundary.geometry) {
-              try {
-                const boundaryGeom = typeof boundary.geometry === 'string' 
-                  ? JSON.parse(boundary.geometry) 
-                  : boundary.geometry;
-                
-                if (boundaryGeom.type === "Polygon" && featureGeometry.type === "Polygon") {
-                  // Check if polygon is within boundary (simplified check)
-                  const featureCoords = featureGeometry.coordinates[0];
-                  const boundaryCoords = boundaryGeom.coordinates[0];
-                  
-                  // Check if at least one point of feature is within boundary
-                  for (const [lng, lat] of featureCoords) {
-                    if (isPointInPolygon([lng, lat], boundaryCoords)) {
-                      isWithinBoundary = true;
-                      req.body.boundaryId = boundary._id.toString();
-                      break;
-                    }
-                  }
-                  
-                  if (isWithinBoundary) break;
-                } else if (boundaryGeom.type === "Polygon" && featureGeometry.type === "Point") {
-                  // Point in polygon check
-                  const [lng, lat] = featureGeometry.coordinates;
-                  if (isPointInPolygon([lng, lat], boundaryGeom.coordinates[0])) {
-                    isWithinBoundary = true;
-                    req.body.boundaryId = boundary._id.toString();
-                    break;
-                  }
+            try {
+              const boundaryGeom = typeof boundary.geometry === 'string' ? JSON.parse(boundary.geometry) : boundary.geometry;
+              if (boundaryGeom?.type === 'Polygon') {
+                const ring = boundaryGeom.coordinates?.[0] as [number, number][] | undefined;
+                if (ring && doesGeometryIntersectBoundary(featureGeometry, ring)) {
+                  isWithinBoundary = true;
+                  req.body.boundaryId = boundary._id.toString();
+                  break;
                 }
-              } catch (error) {
-                console.error('Error checking boundary geometry:', error);
               }
+            } catch (error) {
+              console.error('Error checking boundary geometry:', error);
             }
           }
         }
-        
+
         if (!isWithinBoundary) {
           return res.status(403).json({ message: "Features can only be created within assigned boundary areas" });
         }
-        
+
         // Add team ID to feature for proper filtering
         req.body.teamId = user.teamId?.toString();
       } else {
         // Supervisors can create features anywhere without boundary restrictions
-        // But still assign their teamId if they have one for proper filtering
+        // If the feature lies within any boundary, automatically link it
+        const featureGeometry = req.body.geometry;
+        if (featureGeometry && !req.body.boundaryId) {
+          const allBoundaries = await storage.getAllBoundaries();
+          for (const boundary of allBoundaries) {
+            try {
+              const boundaryGeom = typeof (boundary as any).geometry === 'string' ? JSON.parse((boundary as any).geometry) : (boundary as any).geometry;
+              if (boundaryGeom?.type === 'Polygon') {
+                const ring = boundaryGeom.coordinates?.[0] as [number, number][] | undefined;
+                if (ring && doesGeometryIntersectBoundary(featureGeometry, ring)) {
+                  req.body.boundaryId = (boundary as any)._id.toString();
+                  break;
+                }
+              }
+            } catch (error) {
+              console.error('Error linking supervisor feature to boundary:', error);
+            }
+          }
+        }
+
+        // Optionally record supervisor's team for analytics/filtering if present
         if (user.teamId) {
           req.body.teamId = user.teamId.toString();
         }
@@ -1008,18 +1041,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // - Features created by their team
         // - Features explicitly assigned to their team
         // - Features located within boundaries assigned to their team
+        // - Features whose geometry lies within their team boundaries (even if boundaryId missing)
         if (user.teamId) {
           const allBoundaries = await storage.getAllBoundaries();
+          const teamBoundaries = allBoundaries.filter((boundary: any) => {
+            const assigned = boundary?.assignedTo;
+            const assignedId = typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.();
+            return assignedId && assignedId === user.teamId?.toString();
+          });
           const teamBoundaryIds = new Set(
-            allBoundaries
-              .filter((boundary: any) => {
-                const assigned = boundary?.assignedTo;
-                const assignedId = typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.();
-                return assignedId && assignedId === user.teamId?.toString();
-              })
+            teamBoundaries
               .map((b: any) => (typeof b._id === 'object' ? b._id?.toString?.() : b._id?.toString?.()))
               .filter(Boolean)
           );
+
+          // Precompute boundary rings for geometric inclusion check
+          const teamBoundaryRings: [number, number][][] = [];
+          for (const b of teamBoundaries) {
+            try {
+              const g = typeof (b as any).geometry === 'string' ? JSON.parse((b as any).geometry) : (b as any).geometry;
+              if (g?.type === 'Polygon' && Array.isArray(g.coordinates?.[0])) {
+                teamBoundaryRings.push(g.coordinates[0] as [number, number][]);
+              }
+            } catch {}
+          }
 
           const allFeatures = await storage.getAllFeatures();
           const teamIdStr = user.teamId.toString();
@@ -1027,7 +1072,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const createdByTeam = feature?.teamId?.toString?.() === teamIdStr;
             const assignedToTeam = feature?.assignedTo?.toString?.() === teamIdStr;
             const inTeamBoundary = feature?.boundaryId && teamBoundaryIds.has(feature.boundaryId.toString());
-            return createdByTeam || assignedToTeam || inTeamBoundary;
+            if (createdByTeam || assignedToTeam || inTeamBoundary) return true;
+
+            // Fallback: geometry-based inclusion when boundaryId is missing
+            const geom = feature?.geometry;
+            if (!geom || !geom.type || !geom.coordinates) return false;
+            for (const ring of teamBoundaryRings) {
+              if (doesGeometryIntersectBoundary(geom, ring)) return true;
+            }
+            return false;
           });
         } else {
           features = [];
@@ -1435,14 +1488,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can see all boundaries - ensure this always returns all data
         boundaries = await storage.getAllBoundaries();
       } else {
-        // Field users can only see boundaries assigned to their team
+        // Field users can see:
+        // - Boundaries assigned to their team
+        // - Any supervisor-drawn boundaries whose geometry lies within their team's assigned boundary areas
         const allBoundaries = await storage.getAllBoundaries();
+
+        const teamBoundaries = allBoundaries.filter((b: any) => {
+          const assigned = b?.assignedTo;
+          const assignedId = typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.();
+          return assignedId && user.teamId && assignedId === user.teamId.toString();
+        });
+
+        const teamBoundaryRings: [number, number][][] = [];
+        for (const b of teamBoundaries) {
+          try {
+            const g = typeof (b as any).geometry === 'string' ? JSON.parse((b as any).geometry) : (b as any).geometry;
+            if (g?.type === 'Polygon' && Array.isArray(g.coordinates?.[0])) {
+              teamBoundaryRings.push(g.coordinates[0] as [number, number][]);
+            }
+          } catch {}
+        }
+
         boundaries = allBoundaries.filter((boundary: any) => {
           const assigned = boundary?.assignedTo;
-          if (!assigned || !user.teamId) return false;
-          // Handle both populated doc and raw ObjectId/string
-          const assignedId = typeof assigned === 'object' ? assigned._id?.toString?.() : assigned?.toString?.();
-          return assignedId === user.teamId.toString();
+          const assignedId = typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.();
+          // Always include those directly assigned to team
+          if (assignedId && user.teamId && assignedId === user.teamId.toString()) return true;
+          // Also include if the boundary geometry lies within any of the team's boundary areas
+          try {
+            const g = typeof boundary.geometry === 'string' ? JSON.parse(boundary.geometry) : boundary.geometry;
+            if (g?.type === 'Polygon' && Array.isArray(g.coordinates?.[0])) {
+              const ring = g.coordinates[0] as [number, number][];
+              for (const teamRing of teamBoundaryRings) {
+                // If any vertex of this boundary lies inside the team boundary, include it
+                for (const [lng, lat] of ring) {
+                  if (isPointInPolygon([lng, lat], teamRing)) return true;
+                }
+              }
+            }
+          } catch {}
+          return false;
         });
       }
       
@@ -1897,7 +1982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const boundaryId = req.params.id;
         // Get all features and filter by boundary manually
         const allFeatures = await storage.getAllFeatures();
-        const features = allFeatures.filter((feature: any) => feature.boundaryId === boundaryId);
+        const features = allFeatures.filter((feature: any) => feature?.boundaryId?.toString?.() === boundaryId);
         res.json(features);
       } catch (error) {
         console.error("Get features in boundary error:", error);
