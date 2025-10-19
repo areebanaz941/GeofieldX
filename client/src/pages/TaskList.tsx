@@ -106,8 +106,15 @@ export default function TaskList() {
       return matchesSearch && matchesStatus;
     })
     .sort((a: ITask, b: ITask) => {
-      // Sort by creation date, newest first
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      // Primary: due date (earliest first). Tasks without due date go last.
+      const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      if (aDue !== bDue) return aDue - bDue;
+
+      // Secondary: most recently updated first
+      const aUpdated = new Date(a.updatedAt).getTime();
+      const bUpdated = new Date(b.updatedAt).getTime();
+      return bUpdated - aUpdated;
     });
 
   // Filter boundaries based on search
