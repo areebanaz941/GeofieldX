@@ -79,6 +79,8 @@ export default function MapView() {
   const [clickedFeature, setClickedFeature] = useState<IFeature | null>(null);
   const [editFeatureModalOpen, setEditFeatureModalOpen] = useState(false);
   const [featureToEdit, setFeatureToEdit] = useState<IFeature | null>(null);
+  // Drawing UI state (for line drawing toolbar)
+  const [lineDrawingUi, setLineDrawingUi] = useState<{ active: boolean; points: number; canUndo: boolean; canRedo: boolean }>({ active: false, points: 0, canUndo: false, canRedo: false });
   
   // Dismissible boundary notice state (persisted)
   const [showBoundaryNotice, setShowBoundaryNotice] = useState<boolean>(() => {
@@ -313,6 +315,37 @@ export default function MapView() {
   // ✅ INITIALIZE: Reset navigation state on component mount
   useEffect(() => {
     navigationController.current.reset();
+  }, []);
+
+  // Listen for drawing state updates and cancellation from OpenLayersMap
+  useEffect(() => {
+    const handleDrawingState = (ev: Event) => {
+      const detail = (ev as CustomEvent)?.detail || {};
+      if (!detail || typeof detail !== 'object') return;
+      const { active, points, canUndo, canRedo } = detail as { active?: boolean; points?: number; canUndo?: boolean; canRedo?: boolean };
+      setLineDrawingUi({
+        active: !!active,
+        points: Number(points) || 0,
+        canUndo: !!canUndo,
+        canRedo: !!canRedo
+      });
+    };
+    const handleDrawingCancelled = () => {
+      setLineDrawingMode(false);
+      setLinePoints([]);
+      memoizedToast({ title: 'Drawing cancelled', description: 'Fiber cable drawing was cancelled.' });
+    };
+    window.addEventListener('map-drawing-state', handleDrawingState as EventListener);
+    window.addEventListener('lineDrawingCancelled', handleDrawingCancelled as EventListener);
+    return () => {
+      window.removeEventListener('map-drawing-state', handleDrawingState as EventListener);
+      window.removeEventListener('lineDrawingCancelled', handleDrawingCancelled as EventListener);
+    };
+  }, [memoizedToast]);
+
+  const dispatchDrawingAction = useCallback((action: 'undo' | 'redo' | 'finish' | 'cancel') => {
+    const ev = new CustomEvent('map-drawing-action', { detail: { action } });
+    window.dispatchEvent(ev);
   }, []);
   
   // ✅ URL CHANGE LISTENER - Reset navigation when URL changes
@@ -1631,6 +1664,45 @@ export default function MapView() {
             editingBoundaryId={editingBoundaryId || undefined}
             onBoundaryGeometryEdited={(id, coords) => setPendingBoundaryCoords(coords)}
           />
+
+          {/* Line drawing toolbar - visible during line drawing */
+          {(lineDrawingMode || lineDrawingUi.active) && (
+            <div className="absolute bottom-4 right-4 z-[1100]">
+              <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md shadow-lg p-2 flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => dispatchDrawingAction('undo')}
+                  disabled={!lineDrawingUi.canUndo}
+                  title="Undo last vertex (Ctrl+Z)"
+                >
+                  Undo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => dispatchDrawingAction('redo')}
+                  disabled={!lineDrawingUi.canRedo}
+                  title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+                >
+                  Redo
+                </Button>
+                <Button
+                  onClick={() => dispatchDrawingAction('finish')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={lineDrawingUi.points < 2}
+                  title="Finish line (double-click)"
+                >
+                  Finish
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => dispatchDrawingAction('cancel')}
+                  title="Cancel drawing (Esc)"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
           
           {/* Mobile Drawing Button - Bottom Center */}
           <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-[1000] lg:hidden">
