@@ -1665,7 +1665,7 @@ export default function MapView() {
             onBoundaryGeometryEdited={(id, coords) => setPendingBoundaryCoords(coords)}
           />
 
-          {/* Line drawing toolbar - visible during line drawing */
+          {/* Line drawing toolbar - visible during line drawing */}
           {(lineDrawingMode || lineDrawingUi.active) && (
             <div className="absolute bottom-4 right-4 z-[1100]">
               <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md shadow-lg p-2 flex items-center gap-2">

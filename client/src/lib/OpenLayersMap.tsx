@@ -630,7 +630,17 @@ const OpenLayersMap = ({
     // The last fixed vertex is coords[length - 2] (last is dynamic pointer)
     const lastFixed = coords[coords.length - 2];
     state.redoStack.push(lastFixed);
-    drawInteractionRef.current.removeLastPoint();
+    const drawAny = drawInteractionRef.current as any;
+    if (drawAny && typeof drawAny.removeLastPoint === 'function') {
+      drawAny.removeLastPoint();
+    } else {
+      // Fallback: manually remove last fixed vertex while preserving dynamic pointer
+      const dynamic = coords[coords.length - 1];
+      const newCoords = coords.slice(0, Math.max(0, coords.length - 2)).concat([dynamic]);
+      state.isPerformingRedo = true;
+      geom.setCoordinates(newCoords);
+      state.isPerformingRedo = false;
+    }
     emitDrawingState();
   }, [emitDrawingState]);
 
