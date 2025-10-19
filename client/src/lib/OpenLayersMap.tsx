@@ -592,7 +592,9 @@ const OpenLayersMap = ({
     sketchFeature: Feature | null;
     redoStack: number[][]; // stores lon/lat in map projection (EPSG:3857)
     geometryListenerKey: any | null;
-  }>({ active: false, sketchFeature: null, redoStack: [], geometryListenerKey: null });
+    lastCoordCount: number;
+    isPerformingRedo: boolean;
+  }>({ active: false, sketchFeature: null, redoStack: [], geometryListenerKey: null, lastCoordCount: 0, isPerformingRedo: false });
 
   const emitDrawingState = useCallback(() => {
     const state = lineDrawStateRef.current;
@@ -621,8 +623,8 @@ const OpenLayersMap = ({
     const geom = state.sketchFeature?.getGeometry() as LineString | undefined;
     if (!geom) return;
     const coords = geom.getCoordinates();
-    if (!coords || coords.length < 3) {
-      // Need at least 2 fixed points + dynamic to undo
+    if (!coords || coords.length < 2) {
+      // Need at least 1 fixed point + dynamic to undo
       return;
     }
     // The last fixed vertex is coords[length - 2] (last is dynamic pointer)
@@ -644,7 +646,10 @@ const OpenLayersMap = ({
     // Insert before dynamic last coordinate
     const insertIndex = Math.max(0, coords.length - 1);
     const newCoords = coords.slice(0, insertIndex).concat([next], coords.slice(insertIndex));
+    // Avoid clearing redo stack inside geometry change listener for this programmatic update
+    state.isPerformingRedo = true;
     geom.setCoordinates(newCoords);
+    state.isPerformingRedo = false;
     emitDrawingState();
   }, [emitDrawingState]);
 
@@ -669,6 +674,8 @@ const OpenLayersMap = ({
     s.active = false;
     s.sketchFeature = null;
     s.redoStack = [];
+    s.lastCoordCount = 0;
+    s.isPerformingRedo = false;
     emitDrawingState();
   }, [emitDrawingState]);
 
@@ -1773,6 +1780,7 @@ const OpenLayersMap = ({
         state.active = true;
         state.sketchFeature = event.feature as Feature;
         state.redoStack = [];
+        state.isPerformingRedo = false;
         // Remove previous listener if any
         if (state.geometryListenerKey) {
           try { unByKey(state.geometryListenerKey); } catch {}
@@ -1780,7 +1788,21 @@ const OpenLayersMap = ({
         }
         const geom = state.sketchFeature.getGeometry();
         if (geom) {
+          // Initialize coordinate count (includes dynamic pointer)
+          try {
+            const initialCoords = (state.sketchFeature?.getGeometry() as LineString)?.getCoordinates() || [];
+            state.lastCoordCount = initialCoords.length;
+          } catch { state.lastCoordCount = 0; }
           state.geometryListenerKey = (geom as any).on('change', () => {
+            try {
+              const currentCoords = (state.sketchFeature?.getGeometry() as LineString)?.getCoordinates() || [];
+              const currentCount = currentCoords.length;
+              // If a new vertex was added by the user, clear redo stack
+              if (!state.isPerformingRedo && currentCount > state.lastCoordCount) {
+                state.redoStack = [];
+              }
+              state.lastCoordCount = currentCount;
+            } catch {}
             emitDrawingState();
           });
         }
@@ -1796,6 +1818,8 @@ const OpenLayersMap = ({
         state.active = false;
         state.sketchFeature = null;
         state.redoStack = [];
+        state.lastCoordCount = 0;
+        state.isPerformingRedo = false;
         emitDrawingState();
       });
 
@@ -1842,6 +1866,8 @@ const OpenLayersMap = ({
         state.active = false;
         state.sketchFeature = null;
         state.redoStack = [];
+        state.lastCoordCount = 0;
+        state.isPerformingRedo = false;
         emitDrawingState();
 
         // Remove the draw interaction after line completion
