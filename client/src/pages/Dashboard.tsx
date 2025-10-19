@@ -202,6 +202,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'teams' | 'boundaries'>('overview');
+  const [assignedBoundarySearch, setAssignedBoundarySearch] = useState('');
 
   // Read tab from URL on mount and handle browser navigation
   useEffect(() => {
@@ -348,6 +349,30 @@ export default function Dashboard() {
     
     // Boundaries assigned to this team (provided by /api/boundaries for field users)
     const assignedBoundaries = (boundaries as any[]);
+    // Filter by name and sort by date (latest first)
+    const filteredAndSortedAssignedBoundaries = (assignedBoundaries || [])
+      .filter((b: any) => {
+        if (!assignedBoundarySearch) return true;
+        const q = String(assignedBoundarySearch).toLowerCase();
+        const name = String(b?.name ?? '').toLowerCase();
+        return name.includes(q);
+      })
+      .sort((a: any, b: any) => {
+        const getTime = (x: any) => {
+          const updated = x?.updatedAt ? new Date(x.updatedAt).getTime() : NaN;
+          const created = x?.createdAt ? new Date(x.createdAt).getTime() : NaN;
+          if (!Number.isNaN(updated)) return updated;
+          if (!Number.isNaN(created)) return created;
+          try {
+            const idStr = x?._id?.toString?.() ?? x?._id;
+            if (typeof idStr === 'string' && idStr.length >= 8) {
+              return parseInt(idStr.slice(0, 8), 16) * 1000; // Fallback from ObjectId timestamp
+            }
+          } catch {}
+          return 0;
+        };
+        return getTime(b) - getTime(a);
+      });
     
     return (
       <div className="min-h-screen bg-gray-50">
@@ -524,9 +549,23 @@ export default function Dashboard() {
                   Boundary areas assigned to your team
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {assignedBoundaries.slice(0, 3).map((boundary: any) => (
+          <CardContent>
+            <div className="mb-4 max-w-sm">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search boundaries by name..."
+                  value={assignedBoundarySearch}
+                  onChange={(e) => setAssignedBoundarySearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-3">
+              {filteredAndSortedAssignedBoundaries.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">No boundaries match your search.</div>
+              ) : (
+                (assignedBoundarySearch ? filteredAndSortedAssignedBoundaries : filteredAndSortedAssignedBoundaries.slice(0, 3)).map((boundary: any) => (
                     <div key={boundary._id} className="border rounded-lg p-3 hover:bg-gray-50">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -534,18 +573,26 @@ export default function Dashboard() {
                           {boundary.description && (
                             <p className="text-sm text-gray-600 mt-1">{boundary.description}</p>
                           )}
-                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                            <span className={`px-2 py-1 rounded-full ${
-                              boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
-                              boundary.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {boundary.status}
+                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                        <span className={`px-2 py-1 rounded-full ${
+                          boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
+                          boundary.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {boundary.status}
+                        </span>
+                        {(boundary.updatedAt || boundary.createdAt) && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>
+                              {(boundary.updatedAt ? 'Updated' : 'Created')}: {new Date(boundary.updatedAt || boundary.createdAt).toLocaleDateString()}
                             </span>
-                            {boundary.geometry && (
-                              <span>Type: {boundary.geometry.type}</span>
-                            )}
-                          </div>
+                          </span>
+                        )}
+                        {boundary.geometry && (
+                          <span>Type: {boundary.geometry.type}</span>
+                        )}
+                      </div>
                         </div>
                         <Button
                           variant="outline"
@@ -558,8 +605,9 @@ export default function Dashboard() {
                         </Button>
                       </div>
                     </div>
-                  ))}
-                  {assignedBoundaries.length > 3 && (
+              ))
+              )}
+              {!assignedBoundarySearch && assignedBoundaries.length > 3 && (
                     <div className="text-center pt-2">
                       <Button 
                         variant="ghost" 
