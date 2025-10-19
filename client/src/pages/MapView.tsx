@@ -1460,22 +1460,8 @@ export default function MapView() {
     // For supervisors: only prompt assignment if boundary is unassigned
     if (user?.role === "Supervisor") {
       setSelectedBoundary(boundary);
-
-      const assigned = (boundary as any).assignedTo;
-      const assignedId = typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.();
-      const assignedName = typeof assigned === 'object' ? (assigned.name || assigned.username) : undefined;
-
-      if (!assignedId) {
-        setBoundaryAssignmentModalOpen(true);
-      } else {
-        // Show info toast instead of reopening assignment
-        const team = (teams as any[])?.find((t: any) => t && t._id && String(t._id) === String(assignedId));
-        const teamLabel = assignedName || team?.name || 'Unknown Team';
-        memoizedToast({
-          title: "Boundary Information",
-          description: `${boundary.name} - Assigned to ${teamLabel}`,
-        });
-      }
+      // Always open assignment modal so supervisors can view/change assignment
+      setBoundaryAssignmentModalOpen(true);
     } else {
       memoizedToast({
         title: "Boundary Information",
@@ -1795,8 +1781,8 @@ export default function MapView() {
             </Button>
           </div>
 
-          {/* Show boundary info for field users - Mobile */}
-          {user?.role === "Field" && showBoundaryNotice && (
+          {/* Show boundary info for field users - Mobile (hide only during placement) */}
+          {user?.role === "Field" && showBoundaryNotice && !(pointSelectionMode || lineDrawingMode || drawingMode) && (
             <div className="absolute bottom-20 left-2 right-2 z-[1000] lg:hidden">
               <div className="relative bg-white rounded-lg p-2 shadow-lg border border-orange-200">
                 <button
@@ -1824,8 +1810,8 @@ export default function MapView() {
             </div>
           )}
 
-          {/* Desktop boundary info for field users */}
-          {user?.role === "Field" && showBoundaryNotice && (
+          {/* Desktop boundary info for field users (hide only during placement) */}
+          {user?.role === "Field" && showBoundaryNotice && !(pointSelectionMode || lineDrawingMode || drawingMode) && (
             <div className="absolute bottom-4 right-4 z-[1000] hidden lg:block">
               <div className="relative bg-white rounded-lg p-3 shadow-lg border border-orange-200">
                 <button
