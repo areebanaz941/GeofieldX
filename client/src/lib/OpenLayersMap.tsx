@@ -579,6 +579,11 @@ const OpenLayersMap = ({
   const modifyInteractionRef = useRef<Modify | null>(null);
   const hoveredFeatureRef = useRef<Feature | null>(null);
   const selectedFeatureRef = useRef<Feature | null>(null);
+  // Live refs for interaction modes to avoid stale closures in OL handlers
+  const drawingModeRef = useRef<boolean>(drawingMode);
+  const pointSelectionModeRef = useRef<boolean>(pointSelectionMode);
+  const lineDrawingModeRef = useRef<boolean>(lineDrawingMode);
+  const selectionModeRef = useRef<boolean>(selectionMode);
 
   // Stable callback refs to prevent effect churn during drawing
   const onPolygonCreatedRef = useRef<MapProps['onPolygonCreated'] | null>(null);
@@ -1153,7 +1158,12 @@ const OpenLayersMap = ({
     if (onMapClickRef.current) {
       map.on('click', (event) => {
         // Only handle legacy selection mode, not the new drawing modes
-        if (!drawingMode && !pointSelectionMode && !lineDrawingMode && selectionMode) {
+        if (
+          !drawingModeRef.current &&
+          !pointSelectionModeRef.current &&
+          !lineDrawingModeRef.current &&
+          selectionModeRef.current
+        ) {
           const coordinate = toLonLat(event.coordinate);
           const [lng, lat] = coordinate;
           
@@ -1213,7 +1223,12 @@ const OpenLayersMap = ({
     };
 
     const handlePointerMove = (evt: any) => {
-      if (drawingMode || pointSelectionMode || lineDrawingMode) {
+      if (
+        drawingModeRef.current ||
+        pointSelectionModeRef.current ||
+        lineDrawingModeRef.current ||
+        selectionModeRef.current
+      ) {
         setHoveredFeature(null);
         return;
       }
@@ -1239,7 +1254,12 @@ const OpenLayersMap = ({
     };
 
     const handlePrimaryClick = (evt: any) => {
-      if (drawingMode || pointSelectionMode || lineDrawingMode || selectionMode) return; // handled elsewhere
+      if (
+        drawingModeRef.current ||
+        pointSelectionModeRef.current ||
+        lineDrawingModeRef.current ||
+        selectionModeRef.current
+      ) return; // handled elsewhere
       const feature = pickTopFeature(evt.pixel);
       setSelectedFeature(feature);
       if (!feature) return;
@@ -1381,6 +1401,27 @@ const OpenLayersMap = ({
       }
     };
   }, []);
+
+  // Keep mode refs updated for use inside OL event handlers
+  useEffect(() => { drawingModeRef.current = drawingMode; }, [drawingMode]);
+  useEffect(() => { pointSelectionModeRef.current = pointSelectionMode; }, [pointSelectionMode]);
+  useEffect(() => { lineDrawingModeRef.current = lineDrawingMode; }, [lineDrawingMode]);
+  useEffect(() => { selectionModeRef.current = selectionMode; }, [selectionMode]);
+
+  // Clear hover/cursor when any interactive mode activates
+  useEffect(() => {
+    const anyActive = drawingMode || pointSelectionMode || lineDrawingMode || selectionMode;
+    if (anyActive) {
+      if (hoveredFeatureRef.current) {
+        hoveredFeatureRef.current.set('isHovered', false);
+        hoveredFeatureRef.current.changed();
+        hoveredFeatureRef.current = null;
+      }
+      if (mapRef.current?.getTargetElement()) {
+        mapRef.current.getTargetElement().style.cursor = '';
+      }
+    }
+  }, [drawingMode, pointSelectionMode, lineDrawingMode, selectionMode]);
 
   // Keep callback refs updated without retriggering drawing effects
   useEffect(() => {
