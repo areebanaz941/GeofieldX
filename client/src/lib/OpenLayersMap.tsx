@@ -622,7 +622,8 @@ const OpenLayersMap = ({
     // Create vector layers
     featuresLayerRef.current = new VectorLayer({
       source: featuresSource,
-      declutter: true,
+      // Disable decluttering so nearby icons (e.g., towers) don't hide each other
+      declutter: false,
       // Avoid re-rendering on each interaction frame to reduce flicker
       updateWhileInteracting: false,
       style: (feature, resolution) => {
@@ -804,7 +805,8 @@ const OpenLayersMap = ({
 
     boundariesLayerRef.current = new VectorLayer({
       source: boundariesSource,
-      declutter: true,
+      // Decluttering is unnecessary for polygon strokes and can hide labels inconsistently
+      declutter: false,
       updateWhileInteracting: false,
       style: (feature) => {
         const zoom = mapRef.current?.getView().getZoom() || 13;
