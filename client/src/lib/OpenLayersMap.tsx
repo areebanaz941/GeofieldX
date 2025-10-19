@@ -15,6 +15,7 @@ import GeoJSON from 'ol/format/GeoJSON';
 import Geolocation from 'ol/Geolocation';
 import Control from 'ol/control/Control'; // Import Control class
 import Collection from 'ol/Collection';
+import { unByKey } from 'ol/Observable';
 import { ITask, IUser, IFeature, IBoundary } from '../../../shared/schema';
 import { getFeatureIcon } from '../components/FeatureIcons';
 import { getStatusColor } from '../components/FeatureIcon';
@@ -584,6 +585,153 @@ const OpenLayersMap = ({
   const pointSelectionModeRef = useRef<boolean>(pointSelectionMode);
   const lineDrawingModeRef = useRef<boolean>(lineDrawingMode);
   const selectionModeRef = useRef<boolean>(selectionMode);
+
+  // Internal state for line drawing undo/redo and keyboard handling
+  const lineDrawStateRef = useRef<{
+    active: boolean;
+    sketchFeature: Feature | null;
+    redoStack: number[][]; // stores lon/lat in map projection (EPSG:3857)
+    geometryListenerKey: any | null;
+  }>({ active: false, sketchFeature: null, redoStack: [], geometryListenerKey: null });
+
+  const emitDrawingState = useCallback(() => {
+    const state = lineDrawStateRef.current;
+    let points = 0;
+    try {
+      const geom = state.sketchFeature?.getGeometry() as LineString | undefined;
+      if (geom) {
+        const coords = geom.getCoordinates() || [];
+        // While drawing, last coordinate is dynamic (pointer); fixed vertices = length - 1
+        points = Math.max(0, coords.length - 1);
+      }
+    } catch {}
+    window.dispatchEvent(new CustomEvent('map-drawing-state', {
+      detail: {
+        active: state.active,
+        points,
+        canUndo: points > 0,
+        canRedo: (state.redoStack?.length || 0) > 0
+      }
+    }));
+  }, []);
+
+  const undoLastVertex = useCallback(() => {
+    if (!drawInteractionRef.current || !lineDrawingModeRef.current) return;
+    const state = lineDrawStateRef.current;
+    const geom = state.sketchFeature?.getGeometry() as LineString | undefined;
+    if (!geom) return;
+    const coords = geom.getCoordinates();
+    if (!coords || coords.length < 3) {
+      // Need at least 2 fixed points + dynamic to undo
+      return;
+    }
+    // The last fixed vertex is coords[length - 2] (last is dynamic pointer)
+    const lastFixed = coords[coords.length - 2];
+    state.redoStack.push(lastFixed);
+    drawInteractionRef.current.removeLastPoint();
+    emitDrawingState();
+  }, [emitDrawingState]);
+
+  const redoLastVertex = useCallback(() => {
+    const state = lineDrawStateRef.current;
+    const geom = state.sketchFeature?.getGeometry() as LineString | undefined;
+    if (!geom) return;
+    const redo = state.redoStack;
+    if (!redo || redo.length === 0) return;
+    const next = redo.pop();
+    if (!next) return;
+    const coords = geom.getCoordinates() || [];
+    // Insert before dynamic last coordinate
+    const insertIndex = Math.max(0, coords.length - 1);
+    const newCoords = coords.slice(0, insertIndex).concat([next], coords.slice(insertIndex));
+    geom.setCoordinates(newCoords);
+    emitDrawingState();
+  }, [emitDrawingState]);
+
+  const finishDrawing = useCallback(() => {
+    if (!drawInteractionRef.current) return;
+    drawInteractionRef.current.finishDrawing();
+    // drawend handler will clean up and emit state
+  }, []);
+
+  const cancelDrawing = useCallback(() => {
+    if (drawInteractionRef.current) {
+      drawInteractionRef.current.abortDrawing();
+    }
+    // Notify app to exit line drawing mode
+    window.dispatchEvent(new CustomEvent('lineDrawingCancelled'));
+    // Reset internal state
+    const s = lineDrawStateRef.current;
+    if (s.geometryListenerKey) {
+      try { unByKey(s.geometryListenerKey); } catch {}
+      s.geometryListenerKey = null;
+    }
+    s.active = false;
+    s.sketchFeature = null;
+    s.redoStack = [];
+    emitDrawingState();
+  }, [emitDrawingState]);
+
+  // Keyboard shortcuts for line drawing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!lineDrawingModeRef.current) return;
+      // Ignore when typing in inputs/textareas/contenteditable
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+
+      const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '');
+      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelDrawing();
+        return;
+      }
+      if (ctrlOrCmd && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undoLastVertex();
+        return;
+      }
+      if ((ctrlOrCmd && e.key.toLowerCase() === 'y') || (ctrlOrCmd && e.shiftKey && e.key.toLowerCase() === 'z')) {
+        e.preventDefault();
+        redoLastVertex();
+        return;
+      }
+      if (e.key === 'Enter') {
+        // Optional: allow Enter to finish drawing (double-click works by default)
+        e.preventDefault();
+        finishDrawing();
+      }
+    };
+
+    const handleDrawingActionEvent = (ev: Event) => {
+      const e = ev as CustomEvent;
+      const action = (e.detail && e.detail.action) || '';
+      switch (action) {
+        case 'undo':
+          undoLastVertex();
+          break;
+        case 'redo':
+          redoLastVertex();
+          break;
+        case 'finish':
+          finishDrawing();
+          break;
+        case 'cancel':
+          cancelDrawing();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('map-drawing-action', handleDrawingActionEvent as EventListener);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('map-drawing-action', handleDrawingActionEvent as EventListener);
+    };
+  }, [undoLastVertex, redoLastVertex, finishDrawing, cancelDrawing]);
 
   // Stable callback refs to prevent effect churn during drawing
   const onPolygonCreatedRef = useRef<MapProps['onPolygonCreated'] | null>(null);
@@ -1619,6 +1767,38 @@ const OpenLayersMap = ({
         maxPoints: 20
       });
 
+      drawInteractionRef.current.on('drawstart', (event) => {
+        // Reset redo stack and start tracking geometry changes
+        const state = lineDrawStateRef.current;
+        state.active = true;
+        state.sketchFeature = event.feature as Feature;
+        state.redoStack = [];
+        // Remove previous listener if any
+        if (state.geometryListenerKey) {
+          try { unByKey(state.geometryListenerKey); } catch {}
+          state.geometryListenerKey = null;
+        }
+        const geom = state.sketchFeature.getGeometry();
+        if (geom) {
+          state.geometryListenerKey = (geom as any).on('change', () => {
+            emitDrawingState();
+          });
+        }
+        emitDrawingState();
+      });
+
+      drawInteractionRef.current.on('drawabort', () => {
+        const state = lineDrawStateRef.current;
+        if (state.geometryListenerKey) {
+          try { unByKey(state.geometryListenerKey); } catch {}
+          state.geometryListenerKey = null;
+        }
+        state.active = false;
+        state.sketchFeature = null;
+        state.redoStack = [];
+        emitDrawingState();
+      });
+
       drawInteractionRef.current.on('drawend', (event) => {
         console.log('🔵 Line drawing completed');
         const geometry = event.feature.getGeometry() as LineString;
@@ -1652,6 +1832,17 @@ const OpenLayersMap = ({
         } else {
           console.warn('🔵 No onLineCreated handler available');
         }
+
+        // Reset internal drawing state
+        const state = lineDrawStateRef.current;
+        if (state.geometryListenerKey) {
+          try { unByKey(state.geometryListenerKey); } catch {}
+          state.geometryListenerKey = null;
+        }
+        state.active = false;
+        state.sketchFeature = null;
+        state.redoStack = [];
+        emitDrawingState();
 
         // Remove the draw interaction after line completion
         if (drawInteractionRef.current) {
