@@ -1004,28 +1004,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can see all features - ensure this always returns all data
         features = await storage.getAllFeatures();
       } else {
-        // Field users can only see features within their assigned boundaries
+        // Field users can see:
+        // - Features created by their team
+        // - Features explicitly assigned to their team
+        // - Features located within boundaries assigned to their team
         if (user.teamId) {
-          // Get assigned boundaries for the team
           const allBoundaries = await storage.getAllBoundaries();
-          const teamBoundaries = allBoundaries.filter(
-            boundary => boundary.assignedTo?.toString() === user.teamId?.toString()
+          const teamBoundaryIds = new Set(
+            allBoundaries
+              .filter((boundary: any) => {
+                const assigned = boundary?.assignedTo;
+                const assignedId = typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.();
+                return assignedId && assignedId === user.teamId?.toString();
+              })
+              .map((b: any) => (typeof b._id === 'object' ? b._id?.toString?.() : b._id?.toString?.()))
+              .filter(Boolean)
           );
-          
-          // If team has assigned boundaries, show features created by the team
-          if (teamBoundaries.length > 0) {
-            const allFeatures = await storage.getAllFeatures();
-            // Show features created by the team (based on teamId)
-            features = allFeatures.filter(feature => {
-              return feature.teamId?.toString() === user.teamId?.toString();
-            });
-          } else {
-            // Even without boundaries, show features created by the team
-            const allFeatures = await storage.getAllFeatures();
-            features = allFeatures.filter(feature => {
-              return feature.teamId?.toString() === user.teamId?.toString();
-            });
-          }
+
+          const allFeatures = await storage.getAllFeatures();
+          const teamIdStr = user.teamId.toString();
+          features = allFeatures.filter((feature: any) => {
+            const createdByTeam = feature?.teamId?.toString?.() === teamIdStr;
+            const assignedToTeam = feature?.assignedTo?.toString?.() === teamIdStr;
+            const inTeamBoundary = feature?.boundaryId && teamBoundaryIds.has(feature.boundaryId.toString());
+            return createdByTeam || assignedToTeam || inTeamBoundary;
+          });
         } else {
           features = [];
         }
