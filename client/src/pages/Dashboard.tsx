@@ -203,6 +203,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'teams' | 'boundaries'>('overview');
   const [assignedBoundarySearch, setAssignedBoundarySearch] = useState('');
+  const [showAllAssignedBoundaries, setShowAllAssignedBoundaries] = useState(false);
 
   // Read tab from URL on mount and handle browser navigation
   useEffect(() => {
@@ -565,7 +566,10 @@ export default function Dashboard() {
               {filteredAndSortedAssignedBoundaries.length === 0 ? (
                 <div className="text-center py-6 text-gray-500">No boundaries match your search.</div>
               ) : (
-                (assignedBoundarySearch ? filteredAndSortedAssignedBoundaries : filteredAndSortedAssignedBoundaries.slice(0, 3)).map((boundary: any) => (
+                ((assignedBoundarySearch || showAllAssignedBoundaries)
+                  ? filteredAndSortedAssignedBoundaries
+                  : filteredAndSortedAssignedBoundaries.slice(0, 3)
+                ).map((boundary: any) => (
                     <div key={boundary._id} className="border rounded-lg p-3 hover:bg-gray-50">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -608,17 +612,28 @@ export default function Dashboard() {
               ))
               )}
               {!assignedBoundarySearch && assignedBoundaries.length > 3 && (
-                    <div className="text-center pt-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setLocation('/map?type=Parcel')}
-                        className="text-[#1E5CB3] hover:text-[#0D2E5A]"
-                      >
-                        View all {assignedBoundaries.length} boundaries
-                      </Button>
-                    </div>
+                <div className="text-center pt-2">
+                  {showAllAssignedBoundaries ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllAssignedBoundaries(false)}
+                      className="text-[#1E5CB3] hover:text-[#0D2E5A]"
+                    >
+                      Show less
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllAssignedBoundaries(true)}
+                      className="text-[#1E5CB3] hover:text-[#0D2E5A]"
+                    >
+                      View all {assignedBoundaries.length} boundaries
+                    </Button>
                   )}
+                </div>
+              )}
                 </div>
               </CardContent>
             </Card>
