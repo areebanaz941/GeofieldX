@@ -1400,10 +1400,25 @@ export default function MapView() {
   };
 
   const handleBoundaryClick = (boundary: any) => {
-    // If user is supervisor, show assignment modal
+    // For supervisors: only prompt assignment if boundary is unassigned
     if (user?.role === "Supervisor") {
       setSelectedBoundary(boundary);
-      setBoundaryAssignmentModalOpen(true);
+
+      const assigned = (boundary as any).assignedTo;
+      const assignedId = typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.();
+      const assignedName = typeof assigned === 'object' ? (assigned.name || assigned.username) : undefined;
+
+      if (!assignedId) {
+        setBoundaryAssignmentModalOpen(true);
+      } else {
+        // Show info toast instead of reopening assignment
+        const team = (teams as any[])?.find((t: any) => t && t._id && String(t._id) === String(assignedId));
+        const teamLabel = assignedName || team?.name || 'Unknown Team';
+        memoizedToast({
+          title: "Boundary Information",
+          description: `${boundary.name} - Assigned to ${teamLabel}`,
+        });
+      }
     } else {
       memoizedToast({
         title: "Boundary Information",
