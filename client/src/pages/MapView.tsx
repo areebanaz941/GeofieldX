@@ -81,6 +81,8 @@ export default function MapView() {
   const [featureToEdit, setFeatureToEdit] = useState<IFeature | null>(null);
   // Drawing UI state (for line drawing toolbar)
   const [lineDrawingUi, setLineDrawingUi] = useState<{ active: boolean; points: number; canUndo: boolean; canRedo: boolean }>({ active: false, points: 0, canUndo: false, canRedo: false });
+  // Drawing UI state (for polygon drawing toolbar - parcels/boundaries)
+  const [polygonDrawingUi, setPolygonDrawingUi] = useState<{ active: boolean; points: number; canUndo: boolean; canRedo: boolean }>({ active: false, points: 0, canUndo: false, canRedo: false });
   
   // Dismissible boundary notice state (persisted)
   const [showBoundaryNotice, setShowBoundaryNotice] = useState<boolean>(() => {
@@ -322,24 +324,46 @@ export default function MapView() {
     const handleDrawingState = (ev: Event) => {
       const detail = (ev as CustomEvent)?.detail || {};
       if (!detail || typeof detail !== 'object') return;
-      const { active, points, canUndo, canRedo } = detail as { active?: boolean; points?: number; canUndo?: boolean; canRedo?: boolean };
-      setLineDrawingUi({
+      const { shape, active, points, canUndo, canRedo } = detail as { shape?: 'line' | 'polygon'; active?: boolean; points?: number; canUndo?: boolean; canRedo?: boolean };
+      const ui = {
         active: !!active,
         points: Number(points) || 0,
         canUndo: !!canUndo,
         canRedo: !!canRedo
-      });
+      };
+      if (shape === 'polygon') {
+        setPolygonDrawingUi(ui);
+      } else {
+        // default to line for backward-compat
+        setLineDrawingUi(ui);
+      }
     };
-    const handleDrawingCancelled = () => {
+    const handleLineDrawingCancelled = () => {
       setLineDrawingMode(false);
       setLinePoints([]);
       memoizedToast({ title: 'Drawing cancelled', description: 'Fiber cable drawing was cancelled.' });
     };
+    const handlePolygonDrawingCancelled = () => {
+      setDrawingMode(false);
+      memoizedToast({ title: 'Drawing cancelled', description: 'Polygon drawing was cancelled.' });
+    };
+    const handleGenericDrawingCancelled = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail || {};
+      if (detail?.shape === 'polygon') {
+        handlePolygonDrawingCancelled();
+      } else if (detail?.shape === 'line') {
+        handleLineDrawingCancelled();
+      }
+    };
     window.addEventListener('map-drawing-state', handleDrawingState as EventListener);
-    window.addEventListener('lineDrawingCancelled', handleDrawingCancelled as EventListener);
+    window.addEventListener('lineDrawingCancelled', handleLineDrawingCancelled as EventListener);
+    window.addEventListener('polygonDrawingCancelled', handlePolygonDrawingCancelled as EventListener);
+    window.addEventListener('drawingCancelled', handleGenericDrawingCancelled as EventListener);
     return () => {
       window.removeEventListener('map-drawing-state', handleDrawingState as EventListener);
-      window.removeEventListener('lineDrawingCancelled', handleDrawingCancelled as EventListener);
+      window.removeEventListener('lineDrawingCancelled', handleLineDrawingCancelled as EventListener);
+      window.removeEventListener('polygonDrawingCancelled', handlePolygonDrawingCancelled as EventListener);
+      window.removeEventListener('drawingCancelled', handleGenericDrawingCancelled as EventListener);
     };
   }, [memoizedToast]);
 
@@ -1664,6 +1688,45 @@ export default function MapView() {
             editingBoundaryId={editingBoundaryId || undefined}
             onBoundaryGeometryEdited={(id, coords) => setPendingBoundaryCoords(coords)}
           />
+
+          {/* Polygon drawing toolbar - visible during polygon drawing (parcels/boundaries) */}
+          {(drawingMode || polygonDrawingUi.active) && (
+            <div className="absolute bottom-4 right-4 z-[1100]">
+              <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md shadow-lg p-2 flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => dispatchDrawingAction('undo')}
+                  disabled={!polygonDrawingUi.canUndo}
+                  title="Undo last vertex (Ctrl+Z)"
+                >
+                  Undo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => dispatchDrawingAction('redo')}
+                  disabled={!polygonDrawingUi.canRedo}
+                  title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+                >
+                  Redo
+                </Button>
+                <Button
+                  onClick={() => dispatchDrawingAction('finish')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={polygonDrawingUi.points < 3}
+                  title="Finish polygon (double-click)"
+                >
+                  Finish
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => dispatchDrawingAction('cancel')}
+                  title="Cancel drawing (Esc)"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Line drawing toolbar - visible during line drawing */}
           {(lineDrawingMode || lineDrawingUi.active) && (

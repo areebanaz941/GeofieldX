@@ -586,7 +586,7 @@ const OpenLayersMap = ({
   const lineDrawingModeRef = useRef<boolean>(lineDrawingMode);
   const selectionModeRef = useRef<boolean>(selectionMode);
 
-  // Internal state for line drawing undo/redo and keyboard handling
+  // Internal state for line/polygon drawing undo/redo and keyboard handling
   const lineDrawStateRef = useRef<{
     active: boolean;
     sketchFeature: Feature | null;
@@ -596,19 +596,28 @@ const OpenLayersMap = ({
     isPerformingRedo: boolean;
   }>({ active: false, sketchFeature: null, redoStack: [], geometryListenerKey: null, lastCoordCount: 0, isPerformingRedo: false });
 
-  const emitDrawingState = useCallback(() => {
+  const polygonDrawStateRef = useRef<{
+    active: boolean;
+    sketchFeature: Feature | null;
+    redoStack: number[][]; // stores lon/lat in map projection (EPSG:3857)
+    geometryListenerKey: any | null;
+    lastCoordCount: number; // count of coordinates in first ring
+    isPerformingRedo: boolean;
+  }>({ active: false, sketchFeature: null, redoStack: [], geometryListenerKey: null, lastCoordCount: 0, isPerformingRedo: false });
+
+  const emitDrawingStateLine = useCallback(() => {
     const state = lineDrawStateRef.current;
     let points = 0;
     try {
       const geom = state.sketchFeature?.getGeometry() as LineString | undefined;
       if (geom) {
         const coords = geom.getCoordinates() || [];
-        // While drawing, last coordinate is dynamic (pointer); fixed vertices = length - 1
-        points = Math.max(0, coords.length - 1);
+        points = Math.max(0, coords.length - 1); // last is dynamic pointer
       }
     } catch {}
     window.dispatchEvent(new CustomEvent('map-drawing-state', {
       detail: {
+        shape: 'line',
         active: state.active,
         points,
         canUndo: points > 0,
@@ -617,7 +626,30 @@ const OpenLayersMap = ({
     }));
   }, []);
 
-  const undoLastVertex = useCallback(() => {
+  const emitDrawingStatePolygon = useCallback(() => {
+    const state = polygonDrawStateRef.current;
+    let points = 0;
+    try {
+      const geom = state.sketchFeature?.getGeometry() as Polygon | undefined;
+      if (geom) {
+        const rings = geom.getCoordinates() || [];
+        const ring = Array.isArray(rings) ? (rings[0] || []) : [];
+        // ring includes dynamic last pointer; subtract 1 to get fixed vertices
+        points = Math.max(0, ring.length - 1);
+      }
+    } catch {}
+    window.dispatchEvent(new CustomEvent('map-drawing-state', {
+      detail: {
+        shape: 'polygon',
+        active: state.active,
+        points,
+        canUndo: points > 0,
+        canRedo: (state.redoStack?.length || 0) > 0
+      }
+    }));
+  }, []);
+
+  const undoLastVertexLine = useCallback(() => {
     if (!drawInteractionRef.current || !lineDrawingModeRef.current) return;
     const state = lineDrawStateRef.current;
     const geom = state.sketchFeature?.getGeometry() as LineString | undefined;
@@ -641,10 +673,10 @@ const OpenLayersMap = ({
       geom.setCoordinates(newCoords);
       state.isPerformingRedo = false;
     }
-    emitDrawingState();
-  }, [emitDrawingState]);
+    emitDrawingStateLine();
+  }, [emitDrawingStateLine]);
 
-  const redoLastVertex = useCallback(() => {
+  const redoLastVertexLine = useCallback(() => {
     const state = lineDrawStateRef.current;
     const geom = state.sketchFeature?.getGeometry() as LineString | undefined;
     if (!geom) return;
@@ -660,22 +692,29 @@ const OpenLayersMap = ({
     state.isPerformingRedo = true;
     geom.setCoordinates(newCoords);
     state.isPerformingRedo = false;
-    emitDrawingState();
-  }, [emitDrawingState]);
+    emitDrawingStateLine();
+  }, [emitDrawingStateLine]);
 
-  const finishDrawing = useCallback(() => {
+  const finishDrawingAny = useCallback(() => {
     if (!drawInteractionRef.current) return;
     drawInteractionRef.current.finishDrawing();
     // drawend handler will clean up and emit state
   }, []);
 
-  const cancelDrawing = useCallback(() => {
+  const cancelDrawingAny = useCallback(() => {
     if (drawInteractionRef.current) {
       drawInteractionRef.current.abortDrawing();
     }
-    // Notify app to exit line drawing mode
-    window.dispatchEvent(new CustomEvent('lineDrawingCancelled'));
-    // Reset internal state
+    // Notify app to exit drawing mode (generic + legacy line event)
+    const shape = lineDrawingModeRef.current ? 'line' : (drawingModeRef.current ? 'polygon' : 'unknown');
+    window.dispatchEvent(new CustomEvent('drawingCancelled', { detail: { shape } }));
+    if (shape === 'line') {
+      window.dispatchEvent(new CustomEvent('lineDrawingCancelled'));
+    } else if (shape === 'polygon') {
+      window.dispatchEvent(new CustomEvent('polygonDrawingCancelled'));
+    }
+
+    // Reset internal states
     const s = lineDrawStateRef.current;
     if (s.geometryListenerKey) {
       try { unByKey(s.geometryListenerKey); } catch {}
@@ -686,13 +725,79 @@ const OpenLayersMap = ({
     s.redoStack = [];
     s.lastCoordCount = 0;
     s.isPerformingRedo = false;
-    emitDrawingState();
-  }, [emitDrawingState]);
+    emitDrawingStateLine();
 
-  // Keyboard shortcuts for line drawing
+    const p = polygonDrawStateRef.current;
+    if (p.geometryListenerKey) {
+      try { unByKey(p.geometryListenerKey); } catch {}
+      p.geometryListenerKey = null;
+    }
+    p.active = false;
+    p.sketchFeature = null;
+    p.redoStack = [];
+    p.lastCoordCount = 0;
+    p.isPerformingRedo = false;
+    emitDrawingStatePolygon();
+  }, [emitDrawingStateLine, emitDrawingStatePolygon]);
+
+  // Polygon-specific undo/redo helpers
+  const undoLastVertexPolygon = useCallback(() => {
+    if (!drawInteractionRef.current || !drawingModeRef.current) return;
+    const state = polygonDrawStateRef.current;
+    const geom = state.sketchFeature?.getGeometry() as Polygon | undefined;
+    if (!geom) return;
+    const rings = geom.getCoordinates();
+    if (!rings || rings.length === 0) return;
+    const ring = rings[0] || [];
+    if (ring.length < 2) return; // need at least 1 fixed + dynamic
+    const lastFixed = ring[ring.length - 2];
+    state.redoStack.push(lastFixed);
+    const drawAny = drawInteractionRef.current as any;
+    if (drawAny && typeof drawAny.removeLastPoint === 'function') {
+      drawAny.removeLastPoint();
+    } else {
+      const dynamic = ring[ring.length - 1];
+      const newRing = ring.slice(0, Math.max(0, ring.length - 2)).concat([dynamic]);
+      state.isPerformingRedo = true;
+      geom.setCoordinates([newRing]);
+      state.isPerformingRedo = false;
+    }
+    emitDrawingStatePolygon();
+  }, [emitDrawingStatePolygon]);
+
+  const redoLastVertexPolygon = useCallback(() => {
+    const state = polygonDrawStateRef.current;
+    const geom = state.sketchFeature?.getGeometry() as Polygon | undefined;
+    if (!geom) return;
+    const redo = state.redoStack;
+    if (!redo || redo.length === 0) return;
+    const next = redo.pop();
+    if (!next) return;
+    const rings = geom.getCoordinates() || [];
+    const ring = rings[0] || [];
+    const insertIndex = Math.max(0, ring.length - 1); // before dynamic
+    const newRing = ring.slice(0, insertIndex).concat([next], ring.slice(insertIndex));
+    state.isPerformingRedo = true;
+    geom.setCoordinates([newRing]);
+    state.isPerformingRedo = false;
+    emitDrawingStatePolygon();
+  }, [emitDrawingStatePolygon]);
+
+  // Generic wrappers used by keyboard and toolbar actions
+  const undoLastVertexAny = useCallback(() => {
+    if (lineDrawingModeRef.current) return undoLastVertexLine();
+    if (drawingModeRef.current) return undoLastVertexPolygon();
+  }, [undoLastVertexLine, undoLastVertexPolygon]);
+
+  const redoLastVertexAny = useCallback(() => {
+    if (lineDrawingModeRef.current) return redoLastVertexLine();
+    if (drawingModeRef.current) return redoLastVertexPolygon();
+  }, [redoLastVertexLine, redoLastVertexPolygon]);
+
+  // Keyboard shortcuts for line/polygon drawing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!lineDrawingModeRef.current) return;
+      if (!lineDrawingModeRef.current && !drawingModeRef.current) return;
       // Ignore when typing in inputs/textareas/contenteditable
       const target = e.target as HTMLElement | null;
       const tag = (target?.tagName || '').toUpperCase();
@@ -703,23 +808,23 @@ const OpenLayersMap = ({
 
       if (e.key === 'Escape') {
         e.preventDefault();
-        cancelDrawing();
+        cancelDrawingAny();
         return;
       }
       if (ctrlOrCmd && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
-        undoLastVertex();
+        undoLastVertexAny();
         return;
       }
       if ((ctrlOrCmd && e.key.toLowerCase() === 'y') || (ctrlOrCmd && e.shiftKey && e.key.toLowerCase() === 'z')) {
         e.preventDefault();
-        redoLastVertex();
+        redoLastVertexAny();
         return;
       }
       if (e.key === 'Enter') {
         // Optional: allow Enter to finish drawing (double-click works by default)
         e.preventDefault();
-        finishDrawing();
+        finishDrawingAny();
       }
     };
 
@@ -728,16 +833,16 @@ const OpenLayersMap = ({
       const action = (e.detail && e.detail.action) || '';
       switch (action) {
         case 'undo':
-          undoLastVertex();
+          undoLastVertexAny();
           break;
         case 'redo':
-          redoLastVertex();
+          redoLastVertexAny();
           break;
         case 'finish':
-          finishDrawing();
+          finishDrawingAny();
           break;
         case 'cancel':
-          cancelDrawing();
+          cancelDrawingAny();
           break;
       }
     };
@@ -748,7 +853,7 @@ const OpenLayersMap = ({
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('map-drawing-action', handleDrawingActionEvent as EventListener);
     };
-  }, [undoLastVertex, redoLastVertex, finishDrawing, cancelDrawing]);
+  }, [undoLastVertexAny, redoLastVertexAny, finishDrawingAny, cancelDrawingAny]);
 
   // Stable callback refs to prevent effect churn during drawing
   const onPolygonCreatedRef = useRef<MapProps['onPolygonCreated'] | null>(null);
@@ -1685,6 +1790,53 @@ const OpenLayersMap = ({
         type: 'Polygon'
       });
 
+      drawInteractionRef.current.on('drawstart', (event) => {
+        const state = polygonDrawStateRef.current;
+        state.active = true;
+        state.sketchFeature = event.feature as Feature;
+        state.redoStack = [];
+        state.isPerformingRedo = false;
+        if (state.geometryListenerKey) {
+          try { unByKey(state.geometryListenerKey); } catch {}
+          state.geometryListenerKey = null;
+        }
+        const geom = state.sketchFeature.getGeometry();
+        if (geom) {
+          try {
+            const rings = (state.sketchFeature?.getGeometry() as Polygon)?.getCoordinates() || [];
+            const ring = rings[0] || [];
+            state.lastCoordCount = ring.length;
+          } catch { state.lastCoordCount = 0; }
+          state.geometryListenerKey = (geom as any).on('change', () => {
+            try {
+              const rings = (state.sketchFeature?.getGeometry() as Polygon)?.getCoordinates() || [];
+              const ring = rings[0] || [];
+              const currentCount = ring.length;
+              if (!state.isPerformingRedo && currentCount > state.lastCoordCount) {
+                state.redoStack = [];
+              }
+              state.lastCoordCount = currentCount;
+            } catch {}
+            emitDrawingStatePolygon();
+          });
+        }
+        emitDrawingStatePolygon();
+      });
+
+      drawInteractionRef.current.on('drawabort', () => {
+        const state = polygonDrawStateRef.current;
+        if (state.geometryListenerKey) {
+          try { unByKey(state.geometryListenerKey); } catch {}
+          state.geometryListenerKey = null;
+        }
+        state.active = false;
+        state.sketchFeature = null;
+        state.redoStack = [];
+        state.lastCoordCount = 0;
+        state.isPerformingRedo = false;
+        emitDrawingStatePolygon();
+      });
+
       drawInteractionRef.current.on('drawend', (event) => {
         const geometry = event.feature.getGeometry() as Polygon;
         const coordinates = geometry.getCoordinates();
@@ -1702,6 +1854,19 @@ const OpenLayersMap = ({
             coordinates: lonLatCoordinates
           });
         }
+
+        // Reset polygon draw state
+        const state = polygonDrawStateRef.current;
+        if (state.geometryListenerKey) {
+          try { unByKey(state.geometryListenerKey); } catch {}
+          state.geometryListenerKey = null;
+        }
+        state.active = false;
+        state.sketchFeature = null;
+        state.redoStack = [];
+        state.lastCoordCount = 0;
+        state.isPerformingRedo = false;
+        emitDrawingStatePolygon();
 
         // Remove only the interaction; keep the layer visible until cleared
         if (drawInteractionRef.current) {
@@ -1813,10 +1978,10 @@ const OpenLayersMap = ({
               }
               state.lastCoordCount = currentCount;
             } catch {}
-            emitDrawingState();
+            emitDrawingStateLine();
           });
         }
-        emitDrawingState();
+        emitDrawingStateLine();
       });
 
       drawInteractionRef.current.on('drawabort', () => {
@@ -1830,7 +1995,7 @@ const OpenLayersMap = ({
         state.redoStack = [];
         state.lastCoordCount = 0;
         state.isPerformingRedo = false;
-        emitDrawingState();
+        emitDrawingStateLine();
       });
 
       drawInteractionRef.current.on('drawend', (event) => {
@@ -1878,7 +2043,7 @@ const OpenLayersMap = ({
         state.redoStack = [];
         state.lastCoordCount = 0;
         state.isPerformingRedo = false;
-        emitDrawingState();
+        emitDrawingStateLine();
 
         // Remove the draw interaction after line completion
         if (drawInteractionRef.current) {
