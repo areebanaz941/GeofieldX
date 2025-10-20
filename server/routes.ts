@@ -959,7 +959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Supervisors can create features anywhere without boundary restrictions
         // If the feature lies within any boundary, automatically link it
         const featureGeometry = req.body.geometry;
-        if (featureGeometry && !req.body.boundaryId) {
+        if (featureGeometry) {
           const allBoundaries = await storage.getAllBoundaries();
           for (const boundary of allBoundaries) {
             try {
@@ -967,7 +967,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (boundaryGeom?.type === 'Polygon') {
                 const ring = boundaryGeom.coordinates?.[0] as [number, number][] | undefined;
                 if (ring && doesGeometryIntersectBoundary(featureGeometry, ring)) {
-                  req.body.boundaryId = (boundary as any)._id.toString();
+                  // Link feature to intersecting boundary
+                  req.body.boundaryId = req.body.boundaryId || (boundary as any)._id.toString();
+
+                  // Also auto-assign the feature to the boundary's assigned team (if any),
+                  // so field users of that team can always see it via assignedTo/teamId filters.
+                  const assigned = (boundary as any).assignedTo;
+                  const assignedTeamId = assigned
+                    ? (typeof assigned === 'object' ? assigned?._id?.toString?.() : assigned?.toString?.())
+                    : undefined;
+                  if (assignedTeamId) {
+                    // Set both fields for broader compatibility with existing filters
+                    req.body.assignedTo = req.body.assignedTo || assignedTeamId;
+                    req.body.teamId = req.body.teamId || assignedTeamId;
+                  }
                   break;
                 }
               }
@@ -979,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Optionally record supervisor's team for analytics/filtering if present
         if (user.teamId) {
-          req.body.teamId = user.teamId.toString();
+          req.body.teamId = req.body.teamId || user.teamId.toString();
         }
       }
       
