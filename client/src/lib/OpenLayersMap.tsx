@@ -27,6 +27,28 @@ import towerIcon from '@assets/tower-removebg-preview_1750282584510.png';
 import fibercableIcon from '@assets/fibercable-removebg-preview_1750282584507.png';
 import parcelIcon from '@assets/land-removebg-preview_1750282584509.png';
 
+// Canonical status normalizer: returns schema statuses for consistent coloring
+const toCanonicalStatus = (status: string): string => {
+  if (!status) return 'New';
+  const key = String(status).trim().toLowerCase().replace(/[\s_-]+/g, '');
+  const map: Record<string, string> = {
+    new: 'New',
+    inprogress: 'InProgress',
+    completed: 'Completed',
+    complete: 'Completed',
+    incompleted: 'In-Completed',
+    incomplete: 'In-Completed',
+    incompete: 'In-Completed',
+    submitreview: 'Submit-Review',
+    reviewaccepted: 'Review_Accepted',
+    reviewreject: 'Review_Reject',
+    reviewinprogress: 'Review_inprogress',
+    active: 'Active',
+    unassigned: 'New',
+    assigned: 'InProgress',
+  };
+  return map[key] || status;
+};
 // Map various status names to our standardized status types
 const mapToStandardStatus = (status: string): string => {
   if (!status) return 'unassigned';
@@ -451,7 +473,7 @@ class LocationControl extends Control {
 
 // Helper function to convert SVG to data URI - UPDATED with enhanced status mapping
 const createSVGIcon = (featureType: string, status: string, size: number = 24): string => {
-  const standardStatus = mapToStandardStatus(status);
+  const standardStatus = toCanonicalStatus(status);
   const color = getStatusColor(standardStatus);
   let svgContent = '';
 
@@ -919,7 +941,7 @@ const OpenLayersMap = ({
 
         const isHovered = !!feature.get('isHovered');
         const isSelected = !!feature.get('isSelected');
-        const standardStatus = mapToStandardStatus(featureStatus);
+        const standardStatus = toCanonicalStatus(featureStatus);
         const statusColor = getStatusColor(standardStatus);
         const hoverStrokeColor = isSelected ? statusColor : '#f59e0b'; // status color when selected, amber on hover
         const hoverFillColor = isSelected ? hexToRgba(statusColor, 0.15) : 'rgba(245,158,11,0.15)';
@@ -1083,7 +1105,7 @@ const OpenLayersMap = ({
         if (zoom < LAYERS_VISIBILITY_ZOOM) return undefined;
         const featureType = feature.get('type');
         const boundaryData = feature.get('boundaryData');
-        const boundaryStatusColor = getStatusColor(mapToStandardStatus(boundaryData?.status || 'Unassigned'));
+        const boundaryStatusColor = getStatusColor(toCanonicalStatus(boundaryData?.status || 'New'));
         
         if (featureType === 'boundary-label') {
           // Slightly stricter threshold for labels to avoid clutter flicker
@@ -1131,7 +1153,7 @@ const OpenLayersMap = ({
         const taskData = feature.get('taskData');
         const status = taskData?.status || 'Unassigned';
         // ENHANCED: Use improved status mapping system
-        const standardStatus = mapToStandardStatus(status);
+        const standardStatus = toCanonicalStatus(status);
         const color = getStatusColor(standardStatus);
         
         return new Style({

@@ -279,15 +279,15 @@ export default function Reports() {
                         category="count"
                         valueFormatter={(value) => `${value} features`}
                         colors={[
-                          "#9E9E9E", // Unassigned
-                          "#2196F3", // Assigned
-                          "#9C27B0", // In Progress
-                          "#4CAF50", // Completed
-                          "#FFC107", // Incomplete
-                          "#FF9800", // Submit-Review
-                          "#8BC34A", // Review_Accepted
-                          "#F44336", // Review_Reject
-                          "#03A9F4"  // Review_inprogress
+                          "#FF0000", // New
+                          "#FFA500", // In Progress
+                          "#2E8B57", // Completed
+                          "#00008B", // In-Completed / Incomplete
+                          "#000000", // Submit-Review
+                          "#00FFFF", // Review_Accepted
+                          "#FF00FF", // Review_Reject
+                          "#800080", // Review_inprogress
+                          "#006400"  // Active
                         ]}
                       />
                     </ChartContainer>

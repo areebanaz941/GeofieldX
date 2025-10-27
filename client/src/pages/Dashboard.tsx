@@ -140,8 +140,8 @@ function BoundaryManagement() {
                     )}
                     <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
-                        boundary.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                        boundary.status === 'Active' ? 'bg-[#006400]/10 text-[#006400]' :
+                        boundary.status === 'New' ? 'bg-[#FF0000]/10 text-[#FF0000]' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {boundary.status}
@@ -298,7 +298,7 @@ export default function Dashboard() {
   const taskStats = {
     total: (tasks as any[]).length,
     unassigned: (tasks as any[]).filter((task: any) => !task.assignedTo).length,
-    inProgress: (tasks as any[]).filter((task: any) => task.status === 'In Progress').length,
+    inProgress: (tasks as any[]).filter((task: any) => task.status === 'In Progress' || task.status === 'InProgress').length,
     completed: (tasks as any[]).filter((task: any) => task.status === 'Completed').length,
     pending: (tasks as any[]).filter((task: any) => task.status === 'Pending').length
   };
@@ -579,8 +579,8 @@ export default function Dashboard() {
                           )}
                       <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                         <span className={`px-2 py-1 rounded-full ${
-                          boundary.status === 'Active' ? 'bg-green-100 text-green-800' :
-                          boundary.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                          boundary.status === 'Active' ? 'bg-[#006400]/10 text-[#006400]' :
+                          boundary.status === 'New' ? 'bg-[#FF0000]/10 text-[#FF0000]' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {boundary.status}
@@ -791,8 +791,8 @@ export default function Dashboard() {
                         </div>
                         <div className="ml-4 flex-shrink-0">
                           <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                            task.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                            task.status === 'Completed' ? 'bg-[#2E8B57]/10 text-[#2E8B57]' :
+                            (task.status === 'In Progress' || task.status === 'InProgress') ? 'bg-orange-100 text-orange-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             {task.status}

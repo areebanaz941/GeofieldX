@@ -1,7 +1,27 @@
 import React from 'react';
 
 export type FeatureType = 'Tower' | 'Manhole' | 'FiberCable' | 'Parcel';
-export type FeatureStatus = 'Assigned' | 'UnAssigned' | 'Completed' | 'Delayed' | 'assigned' | 'unassigned' | 'complete' | 'delayed';
+export type FeatureStatus =
+  | 'Assigned'
+  | 'UnAssigned'
+  | 'Completed'
+  | 'Delayed'
+  | 'assigned'
+  | 'unassigned'
+  | 'complete'
+  | 'delayed'
+  // Canonical app statuses
+  | 'New'
+  | 'InProgress'
+  | 'In Progress'
+  | 'In-Completed'
+  | 'Incomplete'
+  | 'In-Complete'
+  | 'Submit-Review'
+  | 'Review_Accepted'
+  | 'Review_Reject'
+  | 'Review_inprogress'
+  | 'Active';
 
 interface FeatureIconProps {
   type: FeatureType;
@@ -10,21 +30,46 @@ interface FeatureIconProps {
   className?: string;
 }
 
-// Status color mapping - supports both capitalized and lowercase status values
+// Status color mapping - supports canonical feature statuses and legacy categories
 const getStatusColor = (status: FeatureStatus | string): string => {
-  const normalizedStatus = status.toLowerCase();
-  switch (normalizedStatus) {
+  const raw = String(status).trim();
+  const key = raw.toLowerCase().replace(/[\s_-]+/g, '');
+
+  // Canonical palette per request
+  const palette: Record<string, string> = {
+    new: '#FF0000',                 // New - Red
+    inprogress: '#FFA500',          // In Progress - Orange
+    completed: '#2E8B57',           // Completed - Sea Green
+    incompleted: '#00008B',         // In-Completed/Incomplete - Dark Blue
+    submitreview: '#000000',        // Submit Review - Black
+    reviewaccepted: '#00FFFF',      // Review Accepted - Cyan
+    reviewreject: '#FF00FF',        // Review Rejected - Magenta
+    reviewinprogress: '#800080',    // Review In Progress - Purple
+    active: '#006400',              // Active - Dark Green
+  };
+
+  // Match canonical names
+  if (palette[key]) return palette[key];
+
+  // Legacy category support
+  switch (key) {
     case 'assigned':
-      return '#3B82F6'; // Blue
+      return '#3B82F6';
     case 'unassigned':
-      return '#FCD34D'; // Yellow/Gold for unassigned
-    case 'completed':
+      return '#6B7280';
     case 'complete':
-      return '#10B981'; // Green
+      return palette.completed;
     case 'delayed':
-      return '#EF4444'; // Red
+      return '#EF4444';
+    // Explicit string with space retained (rare paths)
+    case 'inprogress':
+      return palette.inprogress;
     default:
-      return '#6B7280'; // Default gray
+      // Handle raw display strings without normalization edge cases
+      if (raw === 'In Progress') return palette.inprogress;
+      if (raw === 'In-Completed' || raw === 'In-Complete' || raw === 'Incomplete') return palette.incompleted;
+      if (raw === 'Review_inprogress' || raw === 'Review In Progress') return palette.reviewinprogress;
+      return '#6B7280';
   }
 };
 
