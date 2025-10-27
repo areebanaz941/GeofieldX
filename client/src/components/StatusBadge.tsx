@@ -9,6 +9,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   // Define status colors and backgrounds
   const getStatusStyles = (status: string) => {
     switch (status) {
+      case "New":
+        return {
+          bg: "bg-[#FF0000]/10",
+          text: "text-[#FF0000]",
+        };
       case "Unassigned":
         return {
           bg: "bg-neutral-100",
@@ -22,40 +27,45 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       case "In Progress":
       case "InProgress":
         return {
-          bg: "bg-purple-100",
-          text: "text-purple-700",
+          bg: "bg-orange-100",
+          text: "text-orange-700",
         };
       case "Completed":
         return {
-          bg: "bg-green-100",
-          text: "text-green-700",
+          bg: "bg-[#2E8B57]/10",
+          text: "text-[#2E8B57]",
         };
       case "In-Complete":
       case "In-Completed":
       case "Incomplete":
         return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-700",
+          bg: "bg-[#00008B]/10",
+          text: "text-[#00008B]",
         };
       case "Submit-Review":
         return {
-          bg: "bg-orange-100",
-          text: "text-orange-700",
+          bg: "bg-black/10",
+          text: "text-black",
         };
       case "Review_Accepted":
         return {
-          bg: "bg-lime-100",
-          text: "text-lime-700",
+          bg: "bg-[#00FFFF]/10",
+          text: "text-[#00FFFF]",
         };
       case "Review_Reject":
         return {
-          bg: "bg-red-100",
-          text: "text-red-700",
+          bg: "bg-[#FF00FF]/10",
+          text: "text-[#FF00FF]",
         };
       case "Review_inprogress":
         return {
-          bg: "bg-sky-100",
-          text: "text-sky-700",
+          bg: "bg-[#800080]/10",
+          text: "text-[#800080]",
+        };
+      case "Active":
+        return {
+          bg: "bg-[#006400]/10",
+          text: "text-[#006400]",
         };
       default:
         return {

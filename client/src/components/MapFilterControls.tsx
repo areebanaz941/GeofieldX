@@ -34,10 +34,15 @@ export default function MapFilterControls({
 
   const statusOptions = [
     { value: "All", label: "All", color: "bg-primary-500" },
-    { value: "Unassigned", label: "Unassigned", color: "bg-[#9E9E9E]" },
-    { value: "Assigned", label: "Assigned", color: "bg-[#2196F3]" },
-    { value: "Completed", label: "Completed", color: "bg-[#4CAF50]" },
-    { value: "In-Complete", label: "Incomplete", color: "bg-[#FFC107]" },
+    { value: "New", label: "New", color: "bg-[#FF0000]" },
+    { value: "InProgress", label: "In Progress", color: "bg-[#FFA500]" },
+    { value: "Completed", label: "Completed", color: "bg-[#2E8B57]" },
+    { value: "In-Completed", label: "In-Completed", color: "bg-[#00008B]" },
+    { value: "Submit-Review", label: "Submit Review", color: "bg-black" },
+    { value: "Review_Accepted", label: "Review Accepted", color: "bg-[#00FFFF]" },
+    { value: "Review_Reject", label: "Review Rejected", color: "bg-[#FF00FF]" },
+    { value: "Review_inprogress", label: "Review In Progress", color: "bg-[#800080]" },
+    { value: "Active", label: "Active", color: "bg-[#006400]" },
   ];
 
   return (
