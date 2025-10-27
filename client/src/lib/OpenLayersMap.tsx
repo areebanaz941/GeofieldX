@@ -34,6 +34,13 @@ const mapToStandardStatus = (status: string): string => {
   const normalized = status
     .toLowerCase()
     .replace(/[\s_-]+/g, '');
+  // Explicit mappings to align with requested palette
+  if (normalized === 'inprogress') return 'inprogress';
+  if (normalized === 'submitreview') return 'submitreview';
+  if (normalized === 'reviewaccepted' || normalized === 'review_accepted') return 'reviewaccepted';
+  if (normalized === 'reviewreject' || normalized === 'rejected') return 'reviewreject';
+  if (normalized === 'reviewinprogress') return 'reviewinprogress';
+  if (normalized === 'active') return 'active';
 
   // Completed states
   if (

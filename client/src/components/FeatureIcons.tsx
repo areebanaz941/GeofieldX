@@ -7,18 +7,17 @@ interface FeatureIconProps {
 }
 
 const getStatusColor = (status: string): string => {
-  switch (status) {
-    case 'assigned':
-      return '#3B82F6'; // blue
-    case 'unassigned':
-      return '#6B7280'; // GREY (changed from yellow)
-    case 'complete':
-      return '#10B981'; // green
-    case 'delayed':
-      return '#EF4444'; // red
-    default:
-      return '#000000';
-  }
+  const normalized = (status || '').toString().toLowerCase().replace(/[\s_-]+/g, '');
+  if (normalized === 'new' || normalized === 'unassigned') return '#FF0000'; // New - Red
+  if (normalized === 'inprogress' || normalized === 'assigned') return '#FFA500'; // In Progress - Orange
+  if (normalized === 'completed' || normalized === 'complete' || normalized === 'reviewaccepted') return '#2E8B57'; // Completed - Sea Green
+  if (normalized === 'incompleted' || normalized === 'incomplete' || normalized === 'delayed') return '#00008B'; // In-Completed - Dark Blue
+  if (normalized === 'submitreview') return '#000000'; // Submit Review - Black
+  if (normalized === 'reviewaccepted') return '#00FFFF'; // Review Accepted - Cyan
+  if (normalized === 'reviewreject' || normalized === 'rejected') return '#FF00FF'; // Review Rejected - Magenta
+  if (normalized === 'reviewinprogress') return '#800080'; // Review In Progress - Purple
+  if (normalized === 'active') return '#006400'; // Active - Dark Green
+  return '#6B7280';
 };
 
 export const TowerIcon: React.FC<FeatureIconProps> = ({ status, size = 24 }) => {

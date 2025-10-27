@@ -41,12 +41,27 @@ export default function FeatureList() {
   }) || [];
 
   const getStatusColor = (status: string) => {
+    // Tailwind classes aligned with requested palette for badges
     switch (status) {
-      case 'New': return 'bg-blue-100 text-blue-800';
-      case 'InProgress': return 'bg-yellow-100 text-yellow-800';
-      case 'Completed': return 'bg-green-100 text-green-800';
-      case 'Active': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      // New - Red
+      case 'New': return 'bg-red-100 text-red-800 border-red-200';
+      // In Progress - Orange
+      case 'InProgress': return 'bg-orange-100 text-orange-800 border-orange-200';
+      // Completed - Sea Green
+      case 'Completed': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      // In-Completed - Dark Blue
+      case 'In-Completed': return 'bg-blue-900 text-blue-50 border-blue-800';
+      // Submit Review - Black
+      case 'Submit-Review': return 'bg-black text-white border-black';
+      // Review Accepted - Cyan
+      case 'Review_Accepted': return 'bg-cyan-100 text-cyan-800 border-cyan-200';
+      // Review Rejected - Magenta
+      case 'Review_Reject': return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200';
+      // Review In Progress - Purple
+      case 'Review_inprogress': return 'bg-purple-100 text-purple-800 border-purple-200';
+      // Active - Dark Green
+      case 'Active': return 'bg-green-900 text-green-50 border-green-800';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 

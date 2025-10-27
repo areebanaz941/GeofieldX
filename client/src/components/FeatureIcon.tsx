@@ -12,20 +12,34 @@ interface FeatureIconProps {
 
 // Status color mapping - supports both capitalized and lowercase status values
 const getStatusColor = (status: FeatureStatus | string): string => {
-  const normalizedStatus = status.toLowerCase();
-  switch (normalizedStatus) {
-    case 'assigned':
-      return '#3B82F6'; // Blue
-    case 'unassigned':
-      return '#FCD34D'; // Yellow/Gold for unassigned
-    case 'completed':
-    case 'complete':
-      return '#10B981'; // Green
-    case 'delayed':
-      return '#EF4444'; // Red
-    default:
-      return '#6B7280'; // Default gray
-  }
+  const normalized = (status || '').toString().toLowerCase().replace(/[\s_-]+/g, '');
+
+  // Map to requested palette
+  // New - Red
+  if (normalized === 'new') return '#FF0000';
+  // In Progress - Orange
+  if (normalized === 'inprogress') return '#FFA500';
+  // Completed / Complete - Sea Green
+  if (normalized === 'completed' || normalized === 'complete') return '#2E8B57';
+  // In-Completed - Dark Blue
+  if (normalized === 'incompleted' || normalized === 'incomplete') return '#00008B';
+  // Submit Review - Black
+  if (normalized === 'submitreview') return '#000000';
+  // Review Accepted - Cyan
+  if (normalized === 'reviewaccepted') return '#00FFFF';
+  // Review Rejected - Magenta
+  if (normalized === 'reviewreject' || normalized === 'rejected') return '#FF00FF';
+  // Review In Progress - Purple
+  if (normalized === 'reviewinprogress') return '#800080';
+  // Active - Dark Green
+  if (normalized === 'active' || normalized === 'assigned') return '#006400';
+
+  // Fallbacks for older generic statuses
+  if (normalized === 'unassigned') return '#FF0000'; // treat as New-like
+  if (normalized === 'delayed') return '#00008B'; // treat as In-Completed-like
+
+  // Default neutral
+  return '#6B7280';
 };
 
 // SVG icon components

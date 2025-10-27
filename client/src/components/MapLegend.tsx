@@ -17,15 +17,25 @@ const MapLegend: React.FC = () => {
   };
 
   const statusColorMap: Record<string, string> = {
-    New: '#6B7280',               // Gray
-    InProgress: '#8B5CF6',        // Purple
-    Completed: '#10B981',         // Green
-    'In-Completed': '#F97316',    // Orange (avoid yellow)
-    'Submit-Review': '#3B82F6',   // Blue
-    Review_Accepted: '#14B8A6',   // Teal
-    Review_Reject: '#EF4444',     // Red
-    Review_inprogress: '#38BDF8', // Sky
-    Active: '#6366F1',            // Indigo
+    // Updated per requested palette
+    // New - Red
+    New: '#FF0000',
+    // In Progress - Orange
+    InProgress: '#FFA500',
+    // Completed - Sea Green
+    Completed: '#2E8B57',
+    // In-Completed - Dark Blue
+    'In-Completed': '#00008B',
+    // Submit Review - Black
+    'Submit-Review': '#000000',
+    // Review Accepted - Cyan
+    Review_Accepted: '#00FFFF',
+    // Review Rejected - Magenta
+    Review_Reject: '#FF00FF',
+    // Review In Progress - Purple
+    Review_inprogress: '#800080',
+    // Active - Dark Green
+    Active: '#006400',
   };
 
   const statusItems = FEATURE_STATUSES.map((status) => ({
