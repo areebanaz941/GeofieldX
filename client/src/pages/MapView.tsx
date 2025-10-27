@@ -1400,6 +1400,8 @@ export default function MapView() {
           description: "You can only create features within your assigned boundary areas.",
           variant: "destructive",
         });
+        // Exit point selection mode to avoid getting stuck after an invalid click
+        setPointSelectionMode(false);
         return;
       }
       setSelectedLocation(latlng);
@@ -1438,6 +1440,9 @@ export default function MapView() {
         description: "You can only create features within your assigned boundary areas.",
         variant: "destructive",
       });
+      // Exit line drawing mode to prevent the UI from appearing stuck
+      setLineDrawingMode(false);
+      setLinePoints([]);
       return;
     }
     // Store the line coordinates and open the modal
@@ -1449,6 +1454,33 @@ export default function MapView() {
       description: `Fiber cable route with ${line.coordinates.length} points created`,
     });
   };
+
+  // ESC-to-cancel for point/selection modes (line/polygon handled inside OpenLayersMap)
+  useEffect(() => {
+    const handleEscCancel = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+
+      // Ignore when typing in inputs/textareas/contenteditable
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+
+      if (pointSelectionMode || selectionMode) {
+        e.preventDefault();
+        if (pointSelectionMode) {
+          setPointSelectionMode(false);
+          setSelectedLocation(null);
+          memoizedToast({ title: 'Drawing cancelled', description: 'Point selection was cancelled.' });
+        }
+        if (selectionMode) {
+          setSelectionMode(false);
+          memoizedToast({ title: 'Drawing cancelled', description: 'Selection mode was cancelled.' });
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEscCancel, true);
+    return () => window.removeEventListener('keydown', handleEscCancel, true);
+  }, [pointSelectionMode, selectionMode, memoizedToast]);
 
   const handleFeatureClick = (feature: any) => {
     // Show feature details popup for all users
