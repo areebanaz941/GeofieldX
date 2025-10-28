@@ -1489,7 +1489,21 @@ export default function MapView() {
   };
 
   const handleBoundaryClick = (boundary: any) => {
-    // For supervisors: only prompt assignment if boundary is unassigned
+    // Ignore boundary clicks while creating features or during drawing flows
+    if (
+      pointSelectionMode ||
+      lineDrawingMode ||
+      drawingMode ||
+      featureSelectionOpen ||
+      pointFeatureModalOpen ||
+      lineFeatureModalOpen ||
+      createFeatureModalOpen ||
+      supervisorPolygonModalOpen
+    ) {
+      return;
+    }
+
+    // For supervisors: allow viewing/assigning when not in creation flows
     if (user?.role === "Supervisor") {
       setSelectedBoundary(boundary);
       // Always open assignment modal so supervisors can view/change assignment
