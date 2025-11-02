@@ -602,6 +602,7 @@ const OpenLayersMap = ({
   const modifyInteractionRef = useRef<Modify | null>(null);
   const hoveredFeatureRef = useRef<Feature | null>(null);
   const selectedFeatureRef = useRef<Feature | null>(null);
+  const suppressNextPrimaryClickRef = useRef<boolean>(false);
   // Live refs for interaction modes to avoid stale closures in OL handlers
   const drawingModeRef = useRef<boolean>(drawingMode);
   const pointSelectionModeRef = useRef<boolean>(pointSelectionMode);
@@ -1548,6 +1549,15 @@ const OpenLayersMap = ({
     };
 
     const handlePrimaryClick = (evt: any) => {
+      if (suppressNextPrimaryClickRef.current) {
+        suppressNextPrimaryClickRef.current = false;
+        evt?.preventDefault?.();
+        evt?.stopPropagation?.();
+        const originalEvent = evt?.originalEvent;
+        originalEvent?.preventDefault?.();
+        originalEvent?.stopPropagation?.();
+        return;
+      }
       if (
         drawingModeRef.current ||
         pointSelectionModeRef.current ||
@@ -1788,6 +1798,10 @@ const OpenLayersMap = ({
 
     // Handle polygon drawing
     if (drawingMode && onPolygonCreatedRef.current) {
+      suppressNextPrimaryClickRef.current = true;
+      if (selectInteractionRef.current) {
+        selectInteractionRef.current.setActive(false);
+      }
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
         source: source,
@@ -1813,6 +1827,7 @@ const OpenLayersMap = ({
       });
 
       drawInteractionRef.current.on('drawstart', (event) => {
+        suppressNextPrimaryClickRef.current = true;
         const state = polygonDrawStateRef.current;
         state.active = true;
         state.sketchFeature = event.feature as Feature;
@@ -1860,6 +1875,7 @@ const OpenLayersMap = ({
       });
 
       drawInteractionRef.current.on('drawend', (event) => {
+        suppressNextPrimaryClickRef.current = true;
         const geometry = event.feature.getGeometry() as Polygon;
         const coordinates = geometry.getCoordinates();
         
@@ -1902,6 +1918,10 @@ const OpenLayersMap = ({
 
     // Handle point selection mode
     if (pointSelectionMode && onMapClickRef.current) {
+      suppressNextPrimaryClickRef.current = true;
+      if (selectInteractionRef.current) {
+        selectInteractionRef.current.setActive(false);
+      }
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
         source: source,
@@ -1924,6 +1944,7 @@ const OpenLayersMap = ({
       });
 
       drawInteractionRef.current.on('drawend', (event) => {
+        suppressNextPrimaryClickRef.current = true;
         const geometry = event.feature.getGeometry() as Point;
         const coordinates = geometry.getCoordinates();
         const [lng, lat] = toLonLat(coordinates);
@@ -1943,6 +1964,10 @@ const OpenLayersMap = ({
 
     // Handle line drawing mode
     if (lineDrawingMode && !drawInteractionRef.current) {
+      suppressNextPrimaryClickRef.current = true;
+      if (selectInteractionRef.current) {
+        selectInteractionRef.current.setActive(false);
+      }
       console.log('🔵 Activating line drawing mode');
       const source = new VectorSource();
       const drawLayer = new VectorLayer({
@@ -1972,6 +1997,7 @@ const OpenLayersMap = ({
       });
 
       drawInteractionRef.current.on('drawstart', (event) => {
+        suppressNextPrimaryClickRef.current = true;
         // Reset redo stack and start tracking geometry changes
         const state = lineDrawStateRef.current;
         state.active = true;
@@ -2021,6 +2047,7 @@ const OpenLayersMap = ({
       });
 
       drawInteractionRef.current.on('drawend', (event) => {
+        suppressNextPrimaryClickRef.current = true;
         console.log('🔵 Line drawing completed');
         const geometry = event.feature.getGeometry() as LineString;
         const coordinates = geometry.getCoordinates();
@@ -2619,6 +2646,18 @@ const OpenLayersMap = ({
       });
 
       selectInteractionRef.current.on('select', (event) => {
+        if (
+          drawingModeRef.current ||
+          pointSelectionModeRef.current ||
+          lineDrawingModeRef.current ||
+          selectionModeRef.current
+        ) {
+          return;
+        }
+        if (suppressNextPrimaryClickRef.current) {
+          suppressNextPrimaryClickRef.current = false;
+          return;
+        }
         // Reflect selection state on features so style function can render status-colored highlight
         event.deselected?.forEach((f: any) => { f.set('isSelected', false); f.changed(); });
         const selected = event.selected;
