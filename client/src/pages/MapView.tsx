@@ -142,7 +142,20 @@ export default function MapView() {
     hasProcessed: false, // Changed from hasAttempted to hasProcessed
     timeoutId: null as NodeJS.Timeout | null,
     
-    // Simple check for navigation params
+    // Detect if the current URL change is intended for dashboard navigation, not map navigation
+    isDashboardNavigation(): boolean {
+      const url = new URL(window.location.href);
+      const pathname = url.pathname;
+      const hasTabParam = url.searchParams.has('tab');
+      const hasMapParams = url.searchParams.has('feature') || url.searchParams.has('boundary');
+      // Any navigation to dashboard or root should not be processed by the map controller
+      if (pathname === '/' || pathname.startsWith('/dashboard')) return true;
+      // If tab is present without map-specific params, it's not a map navigation
+      if (hasTabParam && !hasMapParams) return true;
+      return false;
+    },
+
+    // Simple check for navigation params (map-specific only)
     getNavigationParams(): { featureId: string | null; boundaryId: string | null } {
       const params = new URLSearchParams(window.location.search);
       return {
@@ -172,6 +185,12 @@ export default function MapView() {
     attemptNavigation(mapMethods: any, features: any[], boundaries: any[], toastCallback: Function) {
       // Skip if already processed
       if (this.hasProcessed) {
+        return;
+      }
+
+      // If this is a dashboard navigation or tab change, do not process as map navigation
+      if (this.isDashboardNavigation()) {
+        this.hasProcessed = true;
         return;
       }
       
@@ -243,6 +262,9 @@ export default function MapView() {
     setFailureTimeout(toastCallback: Function) {
       if (this.timeoutId || this.hasProcessed) return;
       
+      // Do not set a timeout for dashboard/tab navigations
+      if (this.isDashboardNavigation()) return;
+
       const { featureId, boundaryId } = this.getNavigationParams();
       if (!featureId && !boundaryId) return;
       
@@ -278,6 +300,13 @@ export default function MapView() {
   useEffect(() => {
     const controller = navigationController.current;
     const currentUrl = window.location.search;
+
+    // Ignore dashboard/tab-only navigations entirely
+    if (controller.isDashboardNavigation()) {
+      controller.hasProcessed = true;
+      lastProcessedUrl.current = currentUrl;
+      return;
+    }
     
     // Skip if we already processed this exact URL
     if (lastProcessedUrl.current === currentUrl && controller.hasProcessed) {
