@@ -1,0 +1,10 @@
+{
+  "SW1": { "title": "SW1 — Westminster & Belgravia", "hasInfo": true,  "url": "./pages/SW1.html", "notes": "Example area with info" },
+  "SE1": { "title": "SE1 — South Bank & Bermondsey", "hasInfo": false, "url": "./pages/SE1.html", "notes": "Info coming soon" },
+  "W1":  { "title": "W1 — Marylebone & Mayfair", "hasInfo": true,  "url": "./pages/W1.html" },
+  "E1":  { "title": "E1 — Whitechapel & Shoreditch", "hasInfo": true,  "url": "./pages/E1.html" },
+  "N1":  { "title": "N1 — Islington", "hasInfo": false, "url": "./pages/N1.html" },
+  "NW1": { "title": "NW1 — Camden Town", "hasInfo": false, "url": "./pages/NW1.html" },
+  "EC1": { "title": "EC1 — Clerkenwell", "hasInfo": true,  "url": "./pages/EC1.html" },
+  "WC1": { "title": "WC1 — Bloomsbury", "hasInfo": false, "url": "./pages/WC1.html" }
+}
